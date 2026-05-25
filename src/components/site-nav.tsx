@@ -93,7 +93,7 @@ export function SiteNav() {
             <NavLink href="/sok" label="Sök hantverkare" current={pathname === "/sok"} />
             <NavLink href="#" label="Anslut företag" current={false} />
             <NavLink href="#" label="Nyheter" current={false} />
-            <NavLink href="#" label="Om oss" current={false} />
+            <NavLink href="/kontakt" label="Kontakt" current={pathname === "/kontakt"} />
           </nav>
 
           {/* Höger: språkväljare + login + anslut */}
@@ -184,6 +184,12 @@ export function MobileBottomNav() {
       label: "Kategorier",
       icon: Layers,
       match: (p: string) => p.startsWith("/bransch"),
+    },
+    {
+      href: "/kontakt",
+      label: "Kontakt",
+      icon: Phone,
+      match: (p: string) => p.startsWith("/kontakt"),
     },
   ];
 
