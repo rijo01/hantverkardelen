@@ -43,22 +43,21 @@ export const HANTVERK_BRANSCHER: readonly number[] = [
   43310, // Putsning, fasadbeklädnad och stuckatörsarbeten
   // — Snickeri, kök, inredning, dörrar/fönster —
   43320, // Byggnadssnickeriarbeten (snickeri på plats)
-  16239, // Tillverkning av andra byggnads- och inredningssnickerier
   16233, // Tillverkning av monterade köks- och badrumsinredningar
   25120, // Tillverkning av dörrar och fönster av metall
-  25720, // Tillverkning av lås och gångjärn
-  // — Lyft, kranar, byggmaskiner —
-  28220, // Tillverkning av lyft- och godshanteringsanordningar
-  // — Sanering, lokalvård, fasadtvätt, fönsterputs —
-  81290, // Övrig rengöringsverksamhet (specialrengöring, fasad, sanering)
-  81210, // Lokalvård / städning av byggnader
-  81221, // Fönsterputsning (B2B)
   // — Trädgård / grönytor —
   81300, // Skötsel och underhåll av grönytor
   // — Betong & grundmaterial för bygg —
   23630, // Tillverkning av fabriksblandad betong
   23610, // Tillverkning av betongvaror för byggändamål
   23690, // Tillverkning av övriga varor av betong, cement och gips
+  // Borttagna 2026-05-26 — fyllde katalogen med industri/storkund som inte är hantverkare:
+  //   16239  Tillverkning av byggnadssnickerier (Samhall, Setra, Derome, Inwido)
+  //   25720  Tillverkning av lås och gångjärn (ASSA, KABA — industri, inte låssmed)
+  //   28220  Tillverkning av lyft- och godshanteringsanordningar (Bosch Rexroth, Kalmar Industries)
+  //   81210  Lokalvård / städning (Samhall × 30+ arbetsställen, ISS m.fl.)
+  //   81221  Fönsterputsning B2B (ISS, SITA — stora servicebolag)
+  //   81290  Övrig rengöringsverksamhet/sanering (kommunala renhållningsförvaltningar)
 ];
 
 /** Set-version för O(1) lookup vid guard-kontroller. */
