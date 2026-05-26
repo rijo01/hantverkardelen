@@ -147,7 +147,7 @@ async function ResultsAsync({
   const page = Math.max(1, Number(pageStr) || 1);
   const kategori = kategoriSlug ? getKategoriBySlug(kategoriSlug) : null;
 
-  const { rows, hasMore, matchedBransch } = await searchForetag(query, {
+  const { rows, hasMore, matchedBransch, total } = await searchForetag(query, {
     kommun: kommun?.code,
     ng1,
     ng1List: kategori?.ng1,
@@ -176,7 +176,8 @@ async function ResultsAsync({
             : kategori && !query
               ? (
                 <>
-                  Visar {rows.length} företag inom{" "}
+                  Visar {rows.length}
+                  {total != null ? <> av {total.toLocaleString("sv-SE")}</> : null} företag inom{" "}
                   <span className="font-medium text-[var(--text-strong)]">
                     {kategori.name}
                   </span>
@@ -187,7 +188,8 @@ async function ResultsAsync({
               : matchedBransch && !ng1
                 ? (
                   <>
-                    Visar företag inom{" "}
+                    Visar {rows.length}
+                    {total != null ? <> av {total.toLocaleString("sv-SE")}</> : null} företag inom{" "}
                     <span className="font-medium text-[var(--text-strong)]">
                       {matchedBransch}
                     </span>

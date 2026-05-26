@@ -310,7 +310,7 @@ export async function searchForetag(
     page?: number;
     pageSize?: number;
   } = {},
-): Promise<{ rows: Foretag[]; hasMore: boolean; page: number; pageSize: number; matchedBransch?: string | null }> {
+): Promise<{ rows: Foretag[]; hasMore: boolean; page: number; pageSize: number; matchedBransch?: string | null; total?: number }> {
   const page = Math.max(1, opts.page ?? 1);
   const pageSize = Math.min(50, Math.max(1, opts.pageSize ?? 25));
   const from = (page - 1) * pageSize;
@@ -351,6 +351,7 @@ async function runKategoriBrowse(
   page: number;
   pageSize: number;
   matchedBransch: null;
+  total?: number;
 }> {
   const supa = getSupabaseAnon();
   const minAeant = Math.max(2, opts.aeantMin ?? 2);
@@ -361,14 +362,38 @@ async function runKategoriBrowse(
     .gte("aeant", minAeant);
   if (opts.kommun) q = q.eq("kommun", opts.kommun);
   if (opts.aeantMax && opts.aeantMax > 0) q = q.lte("aeant", opts.aeantMax);
-  const { data, error } = await q
+
+  // Total-räkning parallellt med data-queryn. count: estimated använder PG-statistik
+  // och är snabb även när vanlig count: exact triggar statement_timeout (57014).
+  // Try/catch så att om den ändå skulle smälla får sajten ändå visa rows utan total.
+  const dataQuery = q
     .order("poang", { ascending: false, nullsFirst: false })
     .order("aeant", { ascending: false, nullsFirst: false })
     .order("cfarnr", { ascending: true })
     .range(from, to);
+
+  const totalPromise: Promise<number | undefined> = (async () => {
+    try {
+      let cq = supa
+        .from(VIEW)
+        .select("id", { count: "estimated", head: true })
+        .in("ng1", ng1List as number[])
+        .gte("aeant", minAeant);
+      if (opts.kommun) cq = cq.eq("kommun", opts.kommun);
+      if (opts.aeantMax && opts.aeantMax > 0) cq = cq.lte("aeant", opts.aeantMax);
+      const { count, error } = await cq;
+      if (error || count == null) return undefined;
+      return count;
+    } catch {
+      return undefined;
+    }
+  })();
+
+  const [dataRes, total] = await Promise.all([dataQuery, totalPromise]);
+  const { data, error } = dataRes;
   if (error || !data) {
     console.error("runKategoriBrowse", error);
-    return { rows: [], hasMore: false, page, pageSize, matchedBransch: null };
+    return { rows: [], hasMore: false, page, pageSize, matchedBransch: null, total };
   }
   const rows = data as Partial<PublikRow>[];
   const hasMore = rows.length > pageSize;
@@ -378,6 +403,7 @@ async function runKategoriBrowse(
     page,
     pageSize,
     matchedBransch: null,
+    total,
   };
 }
 
@@ -399,6 +425,7 @@ async function runBranschSearch(
   page: number;
   pageSize: number;
   matchedBransch: string | null;
+  total?: number;
 }> {
   const branschMin = Math.max(2, opts.aeantMin ?? 2);
 
@@ -412,6 +439,24 @@ async function runBranschSearch(
     .order("aeant", { ascending: false, nullsFirst: false })
     .order("cfarnr", { ascending: true })
     .range(from, to);
+
+  // Total-räkning för bransch-träffen — se runKategoriBrowse för rationale.
+  const totalPromise: Promise<number | undefined> = (async () => {
+    try {
+      let cq = supa
+        .from(VIEW)
+        .select("id", { count: "estimated", head: true })
+        .in("ng1", branschInfo.ids)
+        .gte("aeant", branschMin);
+      if (opts.kommun) cq = cq.eq("kommun", opts.kommun);
+      if (opts.aeantMax && opts.aeantMax > 0) cq = cq.lte("aeant", opts.aeantMax);
+      const { count, error } = await cq;
+      if (error || count == null) return undefined;
+      return count;
+    } catch {
+      return undefined;
+    }
+  })();
 
   const wantNameSupplement = page === 1;
   const nameQuery = wantNameSupplement
@@ -438,10 +483,11 @@ async function runBranschSearch(
 
   const sokordQuery = wantNameSupplement ? searchSokordCfarnrs(cleaned) : Promise.resolve([] as number[]);
 
-  const [branschRes, nameRes, sokordCfarnrs] = await Promise.all([
+  const [branschRes, nameRes, sokordCfarnrs, total] = await Promise.all([
     branschQuery,
     nameQuery ?? Promise.resolve({ data: [] as Partial<PublikRow>[], error: null }),
     sokordQuery,
+    totalPromise,
   ]);
 
   if (branschRes.error || !branschRes.data) {
@@ -485,6 +531,7 @@ async function runBranschSearch(
     page,
     pageSize,
     matchedBransch: branschInfo.primaryName,
+    total,
   };
 }
 
