@@ -82,7 +82,7 @@ export function SiteNav() {
             {!isHome ? (
               <div className="flex justify-center sm:justify-start lg:pl-6">
                 <Suspense fallback={null}>
-                  <SearchBar variant="single" />
+                  <SearchBar variant="compact" />
                 </Suspense>
               </div>
             ) : null}

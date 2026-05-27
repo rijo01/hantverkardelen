@@ -18,7 +18,6 @@ const POPULAR_SEARCHES = [
   { label: "Byggföretag", href: "/sok?kategori=bygg" },
   { label: "Takläggare", href: "/sok?kategori=tak" },
   { label: "Golv", href: "/sok?kategori=golv" },
-  { label: "Städ", href: "/sok?kategori=sanering-stad" },
 ];
 
 const fmt = (n: number) => n.toLocaleString("sv-SE");
