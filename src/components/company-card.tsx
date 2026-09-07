@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, Globe, Mail, MapPin, Phone, Sparkles, Users } from "lucide-react";
 import { foretagSlug, type Foretag } from "@/lib/queries";
+import { KONTAKT_NOTIS } from "@/lib/dataprovenans";
 import {
   displayName,
   employerSize,
@@ -131,7 +132,8 @@ export function CompanyCard({
           <a
             href={`tel:${foretag.tel}`}
             className="inline-flex h-9 items-center gap-1.5 rounded-full bg-[#0c8a3d] px-3.5 text-xs font-semibold text-white shadow-[0_4px_12px_-4px_rgba(12,138,61,0.5)] transition hover:bg-[#076b2f] active:scale-[0.98]"
-            aria-label={`Ring ${name}`}
+            aria-label={`Ring ${name} — ${KONTAKT_NOTIS}`}
+            title={KONTAKT_NOTIS}
           >
             <Phone className="size-3.5" aria-hidden />
             <span className="hidden sm:inline">{foretag.tel}</span>
@@ -213,14 +215,23 @@ function SmallIconLink({
  * Lista-wrapper med snygga dividers — vit yta, mjuk skugga, divider mellan
  * kort. Använd för CompanyCard-listor.
  */
+/**
+ * Listan bär proveniensmärkningen en gång i foten istället för på varje kort.
+ * Telefonnumren kommer ur ett register från omkring 2011 — se lib/dataprovenans.
+ */
 export function CompanyCardList({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <ol className="rd-card overflow-hidden divide-y divide-[var(--rule-soft)]">
-      {children}
-    </ol>
+    <div className="space-y-2">
+      <ol className="rd-card overflow-hidden divide-y divide-[var(--rule-soft)]">
+        {children}
+      </ol>
+      <p className="px-1 text-[11px] leading-relaxed text-[var(--text-dim)]">
+        {KONTAKT_NOTIS}. Kontrollera uppgiften innan du förlitar dig på den.
+      </p>
+    </div>
   );
 }

@@ -7,6 +7,13 @@
  * `scbCode` med 4-siffrigt format för referens.
  *
  * `slug` = gemener, å/ä→a, ö→o, mellanslag/specialtecken → bindestreck.
+ *
+ * Kollisioner: translitterering slår ihop namn som skiljer sig bara på
+ * diakriter — Håbo (0305, Uppsala län) och Habo (1443, Jönköpings län) ger
+ * båda "habo". Tidigare vann den som råkade ligga sist i RAW (Habo), och
+ * Håbo blev helt oåtkomlig på sajten. Sådana par löses explicit i
+ * SLUG_OVERRIDES nedan, och byggspärren längst ner kastar om en ny kollision
+ * uppstår så att den aldrig kan tystna in i produktion igen.
  */
 
 export type Kommun = {
@@ -321,6 +328,17 @@ const RAW: Array<[string, string]> = [
   ["2584", "Kiruna"],
 ];
 
+/**
+ * Explicita slugar för kommuner vars translittererade namn krockar med en
+ * annan kommun. Nyckel = SCB-kod, värde = slug.
+ *
+ * Håbo (0305) vs Habo (1443): Habo behåller "habo" eftersom den redan är
+ * indexerad på den URL:en; Håbo särskiljs med sitt län.
+ */
+const SLUG_OVERRIDES: Readonly<Record<string, string>> = {
+  "0305": "habo-uppsala-lan",
+};
+
 // Bygg slutgiltig lista. Vi droppar duplikatet ovan (Heby finns redan på 0331).
 const seenCodes = new Set<string>();
 const KOMMUNER: Kommun[] = [];
@@ -332,9 +350,38 @@ for (const [scb, name] of RAW) {
     code,
     scbCode: scb,
     name,
-    slug: makeSlug(name),
+    slug: SLUG_OVERRIDES[scb] ?? makeSlug(name),
     lan: scb.slice(0, 2).replace(/^0+/, "") || "0",
   });
+}
+
+/**
+ * BYGGSPÄRR — två kommuner får aldrig dela slug.
+ *
+ * En kollision gör den ena kommunen oåtkomlig: kommunBySlug returnerar bara
+ * en av dem, den andras sida försvinner ur sajten men ligger kvar i sitemap
+ * och interna länkar. Det ska stoppa bygget, inte upptäckas i Search Console.
+ * Lös nya kollisioner genom att lägga till en post i SLUG_OVERRIDES ovan.
+ */
+{
+  const bySlug = new Map<string, string[]>();
+  for (const k of KOMMUNER) {
+    const list = bySlug.get(k.slug);
+    if (list) list.push(`${k.scbCode} ${k.name}`);
+    else bySlug.set(k.slug, [`${k.scbCode} ${k.name}`]);
+  }
+  const collisions = Array.from(bySlug.entries()).filter(
+    ([, list]) => list.length > 1,
+  );
+  if (collisions.length > 0) {
+    throw new Error(
+      "Kommun-slugkollision: " +
+        collisions
+          .map(([slug, list]) => `"${slug}" delas av ${list.join(" och ")}`)
+          .join("; ") +
+        ". Lägg till en post i SLUG_OVERRIDES i src/lib/kommuner.ts.",
+    );
+  }
 }
 
 export const ALL_KOMMUNER: ReadonlyArray<Kommun> = KOMMUNER;

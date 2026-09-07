@@ -12,7 +12,7 @@ import {
 import { getBranschNamesBulk } from "@/lib/branscher";
 import { JsonLd, buildBreadcrumb } from "@/components/json-ld";
 import { Breadcrumb } from "@/components/breadcrumb";
-import { kommunForetagCount } from "@/lib/stats";
+import { hubIsIndexable, robotsFor, snapshotKommunCount } from "@/lib/seo";
 import { CompanyCard, CompanyCardList } from "@/components/company-card";
 
 export const revalidate = 86400;
@@ -37,6 +37,8 @@ export async function generateMetadata({
     description,
     alternates: { canonical: `${SITE_URL}/kommun/${kommun.slug}` },
     openGraph: { title, description, type: "website", locale: "sv_SE" },
+    // Grind 1, se lib/seo.ts — en kommun med för få företag är en tunn sida.
+    robots: robotsFor(hubIsIndexable(snapshotKommunCount(kommun.code))),
   };
 }
 
@@ -45,12 +47,11 @@ export default async function KommunPage({ params }: { params: Params }) {
   const kommun = kommunBySlug(slug);
   if (!kommun) notFound();
 
-  const snapshot = kommunForetagCount(kommun.code);
-
+  // Exakt count vid render. Tidigare lästes ett förberäknat värde ur stats.ts
+  // när det fanns — och just de värdena var 1001-artefakter från
+  // count=estimated. Nu räknar vi alltid, det kostar ~350 ms en gång per dygn.
   const [liveTotal, fordelning, foretagSample] = await Promise.all([
-    snapshot != null
-      ? Promise.resolve(snapshot)
-      : countForetagInKommun(kommun.code),
+    countForetagInKommun(kommun.code),
     getBranschFordelning(kommun.code, 24),
     listForetagInKommun(kommun.code, 12),
   ]);

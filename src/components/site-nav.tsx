@@ -3,13 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
-import { Home, Search, MapPin, Layers, Phone, Hammer, Globe } from "lucide-react";
+import { Home, Search, MapPin, Layers, Phone, Hammer } from "lucide-react";
 import { SearchBar } from "@/components/search-bar";
 
 /**
  * Toppen av sajten består av två rader:
  *   1. Topbar (mörkblå, tunn) — kort tagline, scrollar bort med sidan
- *   2. Header (vit, sticky) — logo, sök, nav, login + anslut-knapp
+ *   2. Header (vit, sticky) — logo, sök, nav och anslut-knapp
  *
  * När användaren scrollar gömmer vi topbaren och låter header:n ligga kvar
  * högst upp. Söket bakas in i header:n förutom på startsidan, där
@@ -36,13 +36,13 @@ export function SiteNav() {
             Söktjänst för hem & hantverk — bygg, el, VVS, måleri, snickare m.fl.
           </span>
           <span className="text-white/85 sm:hidden">Hem & hantverk i Sverige</span>
-          <a
-            href="#"
+          <Link
+            href="/kontakt"
             className="inline-flex items-center gap-1.5 font-medium text-white transition hover:text-white/90"
           >
             <Phone aria-hidden className="size-3.5" />
             Anslut företag
-          </a>
+          </Link>
         </div>
       </div>
 
@@ -91,29 +91,26 @@ export function SiteNav() {
           {/* Nav-länkar (desktop) */}
           <nav className="hidden shrink-0 items-center gap-0.5 text-[13px] lg:flex">
             <NavLink href="/sok" label="Sök hantverkare" current={pathname === "/sok"} />
-            <NavLink href="#" label="Anslut företag" current={false} />
-            <NavLink href="#" label="Nyheter" current={false} />
+            <NavLink
+              href="/kommuner"
+              label="Kommuner"
+              current={pathname.startsWith("/kommun")}
+            />
+            <NavLink
+              href="/branscher"
+              label="Kategorier"
+              current={pathname === "/branscher"}
+            />
             <NavLink href="/kontakt" label="Kontakt" current={pathname === "/kontakt"} />
           </nav>
 
-          {/* Höger: språkväljare + login + anslut */}
+          {/* Höger: anslut-CTA.
+              Språkväljaren och "Logga in" låg här men var attrapper — sajten
+              har varken flerspråkighet eller inloggning. De är borttagna
+              hellre än länkade till en sida som inte finns. */}
           <div className="hidden shrink-0 items-center gap-2 lg:flex">
-            <button
-              type="button"
-              aria-label="Byt språk"
-              className="inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-[12px] font-medium text-[var(--text-muted)] transition hover:bg-[var(--surface-soft)] hover:text-[var(--text-strong)]"
-            >
-              <Globe aria-hidden className="size-3.5" />
-              SV
-            </button>
             <Link
-              href="#"
-              className="inline-flex h-9 items-center rounded-md border border-[var(--rule)] bg-white px-3 text-[13px] font-semibold text-[var(--text-strong)] transition hover:border-[var(--brand)]/40 hover:text-[var(--brand-ink)]"
-            >
-              Logga in
-            </Link>
-            <Link
-              href="#"
+              href="/kontakt"
               className="inline-flex h-9 items-center rounded-md bg-[var(--accent-cta)] px-3.5 text-[13px] font-semibold text-white transition hover:bg-[var(--accent-cta-2)] active:scale-[0.99]"
             >
               Anslut företag
@@ -123,7 +120,7 @@ export function SiteNav() {
           {/* Tablet — kompakta knappar utan språk */}
           <div className="hidden shrink-0 items-center gap-2 md:flex lg:hidden">
             <Link
-              href="#"
+              href="/kontakt"
               className="inline-flex h-9 items-center rounded-md bg-[var(--accent-cta)] px-3 text-[12px] font-semibold text-white transition hover:bg-[var(--accent-cta-2)]"
             >
               Anslut

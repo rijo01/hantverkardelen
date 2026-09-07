@@ -3,6 +3,11 @@ import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
 import { Hammer } from "lucide-react";
 import "./globals.css";
 import { SiteNav, MobileBottomNav } from "@/components/site-nav";
+import {
+  PERSONUPPGIFT_FORKLARING,
+  REGISTER_AR,
+  REGISTER_FORKLARING,
+} from "@/lib/dataprovenans";
 
 function LogoMark() {
   return (
@@ -87,9 +92,9 @@ export default function RootLayout({
                 </span>
               </div>
               <p className="max-w-sm text-sm text-[var(--text-muted)]">
-                Sveriges katalog för hem & hantverk. Aggregerad data från
-                offentliga register, person- och organisationsnummer maskas av
-                integritetsskäl.
+                Sveriges katalog för hem &amp; hantverk. Uppgifterna är hämtade
+                ur ett offentligt näringslivsregister från omkring{" "}
+                {REGISTER_AR} och kan vara inaktuella.
               </p>
             </div>
             <div className="space-y-2">
@@ -144,8 +149,20 @@ export default function RootLayout({
                 Integritet
               </p>
               <p className="text-sm text-[var(--text-muted)]">
-                Person- och organisationsnummer visas alltid maskat. Vi följer
-                GDPR och visar endast publika företagsuppgifter.
+                {PERSONUPPGIFT_FORKLARING}
+              </p>
+              <p className="text-sm text-[var(--text-muted)]">
+                {REGISTER_FORKLARING}
+              </p>
+              <p className="text-sm text-[var(--text-muted)]">
+                Vill du få en uppgift rättad eller borttagen?{" "}
+                <a
+                  href="/kontakt"
+                  className="underline hover:text-[var(--brand-ink)]"
+                >
+                  Kontakta oss
+                </a>
+                .
               </p>
             </div>
           </div>
@@ -153,7 +170,7 @@ export default function RootLayout({
             <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-5 text-xs text-[var(--text-dim)] sm:flex-row sm:items-center sm:justify-between">
               <span>
                 © {new Date().getFullYear()} Hantverkardelen · Data från
-                offentliga register
+                offentligt näringslivsregister, ca {REGISTER_AR}
               </span>
               <span className="text-[var(--text-faint)]">
                 Byggt i Sverige

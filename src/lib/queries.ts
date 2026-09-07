@@ -2,6 +2,7 @@ import { getSupabaseAnon } from "./supabase";
 import { branschSlug } from "./branscher";
 import { HANTVERK_BRANSCHER, HANTVERK_BRANSCHER_SET } from "./hantverk-branscher";
 import { kommunCodesForLan } from "./lan";
+import { foretagIsIndexable } from "./seo";
 
 type GeoFilter = { kommun?: string; postort?: string; lan?: string };
 
@@ -24,6 +25,30 @@ function applyGeoFilter<T>(q: T, opts: GeoFilter): T {
   return q;
 }
 
+type AeantFilter = { aeantMin?: number; aeantMax?: number };
+
+/**
+ * Applicera storleksfilter (antal anställda) på en query-builder.
+ *
+ * Filtret appliceras BARA när användaren faktiskt valt ett spann. Tidigare
+ * lade varje anropsplats på `.gte("aeant", Math.max(0, aeantMin ?? 0))`, dvs
+ * `.gte("aeant", 0)` som default. I SQL är NULL >= 0 inte sant, så de 3 762
+ * hantverksföretag som saknar uppgift om antal anställda (4,9 %) föll bort ur
+ * varje sökning och varje bransch-lista — utan att något i gränssnittet sa
+ * att ett filter var på. Det gjorde också att sidans egna tal inte stämde med
+ * katalogens: /branscher sa 1 689 trädgårdsföretag medan söket sa 1 550.
+ */
+function applyAeantFilter<T>(q: T, opts: AeantFilter): T {
+  let out = q;
+  if (opts.aeantMin != null && opts.aeantMin > 0) {
+    out = (out as unknown as { gte(c: string, v: number): T }).gte("aeant", opts.aeantMin);
+  }
+  if (opts.aeantMax != null && opts.aeantMax > 0) {
+    out = (out as unknown as { lte(c: string, v: number): T }).lte("aeant", opts.aeantMax);
+  }
+  return out;
+}
+
 /**
  * Datalager. Alla anrop går mot vyn `foretag_publik` via anon-nyckeln.
  *
@@ -33,12 +58,22 @@ function applyGeoFilter<T>(q: T, opts: GeoFilter): T {
  * (.eq("ng1", X)) guardas dessutom så att icke-hantverk-id ger tomt resultat
  * innan vi når DB.
  *
- * GDPR: kolumnen `orgnr_masked` är redan maskad vid källan. Vi gör ingen
- * ytterligare maskning här — single source of truth är databasvyn.
+ * Personuppgifter: vyn exponerar `orgnr` och `ar_enskild_firma`. Någon kolumn
+ * `orgnr_masked` finns inte — kommentaren här påstod det tidigare, vilket gav
+ * intrycket att numren maskades någonstans. Det görs ingen maskning alls.
+ * Skyddet ligger i vyn: för enskilda firmor (där numret är ett personnummer)
+ * är `orgnr` NULL, medan juridiska personers organisationsnummer visas i sin
+ * helhet. Se src/lib/dataprovenans.ts för hur detta beskrivs för användaren.
  *
- * Prestandanot: anon-rollen kör genom RLS overhead. Sortering på okindexerad
- * kolumn (aeant) och `count: estimated` på filtrerade vyer triggar statement
- * timeout. Vi sorterar därför enbart på PK (id) och undviker count på vy.
+ * Räkning: ALLA antal som visas för användaren kommer från head+count-frågor
+ * med `count: "exact"`. Använd ALDRIG `count: "estimated"` här — PostgREST
+ * räknar då exakt bara upp till max_rows (1000) och returnerar annars 1001,
+ * eller planerarens gissning som kan slå fel med tiotals procent (Stockholm:
+ * estimated 9377 vs exakt 5599). Det gav fabricerade "1 001" över hela sajten.
+ * Exakt count mättes till 330-430 ms även på de tyngsta filtren 2026-09-07.
+ *
+ * Samma tak gäller radhämtning: `.limit(n)` över 1000 kapas tyst av PostgREST,
+ * så antal får aldrig härledas ur `data.length` på en obegränsad mängd.
  */
 
 export type Foretag = {
@@ -131,12 +166,12 @@ function mapRow(row: Partial<PublikRow>): Foretag {
   };
 }
 
-/** Antal hantverksföretag i en kommun (estimated, inom Hantverkardelens nisch). */
+/** Antal hantverksföretag i en kommun — exakt count, inom Hantverkardelens nisch. */
 export async function countForetagInKommun(kommunCode: string): Promise<number> {
   const supa = getSupabaseAnon();
   const { count, error } = await supa
     .from(VIEW)
-    .select("id", { count: "estimated", head: true })
+    .select("id", { count: "exact", head: true })
     .eq("kommun", kommunCode)
     .in("ng1", HANTVERK_BRANSCHER);
   if (error) {
@@ -171,32 +206,36 @@ export async function listForetagInKommun(
 
 /**
  * Branschfördelning i en kommun — endast hantverks-branscher.
+ *
+ * En head+count-fråga per bransch i whitelisten (29 st) istället för att
+ * skanna rader och räkna i JS. Den gamla varianten hämtade `.limit(5000)`,
+ * men PostgREST kapar tyst vid max_rows=1000, så fördelningen för varje
+ * kommun med fler än 1000 hantverksföretag var systematiskt fel.
+ * Sidan är ISR-cachad (revalidate 86400) så kostnaden tas en gång per dygn.
  */
 export async function getBranschFordelning(
   kommunCode: string,
   limit = 20,
 ): Promise<Array<{ ng1: number; count: number }>> {
   const supa = getSupabaseAnon();
-  const { data, error } = await supa
-    .from(VIEW)
-    .select("ng1")
-    .eq("kommun", kommunCode)
-    .in("ng1", HANTVERK_BRANSCHER)
-    .limit(5000);
-  if (error || !data) {
-    console.error("getBranschFordelning", error);
-    return [];
-  }
-  const counts = new Map<number, number>();
-  for (const row of data as Array<{ ng1: number | null }>) {
-    if (row.ng1 == null || row.ng1 === 0) continue;
-    // Defensiv dubbelkoll mot whitelist.
-    if (!HANTVERK_BRANSCHER_SET.has(row.ng1)) continue;
-    counts.set(row.ng1, (counts.get(row.ng1) ?? 0) + 1);
-  }
-  return Array.from(counts.entries())
-    .map(([ng1, count]) => ({ ng1, count }))
-    .sort((a, b) => b.count - a.count)
+  const results = await Promise.all(
+    HANTVERK_BRANSCHER.map(async (ng1) => {
+      const { count, error } = await supa
+        .from(VIEW)
+        .select("id", { count: "exact", head: true })
+        .eq("kommun", kommunCode)
+        .eq("ng1", ng1);
+      if (error) {
+        // Hellre utelämna branschen än visa ett tal vi inte kan stå för.
+        console.error("getBranschFordelning", ng1, error);
+        return null;
+      }
+      return { ng1, count: count ?? 0 };
+    }),
+  );
+  return results
+    .filter((r): r is { ng1: number; count: number } => r != null && r.count > 0)
+    .sort((a, b) => b.count - a.count || a.ng1 - b.ng1)
     .slice(0, limit);
 }
 
@@ -229,9 +268,8 @@ export async function listForetagInKommunByBransch(
     .from(VIEW)
     .select(COLUMNS_LIST)
     .eq("kommun", kommunCode)
-    .eq("ng1", ng1)
-    .gte("aeant", Math.max(0, opts.aeantMin ?? 0));
-  if (opts.aeantMax && opts.aeantMax > 0) q = q.lte("aeant", opts.aeantMax);
+    .eq("ng1", ng1);
+  q = applyAeantFilter(q, opts);
 
   const { data, error } = await q
     .order("poang", { ascending: false, nullsFirst: false })
@@ -378,18 +416,16 @@ async function runKategoriBrowse(
   total?: number;
 }> {
   const supa = getSupabaseAnon();
-  const minAeant = Math.max(0, opts.aeantMin ?? 0);
   let q = supa
     .from(VIEW)
     .select(COLUMNS_LIST)
-    .in("ng1", ng1List as number[])
-    .gte("aeant", minAeant);
+    .in("ng1", ng1List as number[]);
   q = applyGeoFilter(q, opts);
-  if (opts.aeantMax && opts.aeantMax > 0) q = q.lte("aeant", opts.aeantMax);
+  q = applyAeantFilter(q, opts);
 
-  // Total-räkning parallellt med data-queryn. count: estimated använder PG-statistik
-  // och är snabb även när vanlig count: exact triggar statement_timeout (57014).
-  // Try/catch så att om den ändå skulle smälla får sajten ändå visa rows utan total.
+  // Total-räkning parallellt med data-queryn. count: exact — se modulnoten:
+  // estimated ljuger (kapar vid 1001 / planerargissning). Try/catch så att
+  // sajten hellre visar rader helt utan total än ett tal vi inte kan stå för.
   const dataQuery = q
     .order("poang", { ascending: false, nullsFirst: false })
     .order("aeant", { ascending: false, nullsFirst: false })
@@ -400,11 +436,10 @@ async function runKategoriBrowse(
     try {
       let cq = supa
         .from(VIEW)
-        .select("id", { count: "estimated", head: true })
-        .in("ng1", ng1List as number[])
-        .gte("aeant", minAeant);
+        .select("id", { count: "exact", head: true })
+        .in("ng1", ng1List as number[]);
       cq = applyGeoFilter(cq, opts);
-      if (opts.aeantMax && opts.aeantMax > 0) cq = cq.lte("aeant", opts.aeantMax);
+      cq = applyAeantFilter(cq, opts);
       const { count, error } = await cq;
       if (error || count == null) return undefined;
       return count;
@@ -453,29 +488,25 @@ async function runBranschSearch(
   matchedBransch: string | null;
   total?: number;
 }> {
-  const branschMin = Math.max(0, opts.aeantMin ?? 0);
-
   const supa = getSupabaseAnon();
   let qA = supa.from(VIEW).select(COLUMNS_LIST).in("ng1", branschInfo.ids);
   qA = applyGeoFilter(qA, opts);
-  qA = qA.gte("aeant", branschMin);
-  if (opts.aeantMax && opts.aeantMax > 0) qA = qA.lte("aeant", opts.aeantMax);
+  qA = applyAeantFilter(qA, opts);
   const branschQuery = qA
     .order("poang", { ascending: false, nullsFirst: false })
     .order("aeant", { ascending: false, nullsFirst: false })
     .order("cfarnr", { ascending: true })
     .range(from, to);
 
-  // Total-räkning för bransch-träffen — se runKategoriBrowse för rationale.
+  // Total-räkning för bransch-träffen — exakt count, se runKategoriBrowse.
   const totalPromise: Promise<number | undefined> = (async () => {
     try {
       let cq = supa
         .from(VIEW)
-        .select("id", { count: "estimated", head: true })
-        .in("ng1", branschInfo.ids)
-        .gte("aeant", branschMin);
+        .select("id", { count: "exact", head: true })
+        .in("ng1", branschInfo.ids);
       cq = applyGeoFilter(cq, opts);
-      if (opts.aeantMax && opts.aeantMax > 0) cq = cq.lte("aeant", opts.aeantMax);
+      cq = applyAeantFilter(cq, opts);
       const { count, error } = await cq;
       if (error || count == null) return undefined;
       return count;
@@ -496,9 +527,7 @@ async function runBranschSearch(
           })
           .in("ng1", HANTVERK_BRANSCHER);
         qB = applyGeoFilter(qB, opts);
-        const nameMin = Math.max(0, opts.aeantMin ?? 0);
-        qB = qB.gte("aeant", nameMin);
-        if (opts.aeantMax && opts.aeantMax > 0) qB = qB.lte("aeant", opts.aeantMax);
+        qB = applyAeantFilter(qB, opts);
         return qB
           .order("poang", { ascending: false, nullsFirst: false })
           .order("aeant", { ascending: false, nullsFirst: false })
@@ -587,8 +616,7 @@ async function runTextSearch(
     .in("ng1", HANTVERK_BRANSCHER);
   q = applyGeoFilter(q, opts);
   if (opts.ng1 && HANTVERK_BRANSCHER_SET.has(opts.ng1)) q = q.eq("ng1", opts.ng1);
-  q = q.gte("aeant", Math.max(0, opts.aeantMin ?? 0));
-  if (opts.aeantMax && opts.aeantMax > 0) q = q.lte("aeant", opts.aeantMax);
+  q = applyAeantFilter(q, opts);
 
   const textQuery = q
     .order("poang", { ascending: false, nullsFirst: false })
@@ -654,7 +682,6 @@ export async function listRelatedForetag(
     .eq("kommun", kommunCode)
     .eq("ng1", ng1)
     .neq("cfarnr", excludeCfarnr)
-    .gte("aeant", 0)
     .order("poang", { ascending: false, nullsFirst: false })
     .order("aeant", { ascending: false, nullsFirst: false })
     .order("cfarnr", { ascending: true })
@@ -746,8 +773,7 @@ async function fetchByCfarnrs(
     .in("cfarnr", cfarnrs)
     .in("ng1", HANTVERK_BRANSCHER);
   q = applyGeoFilter(q, opts);
-  if (opts.aeantMin && opts.aeantMin > 0) q = q.gte("aeant", opts.aeantMin);
-  if (opts.aeantMax && opts.aeantMax > 0) q = q.lte("aeant", opts.aeantMax);
+  q = applyAeantFilter(q, opts);
   const { data, error } = await q
     .order("poang", { ascending: false, nullsFirst: false })
     .order("aeant", { ascending: false, nullsFirst: false });
@@ -756,6 +782,57 @@ async function fetchByCfarnrs(
     return [];
   }
   return data as Partial<PublikRow>[];
+}
+
+/**
+ * Alla företag som passerar substans-grinden i lib/seo.ts — underlag för
+ * sitemap.
+ *
+ * SQL-villkoret är medvetet ett grovt förfilter, inte grinden. PostgREST kan
+ * bara testa `is null`, och databasen innehåller fält som är tomma men inte
+ * null — t.ex. epostadress = " ". Grinden foretagIsIndexable() trimmar och
+ * underkänner dem. Vi låter därför alltid TS-funktionen ha sista ordet, så
+ * att sitemap och sidornas robots-taggar per konstruktion säger samma sak.
+ *
+ * Pagineras eftersom PostgREST kapar varje svar vid max_rows (1000) och tyst
+ * skulle tappa resten.
+ */
+export async function listIndexableForetag(): Promise<
+  Array<Pick<Foretag, "cfarnr" | "firma" | "namn" | "infotext" | "webb" | "epostadress" | "poang">>
+> {
+  const supa = getSupabaseAnon();
+  const PAGE = 1000;
+  const out: Array<
+    Pick<Foretag, "cfarnr" | "firma" | "namn" | "infotext" | "webb" | "epostadress" | "poang">
+  > = [];
+  for (let offset = 0; ; offset += PAGE) {
+    const { data, error } = await supa
+      .from(VIEW)
+      .select("cfarnr,firma,namn,webb,epostadress,poang,infotext")
+      .in("ng1", HANTVERK_BRANSCHER)
+      .or("infotext.not.is.null,webb.not.is.null,epostadress.not.is.null,poang.gt.0")
+      .order("cfarnr", { ascending: true })
+      .range(offset, offset + PAGE - 1);
+    if (error) {
+      // Hellre ett brutet bygge än en sitemap som tyst tappar halva listan.
+      throw new Error(`listIndexableForetag misslyckades: ${error.message}`);
+    }
+    const rows = (data ?? []) as Array<Partial<PublikRow>>;
+    for (const r of rows) {
+      const kandidat = {
+        cfarnr: r.cfarnr ?? 0,
+        firma: r.firma ?? null,
+        namn: r.namn ?? null,
+        infotext: r.infotext ?? null,
+        webb: r.webb ?? null,
+        epostadress: r.epostadress ?? null,
+        poang: r.poang ?? null,
+      };
+      if (foretagIsIndexable(kandidat)) out.push(kandidat);
+    }
+    if (rows.length < PAGE) break;
+  }
+  return out;
 }
 
 export function foretagSlug(f: Pick<Foretag, "firma" | "namn" | "cfarnr">): string {

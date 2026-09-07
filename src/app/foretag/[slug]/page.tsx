@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import {
   ArrowRight,
   Building2,
   ExternalLink,
   Globe,
   Hash,
+  Info,
   Mail,
   MapPin,
   Phone,
@@ -18,6 +19,7 @@ import {
 import { kommunByCode } from "@/lib/kommuner";
 import {
   branschPageSlug,
+  foretagSlug,
   getForetagByCfarnr,
   listRelatedForetag,
   listSokordForCfarnr,
@@ -41,7 +43,14 @@ import {
   shortWebb,
 } from "@/lib/foretag-format";
 import { isPersonalOrgnr } from "@/lib/jurform";
+import {
+  KONTAKT_NOTIS,
+  PERSONUPPGIFT_FORKLARING,
+  REGISTER_AR,
+  REGISTER_FORKLARING,
+} from "@/lib/dataprovenans";
 import { sanitizeInfotext, safeLogotypUrl } from "@/lib/sanitize-html";
+import { foretagIsIndexable, robotsFor } from "@/lib/seo";
 
 export const revalidate = 86400;
 
@@ -68,8 +77,15 @@ export async function generateMetadata({
   return {
     title,
     description,
-    alternates: { canonical: `${SITE_URL}/foretag/${slug}` },
+    // Kanonisk URL byggs ur företagsnamnet, inte ur inkommande slug: routen
+    // matchar bara på det avslutande cfarnr, så /foretag/vadsomhelst-12345
+    // svarade 200 och satte canonical på sig själv. Varje felstavning blev
+    // en egen indexerbar dubblett. Nu pekar alla varianter på samma adress.
+    alternates: { canonical: `${SITE_URL}/foretag/${foretagSlug(f)}` },
     openGraph: { title, description, type: "website", locale: "sv_SE" },
+    // Grind 2, se lib/seo.ts — en företagssida utan substans utöver
+    // registerraden ska inte indexeras.
+    robots: robotsFor(foretagIsIndexable(f)),
   };
 }
 
@@ -81,6 +97,14 @@ export default async function ForetagPage({ params }: { params: Params }) {
   // nischen returnerar null och route:n får 404 (samma pattern som vårddelen).
   const f = await getForetagByCfarnr(cfarnr);
   if (!f) notFound();
+
+  // Routen matchar bara på det avslutande cfarnr, så varje påhittad slug med
+  // rätt id svarade 200 — obegränsat med dubbletter av samma sida. Skicka
+  // 301 till den kanoniska adressen istället för att bara peka canonical dit.
+  // foretagSlug() är deterministisk och slutar alltid på "-{cfarnr}", så
+  // omdirigeringen kan inte loopa.
+  const canonicalSlug = foretagSlug(f);
+  if (slug !== canonicalSlug) permanentRedirect(`/foretag/${canonicalSlug}`);
 
   const kommun = f.kommun ? kommunByCode(f.kommun) : null;
   const branschName = f.ng1 ? await getBranschName(f.ng1) : null;
@@ -222,9 +246,12 @@ export default async function ForetagPage({ params }: { params: Params }) {
                     Utvald
                   </span>
                 )}
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-600/30 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-800">
+                <span
+                  className="inline-flex items-center gap-1.5 rounded-full border border-[var(--rule)] bg-[var(--surface-soft)] px-2.5 py-1 text-[11px] font-semibold text-[var(--text-muted)]"
+                  title={REGISTER_FORKLARING}
+                >
                   <ShieldCheck className="size-3.5" aria-hidden />
-                  Officiell registerdata
+                  Registerdata {REGISTER_AR}
                 </span>
                 {legalForm && (
                   <span className="inline-flex items-center rounded-full border border-[var(--rule)] bg-white px-2.5 py-1 text-[11px] font-medium text-[var(--text-muted)]">
@@ -279,6 +306,7 @@ export default async function ForetagPage({ params }: { params: Params }) {
                 icon={<Phone className="size-4" aria-hidden />}
                 label="Ring"
                 hint={f.tel}
+                title={KONTAKT_NOTIS}
                 variant="primary"
               />
             )}
@@ -476,6 +504,17 @@ export default async function ForetagPage({ params }: { params: Params }) {
               }
             />
           </dl>
+          {(f.tel || f.epostadress || webb || f.gatuadress) && (
+            <p className="mt-5 flex items-start gap-2 rounded-xl border border-[var(--rule)] bg-[var(--surface-soft)] p-3 text-xs leading-relaxed text-[var(--text-muted)]">
+              <Info aria-hidden className="mt-0.5 size-3.5 shrink-0" />
+              <span>
+                <span className="font-semibold text-[var(--text-body)]">
+                  {KONTAKT_NOTIS}.
+                </span>{" "}
+                {REGISTER_FORKLARING}
+              </span>
+            </p>
+          )}
         </div>
 
         <div className="rd-fade-up rd-fade-up-delay-2 rd-card p-6 sm:p-7">
@@ -536,10 +575,17 @@ export default async function ForetagPage({ params }: { params: Params }) {
               }
             />
           </dl>
-          <p className="mt-5 border-t border-[var(--rule-soft)] pt-4 text-xs text-[var(--text-dim)]">
+          <p className="mt-5 border-t border-[var(--rule-soft)] pt-4 text-xs leading-relaxed text-[var(--text-dim)]">
             {personalOrgnr
-              ? "Organisationsnummer döljs eftersom det är ett personnummer (enskild firma). Företagsdata kommer från offentliga register."
-              : "Företagsdata kommer från offentliga register och SCB."}
+              ? "Inget organisationsnummer visas — för en enskild firma är numret ett personnummer, och det hämtas aldrig ut ur databasen. "
+              : ""}
+            {PERSONUPPGIFT_FORKLARING} Uppgifterna kommer från ett offentligt
+            näringslivsregister från omkring {REGISTER_AR} och kan vara
+            inaktuella.{" "}
+            <Link href="/kontakt" className="underline hover:text-[var(--brand-ink)]">
+              Kontakta oss
+            </Link>{" "}
+            för rättelse eller borttagning.
           </p>
         </div>
       </section>
@@ -696,12 +742,14 @@ function buildFaq({
     if (f.webb) ch.push(`hemsida ${f.webb}`);
     items.push({
       q: `Hur kontaktar jag ${name}?`,
-      a: `Du når ${name} via ${ch.join(", ")}.`,
+      a: `Enligt registret når du ${name} via ${ch.join(", ")}. Uppgiften är ` +
+        `hämtad från ett offentligt näringslivsregister från omkring ` +
+        `${REGISTER_AR} och kan vara inaktuell.`,
     });
   } else {
     items.push({
       q: `Hur kontaktar jag ${name}?`,
-      a: `Vi har inga publika kontaktuppgifter för ${name} just nu. Företagsuppgifter kan ändras — kontrollera officiella register vid behov.`,
+      a: `Vi har inga publika kontaktuppgifter för ${name}. Uppgifterna kommer från ett register från omkring ${REGISTER_AR} och kan vara ofullständiga eller inaktuella.`,
     });
   }
 
@@ -720,7 +768,7 @@ function buildFaq({
   } else if (f.orgnr) {
     items.push({
       q: `Vad är organisationsnumret för ${name}?`,
-      a: `Organisationsnumret för ${name} är ${f.orgnr}. Uppgiften kommer från officiella register.`,
+      a: `Organisationsnumret för ${name} är ${f.orgnr}. Uppgiften kommer från ett offentligt näringslivsregister från omkring ${REGISTER_AR}.`,
     });
   } else {
     items.push({
@@ -737,6 +785,7 @@ function ActionButton({
   icon,
   label,
   hint,
+  title,
   external = false,
   variant,
 }: {
@@ -744,6 +793,8 @@ function ActionButton({
   icon: React.ReactNode;
   label: string;
   hint?: string;
+  /** Hovertext — används för proveniensmärkning av kontaktuppgifter. */
+  title?: string;
   external?: boolean;
   variant: "primary" | "secondary" | "ghost";
 }) {
@@ -759,6 +810,7 @@ function ActionButton({
     <a
       href={href}
       {...(external ? { target: "_blank", rel: "nofollow noopener" } : {})}
+      {...(title ? { title } : {})}
       className={`${base} ${styles}`}
     >
       {icon}

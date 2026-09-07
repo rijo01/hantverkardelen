@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { ArrowLeft, ArrowRight, Layers } from "lucide-react";
 import { kommunBySlug } from "@/lib/kommuner";
 import { getBranschName } from "@/lib/branscher";
 import {
+  branschPageSlug,
   listForetagInKommunByBransch,
   parseBranschSlug,
 } from "@/lib/queries";
@@ -12,6 +13,11 @@ import { isHantverkBransch } from "@/lib/hantverk-branscher";
 import { JsonLd, buildBreadcrumb } from "@/components/json-ld";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { CompanyCard, CompanyCardList } from "@/components/company-card";
+import {
+  hubIsIndexable,
+  robotsFor,
+  snapshotKommunBranschCount,
+} from "@/lib/seo";
 
 export const revalidate = 86400;
 
@@ -33,13 +39,22 @@ export async function generateMetadata({
   const name = (await getBranschName(ng1)) ?? `SNI ${ng1}`;
   const title = `${name} i ${kommun.name}`;
   const description = `Hantverksföretag inom ${name.toLowerCase()} i ${kommun.name} kommun. Hitta lokala bygg-, el-, VVS- och hantverksföretag, kontaktuppgifter och adresser.`;
+  // Kanonisk URL byggs ur branschnamnet, inte ur inkommande slug. Routen
+  // matchar på det avslutande id:t, så /kommun/x/vadsomhelst-43210 svarade
+  // 200 och pekade canonical på sig själv — obegränsat med dubbletter av
+  // samma sida. Nu pekar alla varianter på en och samma adress.
+  const canonicalSlug = branschPageSlug(name, ng1);
   return {
     title,
     description,
     alternates: {
-      canonical: `${SITE_URL}/kommun/${kommun.slug}/${bransch}`,
+      canonical: `${SITE_URL}/kommun/${kommun.slug}/${canonicalSlug}`,
     },
     openGraph: { title, description, type: "website", locale: "sv_SE" },
+    // Grind 1, se lib/seo.ts.
+    robots: robotsFor(
+      hubIsIndexable(snapshotKommunBranschCount(kommun.code, ng1)),
+    ),
   };
 }
 
@@ -69,6 +84,25 @@ export default async function BranschPage({
   if (!isHantverkBransch(ng1)) notFound();
 
   const branschName = (await getBranschName(ng1)) ?? `SNI ${ng1}`;
+
+  // Samma dubblettproblem som på företagssidan: routen matchar på det
+  // avslutande branschid:t, så /kommun/x/vadsomhelst-43210 svarade 200.
+  // 301 till kanonisk slug, med sökparametrarna i behåll så att paginering
+  // och storleksfilter överlever omdirigeringen.
+  const canonicalBransch = branschPageSlug(branschName, ng1);
+  if (bransch !== canonicalBransch) {
+    const qs = new URLSearchParams();
+    for (const [k, v] of [
+      ["page", sp.page],
+      ["aeantMin", sp.aeantMin],
+      ["aeantMax", sp.aeantMax],
+    ] as const) {
+      if (v) qs.set(k, v);
+    }
+    const suffix = qs.toString() ? `?${qs}` : "";
+    permanentRedirect(`/kommun/${kommun.slug}/${canonicalBransch}${suffix}`);
+  }
+
   const page = Math.max(1, Number(sp.page) || 1);
   const aeantMin = sp.aeantMin ? Number(sp.aeantMin) : undefined;
   const aeantMax = sp.aeantMax ? Number(sp.aeantMax) : undefined;
