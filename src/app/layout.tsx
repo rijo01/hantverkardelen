@@ -8,6 +8,8 @@ import {
   REGISTER_AR,
   REGISTER_FORKLARING,
 } from "@/lib/dataprovenans";
+import { GoogleAnalytics } from "@next/third-parties/google";
+import { GA_ID } from "@/lib/site";
 
 function LogoMark() {
   return (
@@ -183,6 +185,7 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
         />
+        <GoogleAnalytics gaId={GA_ID} />
       </body>
     </html>
   );
