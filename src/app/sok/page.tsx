@@ -14,6 +14,8 @@ import { JsonLd, buildBreadcrumb } from "@/components/json-ld";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { SearchBar } from "@/components/search-bar";
 import { CompanyCard, CompanyCardList } from "@/components/company-card";
+import { loadAktivaOverlays, overlayFor } from "@/lib/overlay";
+import { ordnaBoostade } from "@/lib/overlay-rankning";
 import { FilterPanel, buildHref, type FilterState } from "@/components/filter-panel";
 
 export const dynamic = "force-dynamic";
@@ -161,17 +163,27 @@ async function ResultsAsync({
   const page = Math.max(1, Number(pageStr) || 1);
   const kategori = kategoriSlug ? getKategoriBySlug(kategoriSlug) : null;
 
-  const { rows, hasMore, matchedBransch, total } = await searchForetag(query, {
-    kommun: kommun?.code,
-    lan: lan?.code,
-    postort,
-    ng1,
-    ng1List: kategori?.ng1,
-    aeantMin,
-    aeantMax,
-    page,
-    pageSize: PAGE_SIZE,
-  });
+  // Söksidan är force-dynamic och läser alltså overlay vid VARJE request. Det
+  // är avsiktligt: en publicering ska synas i söket direkt, och det finns ingen
+  // cache här att revalidera.
+  const [
+    { rows: oboostade, hasMore, matchedBransch, total },
+    overlays,
+  ] = await Promise.all([
+    searchForetag(query, {
+      kommun: kommun?.code,
+      lan: lan?.code,
+      postort,
+      ng1,
+      ng1List: kategori?.ng1,
+      aeantMin,
+      aeantMax,
+      page,
+      pageSize: PAGE_SIZE,
+    }),
+    loadAktivaOverlays(),
+  ]);
+  const rows = ordnaBoostade(oboostade, overlays);
 
   // Header-text för geo-filter: kommun > postort > lan (matchar applyGeoFilter mutex).
   const geoLabel = kommun
@@ -260,6 +272,7 @@ async function ResultsAsync({
               <li key={f.id}>
                 <CompanyCard
                   foretag={f}
+                  overlay={overlayFor(f, overlays)}
                   rank={offset + i + 1}
                   branschName={matchedBransch ?? branschName}
                   kommunName={k?.name}
