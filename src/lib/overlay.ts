@@ -5,6 +5,7 @@ import { getSupabaseAdmin } from "./supabase-admin";
 import { branschPageSlug, foretagSlug } from "./queries";
 import { kommunByCode } from "./kommuner";
 import { getBranschNamesBulk } from "./branscher";
+import { HANTVERK_BRANSCHER } from "./hantverk-branscher";
 import {
   CONTRACT_VERSION,
   arPubliktSynlig,
@@ -410,6 +411,11 @@ export async function overlayRevalidatePaths(
   );
 
   const paths = new Set<string>();
+
+  // Sitemapen listar betalda profiler (se src/app/sitemap.ts). En publicering
+  // eller avpublicering ändrar den listan, så routen måste med.
+  paths.add("/sitemap.xml");
+
   for (const r of rader) {
     if (r.cfarnr == null) continue;
     paths.add(`/foretag/${foretagSlug({ firma: r.firma, namn: r.namn, cfarnr: r.cfarnr })}`);
@@ -423,4 +429,75 @@ export async function overlayRevalidatePaths(
     }
   }
   return [...paths];
+}
+
+// ── Indexerbarhet ───────────────────────────────────────────────────────────
+
+/**
+ * Sidorna som en BETALD PROFIL gör indexerbara, som sitemap-sökvägar.
+ *
+ * generateMetadata öppnar robots-grinden för en overlay-kund (se
+ * overlayGerSubstans i overlay-rankning.ts). Utan den här funktionen skulle den
+ * sidan svara `index, follow` men SAKNAS I SITEMAPEN, eftersom
+ * listIndexableForetag() bara känner registerfälten — infotext, webb,
+ * epostadress och poang. En kund vars registerrad är naken hade alltså blivit
+ * indexerbar utan att någonsin annonseras.
+ *
+ * Det är samma invariant som seo.ts vilar på, åt andra hållet: sitemapen och
+ * robots-metan måste följa SAMMA regel. Sitemapen unionerar därför den här
+ * listan med sitt vanliga urval.
+ *
+ * NISCHGRINDEN GÄLLER. getForetagByCfarnr() filtrerar på HANTVERK_BRANSCHER och
+ * 404:ar allt utanför; en URL i sitemapen som svarar 404 vore ett sämre fel än
+ * det vi löser.
+ */
+export async function overlayIndexerbaraSokvagar(): Promise<string[]> {
+  const lager = await loadAktivaOverlays();
+
+  const cfarnr: string[] = [];
+  const orgnr: string[] = [];
+  for (const [nyckel, rad] of lager.byCfar) if (harInnehall(rad)) cfarnr.push(nyckel);
+  for (const [nyckel, rad] of lager.byOrgnr) if (harInnehall(rad)) orgnr.push(nyckel);
+  if (cfarnr.length === 0 && orgnr.length === 0) return [];
+
+  const klient = getSupabaseAnon();
+  const träffar: Array<{ cfarnr: number | null; firma: string | null; namn: string | null }> = [];
+
+  if (cfarnr.length > 0) {
+    const { data } = await klient
+      .from(KATALOG_VY)
+      .select("cfarnr,firma,namn")
+      .in("cfarnr", cfarnr.map(Number))
+      .in("ng1", HANTVERK_BRANSCHER);
+    träffar.push(...((data ?? []) as typeof träffar));
+  }
+
+  if (orgnr.length > 0) {
+    // Båda orgnr-formerna — registret lagrar bindestrecksvarianten.
+    const { data } = await klient
+      .from(KATALOG_VY)
+      .select("cfarnr,firma,namn")
+      .in("orgnr", orgnr.flatMap(orgnrVarianter))
+      .in("ng1", HANTVERK_BRANSCHER)
+      .limit(500);
+    träffar.push(...((data ?? []) as typeof träffar));
+  }
+
+  const ut = new Set<string>();
+  for (const r of träffar) {
+    if (r.cfarnr == null) continue;
+    ut.add(`/foretag/${foretagSlug({ firma: r.firma, namn: r.namn, cfarnr: r.cfarnr })}`);
+  }
+  return [...ut];
+}
+
+/** Bär raden något besökaren faktiskt kan läsa? */
+function harInnehall(rad: OverlayProfilRow): boolean {
+  return Boolean(
+    rad.info_html ||
+      rad.hemsida ||
+      rad.logo_url ||
+      (rad.keywords?.length ?? 0) > 0 ||
+      (rad.kategorier?.length ?? 0) > 0,
+  );
 }

@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { ALL_KOMMUNER } from "@/lib/kommuner";
+import { overlayIndexerbaraSokvagar } from "@/lib/overlay";
 import { getBranschNamesBulk } from "@/lib/branscher";
 import { HANTVERK_BRANSCHER } from "@/lib/hantverk-branscher";
 import {
@@ -27,7 +28,10 @@ import {
  * så sitemap och noindex kan inte glida isär utan att bygget faller.
  */
 
-export const revalidate = 86400;
+// En timme, inte ett dygn: sitemapen listar numera betalda profiler, och den
+// listan ändras när en order publiceras. /api/overlay/publish revaliderar
+// dessutom routen direkt, så en ny kund är med inom sekunder.
+export const revalidate = 3600;
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://hantverkardelen.se";
 
@@ -78,6 +82,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }
 
   // ---- Grind 2: företagssidor med substans --------------------------------
+  //
+  // BETALDA PROFILER läggs till ovanpå grinden. generateMetadata öppnar
+  // robots-grinden för en overlay-kund; utan det här skulle den sidan svara
+  // index,follow men saknas i sitemapen, eftersom listIndexableForetag() bara
+  // känner registerfälten. Sitemapen och robots-metan måste följa samma regel.
+  const redanMed = new Set<string>();
   const foretag = await listIndexableForetag();
   for (const f of foretag) {
     if (!foretagIsIndexable(f)) {
@@ -87,11 +97,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           "grinden i lib/seo.ts har glidit isär.",
       );
     }
-    push(`/foretag/${foretagSlug(f)}`, {
+    const path = `/foretag/${foretagSlug(f)}`;
+    redanMed.add(path);
+    push(path, {
       lastModified: now,
       changeFrequency: "monthly",
       priority: 0.5,
     });
+  }
+
+  for (const path of await overlayIndexerbaraSokvagar()) {
+    // En kund kan mycket väl redan ha kvalificerat sig på registerdatan.
+    if (redanMed.has(path)) continue;
+    push(path, { lastModified: now, changeFrequency: "monthly", priority: 0.6 });
   }
 
   return entries;
