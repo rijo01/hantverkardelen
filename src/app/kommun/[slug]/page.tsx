@@ -14,6 +14,8 @@ import { JsonLd, buildBreadcrumb } from "@/components/json-ld";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { hubIsIndexable, robotsFor, snapshotKommunCount } from "@/lib/seo";
 import { CompanyCard, CompanyCardList } from "@/components/company-card";
+import { loadAktivaOverlays, overlayFor } from "@/lib/overlay";
+import { ordnaBoostade } from "@/lib/overlay-rankning";
 
 export const revalidate = 86400;
 
@@ -50,11 +52,16 @@ export default async function KommunPage({ params }: { params: Params }) {
   // Exakt count vid render. Tidigare lästes ett förberäknat värde ur stats.ts
   // när det fanns — och just de värdena var 1001-artefakter från
   // count=estimated. Nu räknar vi alltid, det kostar ~350 ms en gång per dygn.
-  const [liveTotal, fordelning, foretagSample] = await Promise.all([
+  const [liveTotal, fordelning, oboostadeForetag, overlays] = await Promise.all([
     countForetagInKommun(kommun.code),
     getBranschFordelning(kommun.code, 24),
     listForetagInKommun(kommun.code, 12),
+    loadAktivaOverlays(),
   ]);
+
+  // Overlay-vikten läggs ovanpå sajtens ordning (störst arbetsgivare först).
+  // Stabil sortering: den som inte köpt framhävning står kvar där den stod.
+  const foretagSample = ordnaBoostade(oboostadeForetag, overlays);
 
   const branschNames = await getBranschNamesBulk(fordelning.map((f) => f.ng1));
 
@@ -153,6 +160,7 @@ export default async function KommunPage({ params }: { params: Params }) {
                 <li key={f.id}>
                   <CompanyCard
                     foretag={f}
+                    overlay={overlayFor(f, overlays)}
                     rank={i + 1}
                     kommunName={kommun.name}
                   />
