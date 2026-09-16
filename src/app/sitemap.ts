@@ -29,8 +29,14 @@ import {
  */
 
 // En timme, inte ett dygn: sitemapen listar numera betalda profiler, och den
-// listan ändras när en order publiceras. /api/overlay/publish revaliderar
-// dessutom routen direkt, så en ny kund är med inom sekunder.
+// listan ändras när en order publiceras.
+//
+// Detta ÄR fördröjningen. /api/overlay/publish anropar visserligen
+// revalidatePath("/sitemap.xml"), men mätt mot produktion 2026-09-16 slog det
+// inte igenom på 300 sekunder — x-vercel-cache svarade HIT hela vägen.
+// Sidrevalideringen fungerar; metadata-routens edge-cache gör det inte.
+// Ofarligt: en sitemap är en ledtråd, och det som måste gälla omedelbart är att
+// sidan inte svarar noindex.
 export const revalidate = 3600;
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://hantverkardelen.se";
