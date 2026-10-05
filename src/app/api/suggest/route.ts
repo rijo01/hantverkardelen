@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAnon } from "@/lib/supabase";
 import { foretagSlug } from "@/lib/queries";
+import { kontaktsparrFilter } from "@/lib/kontaktsparr";
 import { ALL_KOMMUNER } from "@/lib/kommuner";
 import { TOP_BRANSCHER } from "@/lib/stats";
 import { HANTVERK_BRANSCHER } from "@/lib/hantverk-branscher";
@@ -73,7 +74,8 @@ type Suggestion =
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const raw = (url.searchParams.get("q") ?? "").trim();
-  if (raw.length < 2) {
+  // Kontaktspärren: en spärrad uppgift ger inga förslag. Samma grind som /sok.
+  if (raw.length < 2 || (await kontaktsparrFilter()).sparradFraga(raw)) {
     return NextResponse.json({ suggestions: [] }, {
       headers: { "Cache-Control": "public, max-age=10" },
     });
