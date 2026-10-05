@@ -2,6 +2,8 @@ import { getSupabaseAnon } from "./supabase";
 import { branschSlug } from "./branscher";
 import { HANTVERK_BRANSCHER, HANTVERK_BRANSCHER_SET } from "./hantverk-branscher";
 import { kommunCodesForLan } from "./lan";
+import { filtreraSokord, kontaktsparrFilter } from "./kontaktsparr";
+import type { KontaktsparrFilter } from "./overlay-contract";
 import { foretagIsIndexable } from "./seo";
 
 type GeoFilter = { kommun?: string; postort?: string; lan?: string };
@@ -141,7 +143,15 @@ const COLUMNS =
 const COLUMNS_LIST =
   "id,cfarnr,firma,namn,gatuadress,postnr,postort,tel,webb,epostadress,ng1,kommun,aeant,orgnr,ar_enskild_firma,jurform,poang,logotyp,kontaktperson";
 
-function mapRow(row: Partial<PublikRow>): Foretag {
+/**
+ * Registerraden som sajten ser den.
+ *
+ * KONTAKTSPÄRREN TILLÄMPAS HÄR, och bara här: varje läsning av registret går
+ * genom mapRow, så profilsidan, korten i listorna, FAQ:n och JSON-LD får alla
+ * redan filtrerade värden. Ett spärrat nummer i `tel` blir null; i `infotext`
+ * och `kontaktperson` skrubbas det bort. Se lib/kontaktsparr.ts.
+ */
+function mapRow(row: Partial<PublikRow>, kf: KontaktsparrFilter): Foretag {
   return {
     id: row.id ?? 0,
     cfarnr: row.cfarnr ?? 0,
@@ -150,9 +160,9 @@ function mapRow(row: Partial<PublikRow>): Foretag {
     gatuadress: row.gatuadress ?? null,
     postnr: row.postnr ?? null,
     postort: row.postort ?? null,
-    tel: row.tel ?? null,
+    tel: kf.falt(row.tel ?? null),
     webb: row.webb ?? null,
-    epostadress: row.epostadress ?? null,
+    epostadress: kf.falt(row.epostadress ?? null),
     ng1: row.ng1 ?? null,
     kommun: row.kommun ?? null,
     aeant: row.aeant ?? null,
@@ -160,10 +170,16 @@ function mapRow(row: Partial<PublikRow>): Foretag {
     arEnskildFirma: row.ar_enskild_firma ?? false,
     jurform: row.jurform ?? null,
     poang: row.poang ?? null,
-    infotext: row.infotext ?? null,
+    infotext: kf.skrubba(row.infotext ?? null),
     logotyp: row.logotyp ?? null,
-    kontaktperson: row.kontaktperson ?? null,
+    kontaktperson: kf.skrubba(row.kontaktperson ?? null),
   };
+}
+
+/** mapRow med request-filtret bundet, för `.map()`. */
+async function mapper(): Promise<(row: Partial<PublikRow>) => Foretag> {
+  const kf = await kontaktsparrFilter();
+  return (row) => mapRow(row, kf);
 }
 
 /** Antal hantverksföretag i en kommun — exakt count, inom Hantverkardelens nisch. */
@@ -201,7 +217,7 @@ export async function listForetagInKommun(
     console.error("listForetagInKommun", error);
     return [];
   }
-  return (data as Partial<PublikRow>[]).map(mapRow);
+  return (data as Partial<PublikRow>[]).map(await mapper());
 }
 
 /**
@@ -283,7 +299,7 @@ export async function listForetagInKommunByBransch(
   const rows = data as Partial<PublikRow>[];
   const hasMore = rows.length > pageSize;
   return {
-    rows: rows.slice(0, pageSize).map(mapRow),
+    rows: rows.slice(0, pageSize).map(await mapper()),
     hasMore,
     page,
     pageSize,
@@ -387,6 +403,13 @@ export async function searchForetag(
     return { rows: [], hasMore: false, page, pageSize };
   }
 
+  // Kontaktspärren: en sökning PÅ en spärrad uppgift ger noll träffar. Annars
+  // vore sajtens sök en väg att koppla ihop numret med bolaget igen, även om
+  // numret självt aldrig visas.
+  if ((await kontaktsparrFilter()).sparradFraga(cleaned)) {
+    return { rows: [], hasMore: false, page, pageSize };
+  }
+
   const isSingleWord = !/\s/.test(cleaned);
   const branschInfo =
     !opts.ng1 && !opts.ng1List && isSingleWord
@@ -457,7 +480,7 @@ async function runKategoriBrowse(
   const rows = data as Partial<PublikRow>[];
   const hasMore = rows.length > pageSize;
   return {
-    rows: rows.slice(0, pageSize).map(mapRow),
+    rows: rows.slice(0, pageSize).map(await mapper()),
     hasMore,
     page,
     pageSize,
@@ -581,7 +604,7 @@ async function runBranschSearch(
   const merged = [...pageBransch, ...extras].slice(0, pageSize);
 
   return {
-    rows: merged.map(mapRow),
+    rows: merged.map(await mapper()),
     hasMore: hasMoreFromBransch,
     page,
     pageSize,
@@ -657,7 +680,7 @@ async function runTextSearch(
 
   const merged = [...pageRows, ...extras].slice(0, pageSize);
   return {
-    rows: merged.map(mapRow),
+    rows: merged.map(await mapper()),
     hasMore,
     page,
     pageSize,
@@ -687,7 +710,7 @@ export async function listRelatedForetag(
     .order("cfarnr", { ascending: true })
     .limit(limit);
   if (error || !data) return [];
-  return (data as Partial<PublikRow>[]).map(mapRow);
+  return (data as Partial<PublikRow>[]).map(await mapper());
 }
 
 /**
@@ -710,7 +733,7 @@ export async function getForetagByCfarnr(cfarnr: number): Promise<Foretag | null
     if (error && error.code !== "PGRST116") console.error("getForetagByCfarnr", error);
     return null;
   }
-  return mapRow(data as PublikRow);
+  return mapRow(data as PublikRow, await kontaktsparrFilter());
 }
 
 async function searchSokordCfarnrs(query: string): Promise<number[]> {
@@ -719,18 +742,23 @@ async function searchSokordCfarnrs(query: string): Promise<number[]> {
   const safe = cleaned.replace(/[%_]/g, " ").trim();
 
   const supa = getSupabaseAnon();
-  const { data, error } = await supa
-    .from("sokordtable")
-    .select("cfarnr")
-    .ilike("sokord", `%${safe}%`)
-    .limit(40);
+  const [{ data, error }, kf] = await Promise.all([
+    supa.from("sokordtable").select("cfarnr,sokord").ilike("sokord", `%${safe}%`).limit(40),
+    kontaktsparrFilter(),
+  ]);
   if (error || !data) {
     if (error) console.warn("searchSokordCfarnrs (RLS?)", error.message);
     return [];
   }
+  // Kontaktspärren: ett sökord matchar bara om det FORTFARANDE matchar efter
+  // att den spärrade uppgiften skrubbats bort. Annars hittas bolaget via ett
+  // nummer som inte längre syns på sidan.
+  const nal = safe.toLowerCase();
   const ids = new Set<number>();
-  for (const row of data as Array<{ cfarnr: number | null }>) {
-    if (row.cfarnr != null) ids.add(row.cfarnr);
+  for (const row of data as Array<{ cfarnr: number | null; sokord: string | null }>) {
+    if (row.cfarnr == null) continue;
+    if (!(kf.skrubba(row.sokord) ?? "").toLowerCase().includes(nal)) continue;
+    ids.add(row.cfarnr);
   }
   return Array.from(ids);
 }
@@ -758,7 +786,7 @@ export async function listSokordForCfarnr(cfarnr: number): Promise<string[]> {
     out.push(s);
     if (out.length >= 50) break;
   }
-  return out;
+  return filtreraSokord(out, await kontaktsparrFilter());
 }
 
 async function fetchByCfarnrs(
