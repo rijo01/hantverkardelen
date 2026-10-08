@@ -1,3 +1,4 @@
+import { sidhuvudetsLogotyp } from "@/lib/overlay-contract";
 import type { Metadata } from "next";
 import { visatTelefon as visatTelefonFor } from "@/lib/visat-telefon";
 import Link from "next/link";
@@ -150,7 +151,6 @@ export default async function ForetagSida({
   const featuredIRegistret = isFeatured(f);
   const orgnrInfo = orgnrDisplay(f);
   const sanitizedInfotext = sanitizeInfotext(f.infotext);
-  const logoUrl = safeLogotypUrl(f.logotyp);
   const personalOrgnr = isPersonalOrgnr(f.jurform);
 
   // Overlay: den betalda profilen. I förhandsvisning läses UTKASTET i stället
@@ -175,6 +175,12 @@ export default async function ForetagSida({
   // alls i förhandsvisningsläget. Att i stället visa den publika sidan hade
   // gjort förhandsvisningen till en självkanonikaliserande dubblett.
   if (previewToken && !overlay) notFound();
+
+  // SIDHUVUDETS LOGOTYP: den köpta före registrets. Regeln är kontraktets
+  // sidhuvudetsLogotyp() — samma på alla tre klustersajter. Förut visades bara
+  // registrets bild här, och en köpt logotyp syntes först i det sponsrade
+  // kortet längre ner. `overlay` är utkastet bakom en förhandsvisning.
+  const logoUrl = sidhuvudetsLogotyp(overlay, safeLogotypUrl(f.logotyp))?.url ?? null;
 
   // "Utvald" gäller båda betallagren: registrets poang och overlay-köpets
   // featured. En kund som köpt framhävning ska se framhävd ut.
