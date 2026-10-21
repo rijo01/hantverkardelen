@@ -71,10 +71,36 @@ for (const m of kommunerSrc.matchAll(/\["(\d{3,4})",\s*"([^"]+)"\]/g)) {
 
 const branschCsv = HANTVERK_BRANSCHER.join(",");
 
+// Offentliga juridiska former (stat, kommun, region) räknas inte — samma
+// villkor som sajtens frågor, NISCH_JURFORM_VILLKOR i hantverk-branscher.ts.
+// Koderna läses ur källan; villkoret i övrigt måste hållas lika där.
+const jurformMatch = hantverkSrc.match(
+  /export const OFFENTLIGA_JURFORMER[^=]*=\s*\[([^\]]*)\]/,
+);
+if (!jurformMatch) {
+  console.error("Kunde inte parsa OFFENTLIGA_JURFORMER");
+  process.exit(1);
+}
+const OFFENTLIGA_JURFORMER = jurformMatch[1].split(",").map((s) => Number(s.trim())).filter(Number.isFinite);
+const NISCH_JURFORM_VILLKOR = `jurform.not.in.(${OFFENTLIGA_JURFORMER.join(",")}),jurform.is.null,orgnr.not.like.2*,orgnr.is.null`;
+const JURFORM_QS = `or=(${encodeURIComponent(NISCH_JURFORM_VILLKOR)})`;
+
 // ---- Exakt count via head+count -------------------------------------------
 
-async function countExact(qs) {
-  const r = await fetch(`${SUPA_URL}/rest/v1/foretag_publik?${qs}&limit=1`, {
+// Tusentals frågor i följd: ett enstaka nätverksfel (ECONNRESET) ska inte
+// fälla hela körningen. Ett fel från servern (!r.ok) försöks däremot inte om.
+async function countExact(qs, forsok = 3) {
+  try {
+    return await countExactEnGang(qs);
+  } catch (e) {
+    if (forsok <= 1 || !(e instanceof TypeError)) throw e;
+    await new Promise((res) => setTimeout(res, 1000));
+    return countExact(qs, forsok - 1);
+  }
+}
+
+async function countExactEnGang(qs) {
+  const r = await fetch(`${SUPA_URL}/rest/v1/foretag_publik?${qs}&${JURFORM_QS}&limit=1`, {
     method: "HEAD",
     headers: { ...H, Prefer: "count=exact" },
   });

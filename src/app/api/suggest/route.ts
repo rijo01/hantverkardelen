@@ -4,7 +4,7 @@ import { foretagSlug } from "@/lib/queries";
 import { kontaktsparrFilter } from "@/lib/kontaktsparr";
 import { ALL_KOMMUNER } from "@/lib/kommuner";
 import { TOP_BRANSCHER } from "@/lib/stats";
-import { HANTVERK_BRANSCHER } from "@/lib/hantverk-branscher";
+import { HANTVERK_BRANSCHER, NISCH_JURFORM_VILLKOR } from "@/lib/hantverk-branscher";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -132,6 +132,7 @@ export async function GET(req: Request) {
         config: "swedish_unaccent",
       })
       .in("ng1", HANTVERK_BRANSCHER)
+      .or(NISCH_JURFORM_VILLKOR)
       .gte("aeant", 0)
       .order("aeant", { ascending: false })
       .order("cfarnr", { ascending: true })
