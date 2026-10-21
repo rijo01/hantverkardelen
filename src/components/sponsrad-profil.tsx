@@ -91,9 +91,9 @@ export default function SponsradProfil({
   if (!harInnehall) return null;
 
   return (
-    <section className="rd-card overflow-hidden border-[var(--brand)]/30">
+    <section className="overflow-hidden rounded-xl border border-[var(--brand)]/30 bg-white">
       {utkast && (
-        <p className="rd-brand-gradient px-5 py-2 text-xs font-medium tracking-tight text-white">
+        <p className="bg-[var(--brand)] px-5 py-2 text-sm font-medium text-white">
           Förhandsvisning — så här kommer profilen att se ut. Ingen ser den här
           sidan förrän ordern godkänns.
         </p>
@@ -102,11 +102,11 @@ export default function SponsradProfil({
       <div className="p-6 sm:p-7">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--brand)]/30 bg-[var(--surface-warm)] px-2.5 py-1 text-[11px] font-semibold text-[var(--brand-ink)]">
+            <span className="inline-flex items-center gap-1.5 rounded-sm bg-[var(--tint-2)] px-2 py-0.5 text-sm font-semibold text-[var(--brand-ink)]">
               <BadgeCheck className="size-3.5" aria-hidden />
               Företagets egen profil
             </span>
-            <h2 className="mt-3 text-lg font-semibold text-[var(--text-strong)]">
+            <h2 className="rd-serif mt-3 text-3xl text-[var(--text-strong)]">
               Om {rubriknamn}
             </h2>
             {overlay.kontaktperson && (
@@ -143,14 +143,14 @@ export default function SponsradProfil({
 
         {kategorier.length > 0 && (
           <div className="mt-6">
-            <h3 className="mb-2.5 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-dim)]">
+            <h3 className="mb-2 text-sm font-semibold text-[var(--text-strong)]">
               Verksamhet
             </h3>
             <ul className="flex flex-wrap gap-1.5">
               {kategorier.map((k) => (
                 <li
                   key={k}
-                  className="inline-flex items-center rounded-full border border-[var(--brand)]/30 bg-[var(--surface-warm)] px-3 py-1 text-[13px] font-medium text-[var(--brand-ink)]"
+                  className="inline-flex items-center rounded-md bg-[var(--tint-2)] px-2.5 py-1 text-sm font-medium text-[var(--brand-ink)]"
                 >
                   {k}
                 </li>
@@ -161,14 +161,14 @@ export default function SponsradProfil({
 
         {sokord.length > 0 && (
           <div className="mt-6">
-            <h3 className="mb-2.5 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-dim)]">
+            <h3 className="mb-2 text-sm font-semibold text-[var(--text-strong)]">
               Tjänster &amp; sökord
             </h3>
             <ul className="flex flex-wrap gap-1.5">
               {sokord.map((s) => (
                 <li
                   key={s}
-                  className="inline-flex items-center rounded-full border border-[var(--rule)] bg-white px-2.5 py-1 text-[13px] font-medium text-[var(--text-body)]"
+                  className="inline-flex items-center rounded-md border border-[var(--rule)] bg-white px-2.5 py-1 text-sm text-[var(--text-body)]"
                 >
                   {s}
                 </li>
@@ -181,7 +181,7 @@ export default function SponsradProfil({
           <div className="mt-6 grid gap-3 sm:grid-cols-2">
             {besok && (
               <div>
-                <h3 className="mb-1 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-dim)]">
+                <h3 className="mb-1 text-sm font-semibold text-[var(--text-strong)]">
                   Besöksadress
                 </h3>
                 <p className="inline-flex items-start gap-1.5 text-sm text-[var(--text-body)]">
@@ -192,7 +192,7 @@ export default function SponsradProfil({
             )}
             {post && (
               <div>
-                <h3 className="mb-1 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-dim)]">
+                <h3 className="mb-1 text-sm font-semibold text-[var(--text-strong)]">
                   Postadress
                 </h3>
                 <p className="inline-flex items-start gap-1.5 text-sm text-[var(--text-body)]">
@@ -214,7 +214,7 @@ export default function SponsradProfil({
                 <Phone className="size-4 shrink-0" aria-hidden />
                 {telefon}
                 {telefonEtikett(overlay.telefon_typ) && (
-                  <span className="text-xs font-normal text-[var(--text-dim)]">
+                  <span className="text-sm font-normal text-[var(--text-muted)]">
                     {telefonEtikett(overlay.telefon_typ)}
                   </span>
                 )}

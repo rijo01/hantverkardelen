@@ -62,156 +62,82 @@ export default function KontaktPage() {
   };
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-12 pb-8">
       <JsonLd data={breadcrumbJsonLd} />
       <JsonLd data={organizationJsonLd} />
       <Breadcrumb items={breadcrumbItems} />
 
-      {/* ======= HERO ======= */}
-      <header className="rd-fade-up relative overflow-hidden rounded-3xl border border-[var(--rule)] bg-white rd-shadow-md">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0"
-          style={{
-            background:
-              "radial-gradient(ellipse 70% 60% at 50% 0%, rgba(10,77,140,0.10), transparent 65%),"
-              + "linear-gradient(180deg, #F4F6F8 0%, #ffffff 70%)",
-          }}
-        />
-        <div className="relative space-y-4 p-6 sm:p-9">
-          <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.16em] text-[var(--brand)]">
-            <Mail aria-hidden className="size-3.5" />
-            Kundservice
-          </div>
-          <h1 className="text-balance text-3xl font-semibold leading-[1.05] tracking-tight text-[var(--text-strong)] sm:text-[2.75rem]">
-            Kontakta{" "}
-            <span className="rd-display rd-text-brand text-[1.15em]">oss</span>
-          </h1>
-          <p className="max-w-2xl text-sm leading-relaxed text-[var(--text-muted)] sm:text-base">
-            Har du frågor om Hantverkardelen, dina företagsuppgifter eller hur
-            vår katalog fungerar? Vår kundservice hjälper dig gärna —
-            kontakta oss på telefon, e-post eller via post.
-          </p>
-        </div>
+      <header className="max-w-3xl space-y-3">
+        <h1 className="rd-serif text-balance text-[2.5rem] text-[var(--text-strong)] sm:text-[3.5rem]">
+          Kontakta oss
+        </h1>
+        <p className="text-lg leading-relaxed text-[var(--text-muted)]">
+          Fel nummer eller adress till ett företag? Vill du synas med logotyp,
+          beskrivning och tjänster? Eller har du en fråga om katalogen? Hör av dig.
+        </p>
       </header>
 
-      {/* ======= KONTAKTKORT ======= */}
-      <section className="space-y-5">
-        <div className="space-y-1">
-          <p className="font-mono text-[11px] uppercase tracking-[0.15em] text-[var(--brand)]">
-            Direktkontakt
-          </p>
-          <h2 className="text-2xl font-semibold tracking-tight text-[var(--text-strong)] sm:text-3xl">
-            Så når du oss
-          </h2>
-        </div>
-
-        <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {/* Telefon */}
-          <li>
-            <a
-              href={`tel:${PHONE_TEL}`}
-              className="rd-card rd-card-hover group relative flex h-full flex-col gap-3 overflow-hidden p-5"
-              aria-label={`Ring kundservice på ${PHONE_DISPLAY}`}
-            >
-              <span
-                aria-hidden
-                className="inline-flex size-9 items-center justify-center rounded-xl bg-[var(--tint-2)] text-[var(--brand)]"
+      <section aria-labelledby="na-oss" className="space-y-4">
+        <h2 id="na-oss" className="rd-serif text-3xl text-[var(--text-strong)] sm:text-4xl">
+          Så når du oss
+        </h2>
+        <dl className="grid gap-6 border-t border-[var(--rule)] pt-5 sm:grid-cols-3">
+          <div>
+            <dt className="flex items-center gap-2 text-sm font-semibold text-[var(--text-strong)]">
+              <Phone className="size-4 text-[var(--brand)]" aria-hidden />
+              Telefon
+            </dt>
+            <dd className="mt-1">
+              <a
+                href={`tel:${PHONE_TEL}`}
+                className="inline-flex min-h-11 items-center text-lg font-semibold tabular-nums text-[var(--brand-ink)] underline-offset-4 hover:underline"
               >
-                <Phone className="size-4" strokeWidth={2.2} />
-              </span>
-              <div className="space-y-1">
-                <p className="font-mono text-[10px] font-medium uppercase tracking-[0.18em] text-[var(--text-dim)]">
-                  Telefon
-                </p>
-                <p className="text-lg font-semibold tracking-tight text-[var(--text-strong)] group-hover:text-[var(--brand-ink)]">
-                  {PHONE_DISPLAY}
-                </p>
-                <p className="text-xs text-[var(--text-muted)]">
-                  Vardagar 09–17
-                </p>
-              </div>
-            </a>
-          </li>
-
-          {/* E-post */}
-          <li>
-            <a
-              href={`mailto:${EMAIL}`}
-              className="rd-card rd-card-hover group relative flex h-full flex-col gap-3 overflow-hidden p-5"
-              aria-label={`Skicka e-post till ${EMAIL}`}
-            >
-              <span
-                aria-hidden
-                className="inline-flex size-9 items-center justify-center rounded-xl bg-[var(--tint-2)] text-[var(--brand)]"
+                {PHONE_DISPLAY}
+              </a>
+              <p className="text-sm text-[var(--text-muted)]">Vardagar 09–17</p>
+            </dd>
+          </div>
+          <div>
+            <dt className="flex items-center gap-2 text-sm font-semibold text-[var(--text-strong)]">
+              <Mail className="size-4 text-[var(--brand)]" aria-hidden />
+              E-post
+            </dt>
+            <dd className="mt-1">
+              <a
+                href={`mailto:${EMAIL}`}
+                className="inline-flex min-h-11 items-center break-all text-lg font-semibold text-[var(--brand-ink)] underline-offset-4 hover:underline"
               >
-                <Mail className="size-4" strokeWidth={2.2} />
-              </span>
-              <div className="space-y-1">
-                <p className="font-mono text-[10px] font-medium uppercase tracking-[0.18em] text-[var(--text-dim)]">
-                  E-post
-                </p>
-                <p className="break-all text-lg font-semibold tracking-tight text-[var(--text-strong)] group-hover:text-[var(--brand-ink)]">
-                  {EMAIL}
-                </p>
-                <p className="text-xs text-[var(--text-muted)]">
-                  Svar inom 1–2 arbetsdagar
-                </p>
-              </div>
-            </a>
-          </li>
-
-          {/* Postadress */}
-          <li>
-            <div className="rd-card relative flex h-full flex-col gap-3 overflow-hidden p-5">
-              <span
-                aria-hidden
-                className="inline-flex size-9 items-center justify-center rounded-xl bg-[var(--tint-3)] text-[var(--accent-cta-ink)]"
-              >
-                <MapPin className="size-4" strokeWidth={2.2} />
-              </span>
-              <div className="space-y-1">
-                <p className="font-mono text-[10px] font-medium uppercase tracking-[0.18em] text-[var(--text-dim)]">
-                  Postadress
-                </p>
-                <address className="not-italic text-[15px] font-medium leading-snug text-[var(--text-strong)]">
-                  {ADDRESS_LINES.map((line) => (
-                    <span key={line} className="block">
-                      {line}
-                    </span>
-                  ))}
-                </address>
-              </div>
-            </div>
-          </li>
-        </ul>
+                {EMAIL}
+              </a>
+              <p className="text-sm text-[var(--text-muted)]">Svar inom 1–2 arbetsdagar</p>
+            </dd>
+          </div>
+          <div>
+            <dt className="flex items-center gap-2 text-sm font-semibold text-[var(--text-strong)]">
+              <MapPin className="size-4 text-[var(--brand)]" aria-hidden />
+              Postadress
+            </dt>
+            <dd className="mt-1">
+              <address className="not-italic text-[15px] leading-relaxed text-[var(--text-body)]">
+                {ADDRESS_LINES.map((line) => (
+                  <span key={line} className="block">
+                    {line}
+                  </span>
+                ))}
+              </address>
+            </dd>
+          </div>
+        </dl>
       </section>
 
-      {/* ======= ORGANISATIONSINFO ======= */}
-      <section className="rd-fade-up grid grid-cols-1 gap-5 rounded-3xl border border-[var(--accent-cta)]/25 bg-[var(--surface-warm)] p-6 sm:grid-cols-[1fr_auto] sm:items-center sm:p-8">
-        <div className="space-y-2">
-          <p className="font-mono text-[11px] uppercase tracking-[0.15em] text-[var(--accent-cta-ink)]">
-            Organisationsuppgifter
-          </p>
-          <h3 className="text-lg font-semibold text-[var(--text-strong)] sm:text-xl">
-            Hantverkardelen drivs av QS Group AB
-          </h3>
-          <p className="max-w-2xl text-sm leading-relaxed text-[var(--text-body)]">
-            Organisationsnummer{" "}
-            <span className="font-mono tabular-nums text-[var(--text-strong)]">
-              {ORG_NUMBER}
-            </span>
-            . Vi tar emot post digitalt via Kivra — använd adressen ovan vid
-            fysisk post.
-          </p>
-        </div>
-        <a
-          href={`mailto:${EMAIL}`}
-          className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full rd-brand-gradient rd-cta-shadow px-5 text-sm font-semibold text-white transition hover:brightness-105 active:scale-[0.99]"
-        >
-          Mejla kundservice
-          <Mail aria-hidden className="size-4" />
-        </a>
+      <section className="rounded-xl bg-[var(--surface-soft)] p-6 sm:p-8">
+        <h2 className="text-lg font-semibold text-[var(--text-strong)]">
+          Hantverkardelen drivs av QS Group AB
+        </h2>
+        <p className="mt-1 max-w-2xl text-[15px] leading-relaxed text-[var(--text-muted)]">
+          Organisationsnummer <span className="tabular-nums text-[var(--text-strong)]">{ORG_NUMBER}</span>.
+          Vi tar emot post digitalt via Kivra — använd adressen ovan vid fysisk post.
+        </p>
       </section>
     </div>
   );

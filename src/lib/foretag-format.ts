@@ -138,9 +138,27 @@ export function orgnrDisplay(
   return null;
 }
 
-/** Är detta en "utvald" företagsprofil — dvs en kund med poäng? */
-export function isFeatured(
+/**
+ * Märkningen en rad eller en profil får — och bara den här funktionen avgör den.
+ * Samma regel som vårddelen.
+ *
+ *   "betald"   — overlay-raden har `featured`, alltså ett aktuellt CRM-köp av
+ *                framhävning. Visas som "Utvald · annons".
+ *   "komplett" — registrets `poang > 0` utan aktuellt köp. `poang` är ett
+ *                gammalt betallager som ingen betalar för i dag, så det får
+ *                aldrig se ut som en annons. Visas som "Komplett profil".
+ *
+ * Tidigare hette detta isFeatured() och gav "Utvald" för båda fallen.
+ * Sorteringen påverkas INTE: poang och overlay-vikten styr ordningen som förut
+ * (queries.ts och overlay-rankning.ts).
+ */
+export type ProfilMarkning = "betald" | "komplett" | null;
+
+export function profilMarkning(
   f: Pick<Foretag, "poang">,
-): boolean {
-  return (f.poang ?? 0) > 0;
+  overlay?: { featured?: boolean | null } | null,
+): ProfilMarkning {
+  if (overlay?.featured) return "betald";
+  if ((f.poang ?? 0) > 0) return "komplett";
+  return null;
 }

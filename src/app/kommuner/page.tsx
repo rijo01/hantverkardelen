@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { MapPin } from "lucide-react";
 import { ALL_KOMMUNER } from "@/lib/kommuner";
 import { TOP_KOMMUNER, TOTAL_KOMMUNER, TOTAL_LAN, TOTAL_FORETAG } from "@/lib/stats";
 import { JsonLd, buildBreadcrumb } from "@/components/json-ld";
@@ -39,125 +38,57 @@ export default function KommunerPage() {
   ]);
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-12 pb-8">
       <JsonLd data={breadcrumbJsonLd} />
       <Breadcrumb items={breadcrumbItems} />
 
-      {/* ======= HERO ======= */}
-      <header className="rd-fade-up relative overflow-hidden rounded-3xl border border-[var(--rule)] bg-white rd-shadow-md">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0"
-          style={{
-            background:
-              "radial-gradient(ellipse 70% 60% at 50% 0%, rgba(10,77,140,0.10), transparent 65%),"
-              + "linear-gradient(180deg, #F4F6F8 0%, #ffffff 70%)",
-          }}
-        />
-        <div className="relative space-y-4 p-6 sm:p-9">
-          <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.16em] text-[var(--brand)]">
-            <MapPin aria-hidden className="size-3.5" />
-            Index · {TOTAL_LAN} län
-          </div>
-          <h1 className="text-balance text-3xl font-semibold leading-[1.05] tracking-tight text-[var(--text-strong)] sm:text-[2.75rem]">
-            Alla{" "}
-            <span className="rd-display rd-text-brand text-[1.15em]">
-              {TOTAL_KOMMUNER} kommuner
-            </span>{" "}
-            i Sverige
-          </h1>
-          <p className="max-w-2xl text-sm leading-relaxed text-[var(--text-muted)] sm:text-base">
-            Bläddra A–Ö och hitta lokala hantverkare bland{" "}
-            <span className="font-semibold tabular-nums text-[var(--text-strong)]">
-              {fmt(TOTAL_FORETAG)}
-            </span>{" "}
-            registrerade hantverksföretag inom bygg, el, VVS, måleri och städ.
-          </p>
-        </div>
+      <header className="max-w-3xl space-y-3">
+        <h1 className="rd-serif text-balance text-[2.5rem] text-[var(--text-strong)] sm:text-[3.5rem]">
+          Hantverkare i alla {TOTAL_KOMMUNER} kommuner
+        </h1>
+        <p className="text-lg leading-relaxed text-[var(--text-muted)]">
+          {fmt(TOTAL_FORETAG)} registrerade hantverksföretag i {TOTAL_LAN} län.
+          Välj din kommun för att se yrkena där.
+        </p>
       </header>
 
-      {/* ======= MEST SÖKTA ======= */}
-      <section className="space-y-5">
-        <div className="flex items-end justify-between gap-3">
-          <div className="space-y-1">
-            <p className="font-mono text-[11px] uppercase tracking-[0.15em] text-[var(--brand)]">
-              Mest sökta
-            </p>
-            <h2 className="text-2xl font-semibold tracking-tight text-[var(--text-strong)] sm:text-3xl">
-              Flest hantverkare
-            </h2>
-          </div>
-        </div>
-        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-          {TOP_KOMMUNER.slice(0, 12).map((k, i) => (
-            <li key={k.kommun.code}>
+      <section aria-labelledby="flest" className="space-y-4">
+        <h2 id="flest" className="rd-serif text-3xl text-[var(--text-strong)] sm:text-4xl">
+          Flest hantverkare
+        </h2>
+        <ul className="grid grid-cols-2 border-t border-[var(--rule)] sm:grid-cols-3 sm:gap-x-8 lg:grid-cols-4">
+          {TOP_KOMMUNER.slice(0, 12).map((k) => (
+            <li key={k.kommun.code} className="border-b border-[var(--rule)]">
               <Link
                 href={k.href}
-                className="rd-card rd-card-hover group relative flex h-full flex-col justify-between gap-6 overflow-hidden p-5"
-                title={`Hantverkare i ${k.kommun.name} kommun`}
+                className="group flex min-h-12 items-center justify-between gap-2 py-2.5 pr-2"
               >
-                <span
-                  aria-hidden
-                  className="pointer-events-none absolute -right-6 -top-6 size-24 rounded-full opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-                  style={{
-                    background:
-                      "radial-gradient(circle, rgba(242,116,12,0.25), transparent 70%)",
-                  }}
-                />
-                <div className="space-y-1.5">
-                  <p className="font-mono text-[10px] font-medium uppercase tracking-[0.18em] text-[var(--text-dim)]">
-                    #{i + 1}
-                  </p>
-                  <p className="text-lg font-semibold tracking-tight text-[var(--text-strong)] group-hover:text-[var(--brand-ink)]">
-                    {k.kommun.name}
-                  </p>
-                </div>
-                <div className="flex items-baseline justify-between">
-                  <span className="font-mono text-2xl font-semibold tabular-nums text-[var(--text-strong)]">
-                    {fmt(k.count)}
-                  </span>
-                </div>
+                <span className="truncate font-medium text-[var(--text-strong)] underline-offset-4 group-hover:text-[var(--brand-ink)] group-hover:underline">
+                  {k.kommun.name}
+                </span>
+                <span className="shrink-0 text-sm tabular-nums text-[var(--text-muted)]">
+                  {fmt(k.count)}
+                </span>
               </Link>
             </li>
           ))}
         </ul>
       </section>
 
-      {/* ======= A-Ö ======= */}
-      <section
-        id="alla"
-        aria-labelledby="alla-kommuner"
-        className="space-y-6 border-t border-[var(--rule)] pt-10"
-      >
-        <div className="flex items-end justify-between gap-3">
-          <div className="space-y-1">
-            <p className="font-mono text-[11px] uppercase tracking-[0.15em] text-[var(--brand)]">
-              Index
-            </p>
-            <h2
-              id="alla-kommuner"
-              className="text-2xl font-semibold tracking-tight text-[var(--text-strong)] sm:text-3xl"
-            >
-              Alla {TOTAL_KOMMUNER} kommuner
-            </h2>
-          </div>
-          <span className="text-xs text-[var(--text-dim)]">A–Ö</span>
-        </div>
-        <div className="rd-card divide-y divide-[var(--rule-soft)] p-2 sm:p-3">
+      <section id="alla" aria-labelledby="alla-kommuner" className="space-y-4">
+        <h2 id="alla-kommuner" className="rd-serif text-3xl text-[var(--text-strong)] sm:text-4xl">
+          Alla kommuner A–Ö
+        </h2>
+        <div className="divide-y divide-[var(--rule-soft)] border-y border-[var(--rule)]">
           {Array.from(groups.entries()).map(([letter, kommuner]) => (
-            <div
-              key={letter}
-              className="grid grid-cols-[2.5rem_1fr] items-start gap-3 px-2 py-3 sm:px-3"
-            >
-              <h3 className="rd-display text-2xl text-[var(--accent-cta)]">
-                {letter}
-              </h3>
-              <ul className="flex flex-wrap gap-x-3 gap-y-1.5 pt-1">
+            <div key={letter} className="grid grid-cols-[2.5rem_1fr] items-start gap-3 py-3">
+              <h3 className="rd-serif text-3xl text-[var(--brand)]">{letter}</h3>
+              <ul className="flex flex-wrap gap-x-4 gap-y-0.5">
                 {kommuner.map((k) => (
                   <li key={k.code}>
                     <Link
                       href={`/kommun/${k.slug}`}
-                      className="text-sm text-[var(--text-body)] transition-colors hover:text-[var(--brand-ink)]"
+                      className="inline-flex min-h-9 items-center text-[15px] text-[var(--text-body)] underline-offset-4 transition-colors hover:text-[var(--brand-ink)] hover:underline"
                       title={`Hantverkare i ${k.name} kommun`}
                     >
                       {k.name}

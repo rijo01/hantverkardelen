@@ -3,21 +3,7 @@ import type { Metadata } from "next";
 import { visatTelefon as visatTelefonFor } from "@/lib/visat-telefon";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
-import {
-  ArrowRight,
-  Building2,
-  ExternalLink,
-  Globe,
-  Hash,
-  Info,
-  Mail,
-  MapPin,
-  Phone,
-  ShieldCheck,
-  Sparkles,
-  User,
-  Users,
-} from "lucide-react";
+import { ExternalLink, Globe, Mail, MapPin, User } from "lucide-react";
 import { kommunByCode } from "@/lib/kommuner";
 import {
   branschPageSlug,
@@ -31,22 +17,26 @@ import {
 import { getBranschName } from "@/lib/branscher";
 import { JsonLd, buildBreadcrumb } from "@/components/json-ld";
 import { Breadcrumb } from "@/components/breadcrumb";
-import { CompanyCard, CompanyCardList } from "@/components/company-card";
+import {
+  CompanyCard,
+  CompanyCardList,
+  RingKnapp,
+  ProfilEtikett,
+} from "@/components/company-card";
+import { MobilRingrad } from "@/components/mobil-ringrad";
+import { yrkesnamn } from "@/lib/yrkesnamn";
 import {
   displayName,
   employerSize,
   googleMapsUrl,
-  initialFor,
-  isFeatured,
+  profilMarkning,
   legalFormFor,
-  monogramGradient,
   normalizeWebb,
   orgnrDisplay,
   shortWebb,
 } from "@/lib/foretag-format";
 import { isPersonalOrgnr } from "@/lib/jurform";
 import {
-  KONTAKT_NOTIS,
   PERSONUPPGIFT_FORKLARING,
   REGISTER_AR,
   REGISTER_FORKLARING,
@@ -148,7 +138,6 @@ export default async function ForetagSida({
   const size = employerSize(f.aeant);
   const mapsUrl = googleMapsUrl(f);
   const webb = normalizeWebb(f.webb);
-  const featuredIRegistret = isFeatured(f);
   const orgnrInfo = orgnrDisplay(f);
   const sanitizedInfotext = sanitizeInfotext(f.infotext);
   const personalOrgnr = isPersonalOrgnr(f.jurform);
@@ -182,9 +171,9 @@ export default async function ForetagSida({
   // kortet längre ner. `overlay` är utkastet bakom en förhandsvisning.
   const logoUrl = sidhuvudetsLogotyp(overlay, safeLogotypUrl(f.logotyp))?.url ?? null;
 
-  // "Utvald" gäller båda betallagren: registrets poang och overlay-köpets
-  // featured. En kund som köpt framhävning ska se framhävd ut.
-  const featured = featuredIRegistret || Boolean(overlay?.featured);
+  // "Utvald · annons" bara för ett aktuellt overlay-köp (featured); registrets
+  // gamla poang får "Komplett profil". Se profilMarkning().
+  const markning = profilMarkning(f, overlay);
 
   /**
    * Vilket telefonnummer sidan visar i huvudet.
@@ -281,155 +270,148 @@ export default async function ForetagSida({
   });
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-12 pb-8">
       <JsonLd data={breadcrumbJsonLd} />
       <JsonLd data={localBusinessJsonLd} />
       <JsonLd data={faqJsonLd} />
       <Breadcrumb items={breadcrumbItems} />
 
-      {/* ========= HEADER ========= */}
-      <header
-        className={`rd-fade-up overflow-hidden rounded-3xl border bg-white rd-shadow-md ${
-          featured ? "border-[var(--accent-cta)]/35" : "border-[var(--rule)]"
-        }`}
-      >
-        <div className="relative p-6 sm:p-8">
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-0 -z-0"
-            style={{
-              background: featured
-                ? "radial-gradient(ellipse 70% 50% at 0% 0%, rgba(242,116,12,0.16), transparent 65%),"
-                  + "radial-gradient(ellipse 50% 40% at 100% 0%, rgba(10,77,140,0.08), transparent 70%),"
-                  + "linear-gradient(180deg, #FFEAD1 0%, #ffffff 60%)"
-                : "radial-gradient(ellipse 70% 50% at 0% 0%, rgba(10,77,140,0.10), transparent 65%),"
-                  + "linear-gradient(180deg, #F2F6FB 0%, #ffffff 60%)",
-            }}
-          />
-          <div className="relative flex flex-col gap-6 sm:flex-row sm:items-start">
-            {logoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={logoUrl}
-                alt={`${name} logotyp`}
-                loading="lazy"
-                className="size-20 shrink-0 rounded-2xl border border-[var(--rule)] bg-white object-contain p-2 shadow-[0_4px_12px_-4px_rgba(17,24,38,0.08)] sm:size-24"
-              />
-            ) : (
-              <div
-                aria-hidden
-                className="inline-flex size-20 shrink-0 items-center justify-center rounded-3xl text-3xl font-bold text-white shadow-[0_8px_24px_-8px_rgba(242,116,12,0.55)] ring-1 ring-white/40 sm:size-24 sm:text-[2.25rem]"
-                style={{ backgroundImage: monogramGradient(f.cfarnr) }}
-              >
-                {initialFor(name)}
+      {/* ========= HUVUD + KONTAKT =========
+          Besökaren kom hit för att få tag på företaget. Numret, adressen och
+          vägarna dit står därför direkt under namnet — inte två kort längre
+          ner som förut. */}
+      <header className="space-y-5">
+        <div className="flex items-start gap-4">
+          {logoUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={logoUrl}
+              alt={`${name} logotyp`}
+              loading="lazy"
+              className="size-16 shrink-0 rounded-lg border border-[var(--rule)] bg-white object-contain p-1.5 sm:size-20"
+            />
+          )}
+          <div className="min-w-0 space-y-2">
+            {(markning || legalForm) && (
+              <div className="flex flex-wrap items-center gap-2 text-sm text-[var(--text-muted)]">
+                <ProfilEtikett markning={markning} />
+                {legalForm && <span>{legalForm}</span>}
               </div>
             )}
-
-            <div className="min-w-0 flex-1 space-y-3">
-              <div className="flex flex-wrap items-center gap-2">
-                {featured && (
-                  <span className="inline-flex items-center gap-1.5 rounded-full rd-brand-gradient px-2.5 py-1 text-[11px] font-semibold text-white shadow-[0_4px_10px_-4px_rgba(242,116,12,0.5)]">
-                    <Sparkles className="size-3.5" aria-hidden />
-                    Utvald
-                  </span>
-                )}
-                <span
-                  className="inline-flex items-center gap-1.5 rounded-full border border-[var(--rule)] bg-[var(--surface-soft)] px-2.5 py-1 text-[11px] font-semibold text-[var(--text-muted)]"
-                  title={REGISTER_FORKLARING}
+            <h1 className="rd-serif text-balance break-words text-[2.25rem] text-[var(--text-strong)] sm:text-5xl">
+              {name}
+            </h1>
+            <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[15px] text-[var(--text-muted)]">
+              {branschName && f.ng1 && kommun ? (
+                <Link
+                  href={`/kommun/${kommun.slug}/${branschPageSlug(branschName, f.ng1)}`}
+                  className="font-semibold text-[var(--brand-ink)] underline-offset-4 hover:underline"
                 >
-                  <ShieldCheck className="size-3.5" aria-hidden />
-                  Registerdata {REGISTER_AR}
-                </span>
-                {legalForm && (
-                  <span className="inline-flex items-center rounded-full border border-[var(--rule)] bg-white px-2.5 py-1 text-[11px] font-medium text-[var(--text-muted)]">
-                    {legalForm}
-                  </span>
-                )}
-              </div>
-              <h1 className="text-balance text-3xl font-semibold leading-[1.05] tracking-tight text-[var(--text-strong)] sm:text-[2.25rem]">
-                {name}
-              </h1>
-              <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[15px] text-[var(--text-muted)]">
-                {branschName && f.ng1 && kommun ? (
-                  <Link
-                    href={`/kommun/${kommun.slug}/${branschPageSlug(branschName, f.ng1)}`}
-                    className="font-medium text-[var(--brand-ink)] hover:underline"
-                  >
-                    {branschName}
-                  </Link>
-                ) : branschName ? (
-                  <span className="font-medium text-[var(--text-body)]">
-                    {branschName}
-                  </span>
-                ) : null}
-                {branschName && kommun && (
+                  {yrkesnamn(f.ng1, branschName)}
+                </Link>
+              ) : branschName ? (
+                <span className="font-semibold text-[var(--text-body)]">{branschName}</span>
+              ) : null}
+              {kommun && (
+                <>
                   <span aria-hidden className="text-[var(--text-faint)]">·</span>
-                )}
-                {kommun && (
                   <Link
                     href={`/kommun/${kommun.slug}`}
-                    className="hover:text-[var(--brand-ink)] hover:underline"
+                    className="underline-offset-4 hover:text-[var(--brand-ink)] hover:underline"
                   >
                     {kommun.name} kommun
                   </Link>
+                </>
+              )}
+              {size && (
+                <>
+                  <span aria-hidden className="text-[var(--text-faint)]">·</span>
+                  <span>{size.label}</span>
+                </>
+              )}
+            </p>
+          </div>
+        </div>
+
+        <div
+          id="kontakt"
+          className="grid gap-5 rounded-xl border border-[var(--rule)] bg-white p-5 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] sm:p-6"
+        >
+          <div className="space-y-3">
+            {visatTelefon ? (
+              <>
+                <RingKnapp telefon={visatTelefon} name={name} stor className="flex w-full justify-center sm:inline-flex sm:w-auto" />
+                <p className="text-sm text-[var(--text-muted)]">
+                  {overlay?.telefon_override && visatTelefon === overlay.telefon_override.trim()
+                    ? "Numret är lämnat av företaget."
+                    : `Numret kommer från ett register från ${REGISTER_AR} och kan vara inaktuellt.`}
+                </p>
+              </>
+            ) : (
+              <p className="text-[15px] text-[var(--text-muted)]">
+                Registret har inget telefonnummer till {name}.
+              </p>
+            )}
+            {(f.epostadress || webb) && (
+              <div className="flex flex-wrap gap-x-5 gap-y-1 pt-1 text-[15px]">
+                {f.epostadress && (
+                  <a
+                    href={`mailto:${f.epostadress}`}
+                    className="inline-flex min-h-11 items-center gap-2 font-medium text-[var(--brand-ink)] underline-offset-4 hover:underline"
+                  >
+                    <Mail className="size-4 shrink-0" aria-hidden />
+                    {f.epostadress}
+                  </a>
+                )}
+                {webb && (
+                  <a
+                    href={webb}
+                    target="_blank"
+                    rel="nofollow noopener"
+                    className="inline-flex min-h-11 items-center gap-2 font-medium text-[var(--brand-ink)] underline-offset-4 hover:underline"
+                  >
+                    <Globe className="size-4 shrink-0" aria-hidden />
+                    {shortWebb(webb)}
+                  </a>
                 )}
               </div>
-              {size && (
-                <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--tint-3)] px-2.5 py-1 text-xs font-semibold text-[var(--accent-cta-ink)]">
-                    <Users className="size-3.5" aria-hidden />
-                    {size.label}
-                  </span>
-                </div>
-              )}
-            </div>
+            )}
+            {/* Plats för "Begär offert" när offertflödet finns — under
+                numret, som ett andra sätt att nå företaget. */}
           </div>
 
-          {/* Action-rad */}
-          <div className="relative mt-6 flex flex-wrap items-center gap-2 border-t border-[var(--rule-soft)] pt-5 sm:gap-2.5">
-            {visatTelefon && (
-              <ActionButton
-                href={`tel:${visatTelefon}`}
-                icon={<Phone className="size-4" aria-hidden />}
-                label="Ring"
-                hint={visatTelefon}
-                title={KONTAKT_NOTIS}
-                variant="primary"
-              />
-            )}
-            {f.epostadress && (
-              <ActionButton
-                href={`mailto:${f.epostadress}`}
-                icon={<Mail className="size-4" aria-hidden />}
-                label="E-post"
-                variant="secondary"
-              />
-            )}
-            {webb && (
-              <ActionButton
-                href={webb}
-                external
-                icon={<Globe className="size-4" aria-hidden />}
-                label="Hemsida"
-                hint={shortWebb(webb) ?? undefined}
-                variant="secondary"
-              />
+          <div className="border-t border-[var(--rule-soft)] pt-4 sm:border-l sm:border-t-0 sm:pl-6 sm:pt-0">
+            <h2 className="text-sm font-semibold text-[var(--text-strong)]">Adress</h2>
+            {f.gatuadress || f.postort ? (
+              <address className="mt-1 not-italic text-[15px] leading-relaxed text-[var(--text-body)]">
+                {f.gatuadress && <span className="block">{f.gatuadress}</span>}
+                <span className="block">
+                  {[f.postnr, f.postort].filter(Boolean).join(" ")}
+                </span>
+              </address>
+            ) : (
+              <p className="mt-1 text-[15px] text-[var(--text-muted)]">Ingen adress registrerad.</p>
             )}
             {mapsUrl && (
-              <ActionButton
+              <a
                 href={mapsUrl}
-                external
-                icon={<MapPin className="size-4" aria-hidden />}
-                label="Visa på karta"
-                variant="ghost"
-              />
+                target="_blank"
+                rel="nofollow noopener"
+                className="mt-1 inline-flex min-h-11 items-center gap-1.5 font-medium text-[var(--brand-ink)] underline-offset-4 hover:underline"
+              >
+                <MapPin className="size-4 shrink-0" aria-hidden />
+                Visa på karta
+                <ExternalLink className="size-3.5" aria-hidden />
+              </a>
             )}
           </div>
         </div>
       </header>
 
+      {visatTelefon && <MobilRingrad telefon={visatTelefon} namn={name} ankareId="kontakt" />}
+
       {/* ========= BETALD PROFIL (overlay) =========
-          Ligger direkt under huvudet och ÖVER registerbeskrivningen: det kunden
+          Direkt under kontakten och ÖVER registerbeskrivningen: det kunden
           själv skrivit om sin verksamhet är mer värt för besökaren än en
           registerrad från 2011. Renderas bara när det finns en aktiv och giltig
           overlay-rad — eller, i förhandsvisning, ett utkast. */}
@@ -437,79 +419,37 @@ export default async function ForetagSida({
         <SponsradProfil overlay={overlay} namn={name} utkast={Boolean(previewToken)} />
       )}
 
-      {/* ========= BESKRIVNING + BRANSCH-CHIPS ========= */}
-      <section className="grid grid-cols-1 gap-6 lg:grid-cols-[1.4fr_1fr]">
-        <div className="rd-fade-up rd-fade-up-delay-1 rd-card p-6 sm:p-7">
-          <h2 className="mb-3 text-lg font-semibold text-[var(--text-strong)]">
-            Om {name}
-          </h2>
+      {/* ========= OM + REGISTERFAKTA ========= */}
+      <section className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+        <div>
+          <h2 className="rd-serif text-3xl text-[var(--text-strong)]">Om {name}</h2>
           {sanitizedInfotext ? (
             <div
-              className="rd-rich-text text-[15px] leading-relaxed text-[var(--text-body)]"
+              className="rd-rich-text mt-3 max-w-prose text-[15px] leading-relaxed text-[var(--text-body)]"
               dangerouslySetInnerHTML={{ __html: sanitizedInfotext }}
             />
           ) : (
-            <p className="text-[15px] leading-relaxed text-[var(--text-body)]">
+            <p className="mt-3 max-w-prose text-[15px] leading-relaxed text-[var(--text-body)]">
               {description}
             </p>
           )}
           {f.kontaktperson && (
-            <div className="mt-5 flex items-center gap-3 border-t border-[var(--rule-soft)] pt-4">
-              <span className="inline-flex size-9 items-center justify-center rounded-full bg-[var(--tint-2)] text-[var(--brand-ink)]">
-                <User className="size-4" aria-hidden />
-              </span>
-              <div>
-                <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-[var(--text-dim)]">
-                  Kontaktperson
-                </p>
-                <p className="text-sm font-medium text-[var(--text-strong)]">
-                  {f.kontaktperson}
-                </p>
-              </div>
-            </div>
-          )}
-          {branschName && (
-            <>
-              <h3 className="mt-7 mb-2.5 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-dim)]">
-                Bransch
-              </h3>
-              <div className="flex flex-wrap gap-2">
-                {kommun && f.ng1 ? (
-                  <Link
-                    href={`/kommun/${kommun.slug}/${branschPageSlug(branschName, f.ng1)}`}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-[var(--brand)]/30 bg-[var(--tint-2)] px-3 py-1.5 text-sm font-medium text-[var(--brand-ink)] transition hover:bg-white"
-                  >
-                    {branschName}
-                    <ArrowRight className="size-3.5" aria-hidden />
-                  </Link>
-                ) : (
-                  <span className="inline-flex items-center rounded-full border border-[var(--rule)] bg-[var(--surface-soft)] px-3 py-1.5 text-sm font-medium text-[var(--text-body)]">
-                    {branschName}
-                  </span>
-                )}
-                <Link
-                  href={`/sok?q=${encodeURIComponent(branschName)}`}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-[var(--rule)] bg-white px-3 py-1.5 text-sm font-medium text-[var(--text-muted)] transition hover:border-[var(--accent-cta)]/40 hover:text-[var(--accent-cta-ink)]"
-                >
-                  {branschName} i hela Sverige
-                </Link>
-              </div>
-            </>
+            <p className="mt-4 inline-flex items-center gap-2 text-[15px] text-[var(--text-body)]">
+              <User className="size-4 text-[var(--text-dim)]" aria-hidden />
+              Kontaktperson: <span className="font-medium text-[var(--text-strong)]">{f.kontaktperson}</span>
+            </p>
           )}
           {sokord.length > 0 && (
             <>
-              <h3 className="mt-7 mb-2.5 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-dim)]">
-                Tjänster &amp; sökord
-                <span className="font-mono text-[10px] font-normal normal-case tracking-normal text-[var(--text-faint)]">
-                  {sokord.length}
-                </span>
+              <h3 className="mt-7 text-sm font-semibold text-[var(--text-strong)]">
+                Tjänster och sökord
               </h3>
-              <ul className="flex flex-wrap gap-1.5">
+              <ul className="mt-2.5 flex flex-wrap gap-1.5">
                 {sokord.map((s) => (
                   <li key={s}>
                     <Link
                       href={`/sok?q=${encodeURIComponent(s)}`}
-                      className="inline-flex items-center rounded-full border border-[var(--rule)] bg-white px-2.5 py-1 text-[13px] font-medium text-[var(--text-body)] transition hover:border-[var(--accent-cta)]/45 hover:bg-[var(--surface-warm)] hover:text-[var(--accent-cta-ink)]"
+                      className="inline-flex min-h-9 items-center rounded-md border border-[var(--rule)] bg-white px-2.5 text-sm text-[var(--text-body)] transition-colors hover:border-[var(--brand)]/40 hover:bg-[var(--tint-1)] hover:text-[var(--brand-ink)]"
                       title={`Sök ${s}`}
                     >
                       {s}
@@ -519,194 +459,86 @@ export default async function ForetagSida({
               </ul>
             </>
           )}
-        </div>
-
-        {/* Adressblock */}
-        <div className="rd-fade-up rd-fade-up-delay-1 rd-card p-6 sm:p-7">
-          <h2 className="mb-3 text-lg font-semibold text-[var(--text-strong)]">
-            Besöksadress
-          </h2>
-          {f.gatuadress || f.postort ? (
-            <>
-              <address className="not-italic">
-                <p className="text-[15px] font-semibold text-[var(--text-strong)]">
-                  {f.gatuadress ?? "—"}
-                </p>
-                <p className="mt-0.5 text-sm text-[var(--text-muted)]">
-                  {[f.postnr, f.postort].filter(Boolean).join(" ") || ""}
-                </p>
-                {kommun && (
-                  <p className="mt-0.5 text-sm text-[var(--text-muted)]">
-                    {kommun.name} kommun, Sverige
-                  </p>
-                )}
-              </address>
-              {mapsUrl && (
-                <a
-                  href={mapsUrl}
-                  target="_blank"
-                  rel="nofollow noopener"
-                  className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-[var(--brand-ink)] hover:underline"
+          {branschName && (
+            <p className="mt-7 flex flex-wrap gap-x-6 gap-y-1 text-[15px]">
+              {kommun && f.ng1 && (
+                <Link
+                  href={`/kommun/${kommun.slug}/${branschPageSlug(branschName, f.ng1)}`}
+                  className="inline-flex min-h-11 items-center font-semibold text-[var(--brand-ink)] underline underline-offset-4 decoration-[var(--brand)]/30 hover:decoration-[var(--brand)]"
                 >
-                  Öppna i Google Maps
-                  <ExternalLink className="size-3.5" aria-hidden />
-                </a>
+                  Fler inom {yrkesnamn(f.ng1, branschName).toLowerCase()} i {kommun.name}
+                </Link>
               )}
-            </>
-          ) : (
-            <p className="text-sm text-[var(--text-muted)]">
-              Ingen adress registrerad.
-            </p>
-          )}
-        </div>
-      </section>
-
-      {/* ========= KONTAKT + FÖRETAGSINFO ========= */}
-      <section className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div className="rd-fade-up rd-fade-up-delay-2 rd-card p-6 sm:p-7">
-          <h2 className="mb-5 text-lg font-semibold text-[var(--text-strong)]">
-            Kontaktuppgifter
-          </h2>
-          <dl className="divide-y divide-[var(--rule-soft)]">
-            <ContactRow
-              icon={<Phone className="size-4" aria-hidden />}
-              label="Telefon"
-              value={visatTelefon}
-              href={visatTelefon ? `tel:${visatTelefon}` : null}
-            />
-            <ContactRow
-              icon={<Mail className="size-4" aria-hidden />}
-              label="E-post"
-              value={f.epostadress}
-              href={f.epostadress ? `mailto:${f.epostadress}` : null}
-            />
-            <ContactRow
-              icon={<Globe className="size-4" aria-hidden />}
-              label="Hemsida"
-              value={shortWebb(webb)}
-              href={webb}
-              external
-            />
-            <ContactRow
-              icon={<MapPin className="size-4" aria-hidden />}
-              label="Adress"
-              value={
-                [
-                  f.gatuadress,
-                  [f.postnr, f.postort].filter(Boolean).join(" "),
-                ]
-                  .filter(Boolean)
-                  .join(", ") || null
-              }
-            />
-          </dl>
-          {(visatTelefon || f.epostadress || webb || f.gatuadress) && (
-            <p className="mt-5 flex items-start gap-2 rounded-xl border border-[var(--rule)] bg-[var(--surface-soft)] p-3 text-xs leading-relaxed text-[var(--text-muted)]">
-              <Info aria-hidden className="mt-0.5 size-3.5 shrink-0" />
-              <span>
-                <span className="font-semibold text-[var(--text-body)]">
-                  {KONTAKT_NOTIS}.
-                </span>{" "}
-                {REGISTER_FORKLARING}
-              </span>
+              <Link
+                href={`/sok?q=${encodeURIComponent(branschName)}`}
+                className="inline-flex min-h-11 items-center font-semibold text-[var(--brand-ink)] underline underline-offset-4 decoration-[var(--brand)]/30 hover:decoration-[var(--brand)]"
+              >
+                {branschName} i hela Sverige
+              </Link>
             </p>
           )}
         </div>
 
-        <div className="rd-fade-up rd-fade-up-delay-2 rd-card p-6 sm:p-7">
-          <h2 className="mb-5 text-lg font-semibold text-[var(--text-strong)]">
-            Företagsinformation
-          </h2>
-          <dl className="divide-y divide-[var(--rule-soft)]">
+        <div>
+          <h2 className="rd-serif text-3xl text-[var(--text-strong)]">Registerfakta</h2>
+          <dl className="mt-3 divide-y divide-[var(--rule-soft)] border-y border-[var(--rule-soft)]">
             <InfoRow
-              icon={<Hash className="size-3.5" aria-hidden />}
               label="Organisationsnummer"
               value={
                 orgnrInfo?.kind === "orgnr" ? (
-                  <span className="font-mono tabular-nums">{orgnrInfo.value}</span>
+                  <span className="tabular-nums">{orgnrInfo.value}</span>
                 ) : orgnrInfo?.kind === "hidden" ? (
-                  <span className="text-xs italic text-[var(--text-muted)]">
-                    {orgnrInfo.value}
-                  </span>
+                  <span className="text-[var(--text-muted)]">{orgnrInfo.value}</span>
                 ) : null
               }
             />
+            <InfoRow label="Juridisk form" value={legalForm} />
             <InfoRow
-              icon={<Building2 className="size-3.5" aria-hidden />}
-              label="Juridisk form"
-              value={legalForm}
-            />
-            <InfoRow
-              icon={<Users className="size-3.5" aria-hidden />}
               label="Antal anställda"
-              value={
-                f.aeant ? (
-                  <span className="font-mono tabular-nums">
-                    ca {f.aeant.toLocaleString("sv-SE")}
-                  </span>
-                ) : null
-              }
+              value={size ? <span className="tabular-nums">{size.label}</span> : null}
             />
             <InfoRow
-              icon={<MapPin className="size-3.5" aria-hidden />}
               label="Kommun"
               value={
                 kommun ? (
                   <Link
                     href={`/kommun/${kommun.slug}`}
-                    className="text-[var(--brand-ink)] hover:underline"
+                    className="text-[var(--brand-ink)] underline-offset-4 hover:underline"
                   >
                     {kommun.name}
                   </Link>
                 ) : null
               }
             />
-            <InfoRow
-              icon={<MapPin className="size-3.5" aria-hidden />}
-              label="Postort"
-              value={
-                f.postort ? (
-                  <span className="text-[var(--text-strong)]">{f.postort}</span>
-                ) : null
-              }
-            />
+            <InfoRow label="Postort" value={f.postort} />
           </dl>
-          <p className="mt-5 border-t border-[var(--rule-soft)] pt-4 text-xs leading-relaxed text-[var(--text-dim)]">
+          <p className="mt-4 text-sm leading-relaxed text-[var(--text-muted)]">
             {personalOrgnr
               ? "Inget organisationsnummer visas — för en enskild firma är numret ett personnummer, och det hämtas aldrig ut ur databasen. "
               : ""}
-            {PERSONUPPGIFT_FORKLARING} Uppgifterna kommer från ett offentligt
-            näringslivsregister från omkring {REGISTER_AR} och kan vara
-            inaktuella.{" "}
-            <Link href="/kontakt" className="underline hover:text-[var(--brand-ink)]">
-              Kontakta oss
-            </Link>{" "}
-            för rättelse eller borttagning.
+            {PERSONUPPGIFT_FORKLARING} {REGISTER_FORKLARING}
           </p>
         </div>
       </section>
 
       {/* ========= LIKNANDE FÖRETAG ========= */}
       {related.length > 0 && kommun && (
-        <section className="rd-fade-up rd-fade-up-delay-3 space-y-4">
+        <section className="space-y-4">
           <div className="flex items-end justify-between gap-3">
-            <div className="space-y-1">
-              <p className="font-mono text-[11px] uppercase tracking-[0.15em] text-[var(--brand)]">
-                Liknande företag
-              </p>
-              <h2 className="text-xl font-semibold text-[var(--text-strong)] sm:text-2xl">
-                {branschName ? `${branschName} i ${kommun.name}` : `Hantverkare i ${kommun.name}`}
-              </h2>
-            </div>
+            <h2 className="rd-serif text-3xl text-[var(--text-strong)]">
+              {branschName && f.ng1
+                ? `Fler inom ${yrkesnamn(f.ng1, branschName).toLowerCase()} i ${kommun.name}`
+                : `Fler hantverkare i ${kommun.name}`}
+            </h2>
             <Link
               href={
                 branschName && f.ng1
                   ? `/kommun/${kommun.slug}/${branschPageSlug(branschName, f.ng1)}`
                   : `/kommun/${kommun.slug}`
               }
-              className="inline-flex shrink-0 items-center gap-1.5 text-sm font-medium text-[var(--brand-ink)] hover:underline"
+              className="inline-flex min-h-11 shrink-0 items-center font-semibold text-[var(--brand-ink)] underline underline-offset-4 decoration-[var(--brand)]/30 hover:decoration-[var(--brand)]"
             >
-              Visa alla <ArrowRight aria-hidden className="size-3.5" />
+              Visa alla
             </Link>
           </div>
           <CompanyCardList>
@@ -715,7 +547,6 @@ export default async function ForetagSida({
                 <CompanyCard
                   foretag={rf}
                   overlay={overlayFor(rf, overlays)}
-                  branschName={branschName}
                   kommunName={kommun.name}
                 />
               </li>
@@ -725,23 +556,18 @@ export default async function ForetagSida({
       )}
 
       {/* ========= FAQ ========= */}
-      <section className="rd-fade-up rd-fade-up-delay-4 space-y-4">
-        <div className="space-y-1">
-          <p className="font-mono text-[11px] uppercase tracking-[0.15em] text-[var(--brand)]">
-            Vanliga frågor
-          </p>
-          <h2 className="text-xl font-semibold text-[var(--text-strong)] sm:text-2xl">
-            Frågor och svar om {name}
-          </h2>
-        </div>
-        <div className="rd-card divide-y divide-[var(--rule-soft)]">
+      <section className="space-y-4">
+        <h2 className="rd-serif text-3xl text-[var(--text-strong)]">
+          Frågor och svar om {name}
+        </h2>
+        <div className="divide-y divide-[var(--rule-soft)] rounded-xl border border-[var(--rule)] bg-white">
           {faqItems.map((it, i) => (
             <details
               key={i}
               className="group px-5 py-4 sm:px-6"
               {...(i === 0 ? { open: true } : {})}
             >
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-medium text-[var(--text-strong)]">
+              <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 text-[15px] font-medium text-[var(--text-strong)]">
                 {it.q}
                 <span
                   aria-hidden
@@ -750,13 +576,34 @@ export default async function ForetagSida({
                   +
                 </span>
               </summary>
-              <p className="mt-2.5 text-sm leading-relaxed text-[var(--text-muted)]">
+              <p className="mt-2 max-w-prose text-[15px] leading-relaxed text-[var(--text-muted)]">
                 {it.a}
               </p>
             </details>
           ))}
         </div>
       </section>
+
+      {/* Hantverkarens väg in: rätta registret eller köp en profil. */}
+      {!overlay && (
+        <section className="flex flex-col gap-4 rounded-xl bg-[var(--surface-soft)] p-6 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-[var(--text-strong)]">
+              Är det här ditt företag?
+            </h2>
+            <p className="mt-1 max-w-xl text-[15px] text-[var(--text-muted)]">
+              Rätta numret och adressen, eller lägg till logotyp, beskrivning och
+              tjänster.
+            </p>
+          </div>
+          <Link
+            href="/kontakt"
+            className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-lg border border-[var(--brand)]/35 bg-white px-4 font-semibold text-[var(--brand-ink)] transition-colors hover:border-[var(--brand)] hover:bg-[var(--tint-1)]"
+          >
+            Uppdatera uppgifterna
+          </Link>
+        </section>
+      )}
     </div>
   );
 }
@@ -786,7 +633,9 @@ function buildDescription({
   );
   if (f.aeant && f.aeant > 0) {
     segs.push(
-      `Företaget har ca ${f.aeant.toLocaleString("sv-SE")} anställda enligt senast tillgängliga uppgifter.`,
+      f.aeant === 1
+        ? "Företaget har 1 anställd enligt senast tillgängliga uppgifter."
+        : `Företaget har ca ${f.aeant.toLocaleString("sv-SE")} anställda enligt senast tillgängliga uppgifter.`,
     );
   }
   if (f.gatuadress) {
@@ -856,7 +705,10 @@ function buildFaq({
   if (f.aeant) {
     items.push({
       q: `Hur många anställda har ${name}?`,
-      a: `${name} har cirka ${f.aeant.toLocaleString("sv-SE")} anställda enligt senast tillgängliga data.`,
+      a:
+        f.aeant === 1
+          ? `${name} har 1 anställd enligt senast tillgängliga data.`
+          : `${name} har cirka ${f.aeant.toLocaleString("sv-SE")} anställda enligt senast tillgängliga data.`,
     });
   }
 
@@ -880,115 +732,18 @@ function buildFaq({
   return items;
 }
 
-function ActionButton({
-  href,
-  icon,
-  label,
-  hint,
-  title,
-  external = false,
-  variant,
-}: {
-  href: string;
-  icon: React.ReactNode;
-  label: string;
-  hint?: string;
-  /** Hovertext — används för proveniensmärkning av kontaktuppgifter. */
-  title?: string;
-  external?: boolean;
-  variant: "primary" | "secondary" | "ghost";
-}) {
-  const base =
-    "inline-flex h-11 items-center gap-2 rounded-full px-4 text-sm font-semibold transition active:scale-[0.99]";
-  const styles =
-    variant === "primary"
-      ? "bg-[var(--accent-cta)] text-white shadow-[0_6px_18px_-6px_rgba(242,116,12,0.55)] hover:bg-[var(--accent-cta-2)]"
-      : variant === "secondary"
-        ? "border border-[var(--rule)] bg-white text-[var(--text-strong)] hover:border-[var(--accent-cta)]/45 hover:bg-[var(--surface-warm)] hover:text-[var(--accent-cta-ink)]"
-        : "text-[var(--text-muted)] hover:bg-[var(--surface-soft)] hover:text-[var(--brand-ink)]";
-  return (
-    <a
-      href={href}
-      {...(external ? { target: "_blank", rel: "nofollow noopener" } : {})}
-      {...(title ? { title } : {})}
-      className={`${base} ${styles}`}
-    >
-      {icon}
-      <span>{label}</span>
-      {hint && (
-        <span
-          className={`hidden font-mono text-xs font-normal tabular-nums sm:inline ${
-            variant === "primary" ? "text-white/85" : "text-[var(--text-dim)]"
-          }`}
-        >
-          {hint}
-        </span>
-      )}
-    </a>
-  );
-}
-
-function ContactRow({
-  icon,
-  label,
-  value,
-  href,
-  external = false,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string | null | undefined;
-  href?: string | null;
-  external?: boolean;
-}) {
-  return (
-    <div className="flex items-center gap-4 py-3.5">
-      <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-[var(--tint-2)] text-[var(--brand-ink)] ring-1 ring-[var(--brand)]/15">
-        {icon}
-      </span>
-      <div className="min-w-0 flex-1">
-        <dt className="text-[11px] font-medium uppercase tracking-[0.12em] text-[var(--text-dim)]">
-          {label}
-        </dt>
-        <dd className="truncate text-sm text-[var(--text-body)]">
-          {value && href ? (
-            <a
-              href={href}
-              {...(external
-                ? { target: "_blank", rel: "nofollow noopener" }
-                : {})}
-              className="font-medium text-[var(--text-strong)] hover:text-[var(--brand-ink)] hover:underline"
-            >
-              {value}
-            </a>
-          ) : value ? (
-            <span className="font-medium text-[var(--text-strong)]">{value}</span>
-          ) : (
-            <span className="text-[var(--text-faint)]">Ej tillgängligt</span>
-          )}
-        </dd>
-      </div>
-    </div>
-  );
-}
-
 function InfoRow({
-  icon,
   label,
   value,
 }: {
-  icon?: React.ReactNode;
   label: string;
   value: React.ReactNode | null;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 py-2.5 text-sm">
-      <dt className="inline-flex items-center gap-2 text-[var(--text-muted)]">
-        {icon && <span className="text-[var(--text-dim)]">{icon}</span>}
-        {label}
-      </dt>
-      <dd className="text-right">
-        {value ?? <span className="text-[var(--text-faint)]">–</span>}
+    <div className="flex items-baseline justify-between gap-4 py-2.5 text-[15px]">
+      <dt className="text-[var(--text-muted)]">{label}</dt>
+      <dd className="text-right text-[var(--text-strong)]">
+        {value ?? <span className="text-[var(--text-muted)]">Uppgift saknas</span>}
       </dd>
     </div>
   );

@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
-import { ArrowLeft, ArrowRight, Layers } from "lucide-react";
-import { kommunBySlug } from "@/lib/kommuner";
-import { getBranschName } from "@/lib/branscher";
+import { ArrowLeft, ArrowRight } from "lucide-react";
+import { ALL_KOMMUNER, kommunBySlug } from "@/lib/kommuner";
+import { lanByCode } from "@/lib/lan";
+import { getBranschName, getBranschNamesBulk } from "@/lib/branscher";
+import { yrkesnamn } from "@/lib/yrkesnamn";
+import { KOMMUN_BRANSCH_FORETAG } from "@/lib/seo-snapshot";
 import {
   branschPageSlug,
   listForetagInKommunByBransch,
@@ -124,6 +127,28 @@ export default async function BranschPage({
   ]);
   const rows = ordnaBoostade(oboostade, overlays);
 
+  const antal = snapshotKommunBranschCount(kommun.code, ng1);
+  const yrke = yrkesnamn(ng1, branschName);
+  const lan = lanByCode(kommun.lan);
+  const genitiv = kommun.name.endsWith("s") ? kommun.name : `${kommun.name}s`;
+
+  // Samma yrke i länets andra kommuner, och andra yrken i samma kommun. Båda
+  // ur snapshoten, och bara sidor som passerar indexgrinden — en intern länk
+  // till en noindex-sida är en återvändsgränd för både besökare och Google.
+  const grannar = ALL_KOMMUNER.filter(
+    (k) => k.lan === kommun.lan && k.code !== kommun.code,
+  )
+    .map((k) => ({ k, n: snapshotKommunBranschCount(k.code, ng1) }))
+    .filter(({ n }) => hubIsIndexable(n))
+    .sort((a, b) => b.n - a.n)
+    .slice(0, 10);
+  const andraKoder = Object.entries(KOMMUN_BRANSCH_FORETAG[kommun.code] ?? {})
+    .map(([kod, n]) => ({ ng1: Number(kod), n }))
+    .filter((r) => r.ng1 !== ng1 && hubIsIndexable(r.n))
+    .sort((a, b) => b.n - a.n)
+    .slice(0, 12);
+  const andraNamn = await getBranschNamesBulk(andraKoder.map((r) => r.ng1));
+
   const breadcrumbItems = [
     { name: "Hantverkardelen", href: "/" },
     { name: kommun.name, href: `/kommun/${kommun.slug}` },
@@ -159,57 +184,37 @@ export default async function BranschPage({
   }
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-10 pb-8">
       <JsonLd data={breadcrumbJsonLd} />
       <Breadcrumb items={breadcrumbItems} />
 
-      {/* ======= HERO ======= */}
-      <header className="rd-fade-up relative overflow-hidden rounded-3xl border border-[var(--rule)] bg-white rd-shadow-md">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0"
-          style={{
-            background:
-              "radial-gradient(ellipse 70% 60% at 50% 0%, rgba(10,77,140,0.08), transparent 65%),"
-              + "linear-gradient(180deg, #F4F6F8 0%, #ffffff 70%)",
-          }}
-        />
-        <div className="relative space-y-4 p-6 sm:p-9">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--rule)] bg-[var(--surface-soft)] px-2.5 py-1 font-mono text-[11px] text-[var(--text-muted)]">
-              SNI {ng1}
-            </span>
-            <span className="font-mono text-[11px] uppercase tracking-[0.15em] text-[var(--brand)]">
-              Bransch · {kommun.name}
-            </span>
-          </div>
-          <h1 className="text-balance text-3xl font-semibold leading-[1.05] tracking-tight text-[var(--text-strong)] sm:text-[2.5rem]">
-            <span className="rd-display rd-text-brand text-[1.1em]">
-              {branschName}
-            </span>{" "}
-            i{" "}
-            <Link
-              href={`/kommun/${kommun.slug}`}
-              className="text-[var(--text-strong)] underline-offset-[6px] hover:underline"
-            >
-              {kommun.name}
-            </Link>
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="max-w-3xl space-y-3">
+          <h1 className="rd-serif text-balance text-[2.5rem] text-[var(--text-strong)] sm:text-[3.5rem]">
+            {branschName} i {kommun.name}
           </h1>
-          <p className="max-w-2xl text-sm leading-relaxed text-[var(--text-muted)] sm:text-base">
-            Hantverksföretag inom {branschName.toLowerCase()} i {kommun.name}{" "}
-            kommun, sorterat efter storlek (antal anställda).
+          <p className="text-lg leading-relaxed text-[var(--text-muted)]">
+            {antal > 0 ? (
+              <>
+                <span className="font-semibold tabular-nums text-[var(--text-strong)]">
+                  {fmt(antal)}
+                </span>{" "}
+                registrerade företag inom {yrke.toLowerCase()} i {genitiv} kommun
+                {lan ? <>, {lan.name}s län</> : null}.
+              </>
+            ) : (
+              <>Registrerade företag inom {yrke.toLowerCase()} i {genitiv} kommun.</>
+            )}{" "}
+            Telefon och adress står direkt i listan.
           </p>
         </div>
+        {/* Plats för "Begär offert" till flera företag i orten, när
+            offertflödet finns. Ligger här, bredvid rubriken, och aldrig
+            framför listan. */}
       </header>
 
-      {/* ======= STORLEKSFILTER ======= */}
-      <nav
-        aria-label="Filtrera på storlek"
-        className="flex flex-wrap items-center gap-2"
-      >
-        <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-[var(--text-dim)]">
-          Storlek:
-        </span>
+      <nav aria-label="Filtrera på storlek" className="flex flex-wrap items-center gap-2">
+        <span className="mr-1 text-sm text-[var(--text-muted)]">Antal anställda:</span>
         {SIZE_BUCKETS.map((b) => {
           const isActive =
             (aeantMin ?? null) === (b.min ?? null) &&
@@ -222,10 +227,11 @@ export default async function BranschPage({
                 aeantMax: b.max ? String(b.max) : null,
                 page: null,
               })}
-              className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium transition ${
+              aria-current={isActive ? "true" : undefined}
+              className={`inline-flex min-h-10 items-center rounded-lg border px-3 text-sm font-medium transition-colors ${
                 isActive
-                  ? "border-[var(--accent-cta)]/50 bg-[var(--tint-3)] text-[var(--accent-cta-ink)]"
-                  : "border-[var(--rule)] bg-white text-[var(--text-body)] hover:border-[var(--accent-cta)]/40 hover:bg-[var(--surface-warm)]"
+                  ? "border-[var(--brand)] bg-[var(--tint-2)] text-[var(--brand-ink)]"
+                  : "border-[var(--rule)] bg-white text-[var(--text-body)] hover:border-[var(--brand)]/40 hover:bg-[var(--tint-1)]"
               }`}
             >
               {b.label}
@@ -234,33 +240,29 @@ export default async function BranschPage({
         })}
       </nav>
 
-      {/* ======= LIST ======= */}
       {rows.length === 0 ? (
-        <div className="rd-card border-dashed bg-white p-8 text-center">
-          <p className="text-base font-medium text-[var(--text-strong)]">
-            Inga hantverksföretag hittades
+        <div className="rounded-xl border border-[var(--rule)] bg-white p-6 sm:p-8">
+          <p className="text-lg font-semibold text-[var(--text-strong)]">
+            Inga företag i den storleken
           </p>
-          <p className="mt-1 text-sm text-[var(--text-muted)]">
-            Inga registrerade hantverksföretag inom {branschName.toLowerCase()} i{" "}
-            {kommun.name} matchar valt storleksfilter.
+          <p className="mt-1 text-[15px] text-[var(--text-muted)]">
+            Inga registrerade företag inom {yrke.toLowerCase()} i {kommun.name} har
+            så många anställda.
           </p>
           <Link
-            href={`/kommun/${kommun.slug}`}
-            className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-[var(--brand-ink)] hover:underline"
+            href={withParams({ aeantMin: null, aeantMax: null, page: null })}
+            className="mt-4 inline-flex min-h-11 items-center font-semibold text-[var(--brand-ink)] underline underline-offset-4"
           >
-            <ArrowLeft aria-hidden className="size-4" />
-            Tillbaka till {kommun.name}
+            Visa alla storlekar
           </Link>
         </div>
       ) : (
         <CompanyCardList>
-          {rows.map((f, i) => (
+          {rows.map((f) => (
             <li key={f.id}>
               <CompanyCard
                 foretag={f}
                 overlay={overlayFor(f, overlays)}
-                rank={(page - 1) * PAGE_SIZE + i + 1}
-                branschName={branschName}
                 kommunName={kommun.name}
               />
             </li>
@@ -269,11 +271,11 @@ export default async function BranschPage({
       )}
 
       {(page > 1 || hasMore) && (
-        <nav className="flex items-center justify-between border-t border-[var(--rule)] pt-5 text-sm">
+        <nav aria-label="Sidor" className="flex items-center justify-between border-t border-[var(--rule)] pt-5 text-sm">
           {page > 1 ? (
             <Link
               href={withParams({ page: page > 2 ? String(page - 1) : null })}
-              className="inline-flex items-center gap-1.5 rounded-full border border-[var(--rule)] bg-white px-4 py-2 font-medium text-[var(--text-body)] transition hover:border-[var(--accent-cta)]/40 hover:bg-[var(--surface-warm)] hover:text-[var(--accent-cta-ink)]"
+              className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-[var(--rule)] bg-white px-4 font-medium text-[var(--text-body)] transition hover:border-[var(--brand)]/40 hover:bg-[var(--tint-1)] hover:text-[var(--brand-ink)]"
             >
               <ArrowLeft aria-hidden className="size-4" />
               Föregående
@@ -285,7 +287,7 @@ export default async function BranschPage({
           {hasMore ? (
             <Link
               href={withParams({ page: String(page + 1) })}
-              className="inline-flex items-center gap-1.5 rounded-full border border-[var(--rule)] bg-white px-4 py-2 font-medium text-[var(--text-body)] transition hover:border-[var(--accent-cta)]/40 hover:bg-[var(--surface-warm)] hover:text-[var(--accent-cta-ink)]"
+              className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-[var(--rule)] bg-white px-4 font-medium text-[var(--text-body)] transition hover:border-[var(--brand)]/40 hover:bg-[var(--tint-1)] hover:text-[var(--brand-ink)]"
             >
               Nästa
               <ArrowRight aria-hidden className="size-4" />
@@ -296,44 +298,68 @@ export default async function BranschPage({
         </nav>
       )}
 
-      {/* ======= CROSS-LINKS ======= */}
-      <section className="rd-fade-up rd-fade-up-delay-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <Link
-          href={`/kommun/${kommun.slug}`}
-          className="rd-card rd-card-hover group flex items-center justify-between gap-3 p-5"
-        >
-          <div className="min-w-0">
-            <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-[var(--text-dim)]">
-              Pillar
-            </p>
-            <p className="mt-1 text-base font-semibold text-[var(--text-strong)]">
+      {grannar.length > 0 && lan && (
+        <section aria-labelledby="grannar">
+          <h2 id="grannar" className="rd-serif text-3xl text-[var(--text-strong)] sm:text-4xl">
+            {yrke} i närliggande kommuner
+          </h2>
+          <p className="mt-1 text-[15px] text-[var(--text-muted)]">
+            Övriga kommuner i {lan.name}s län.
+          </p>
+          <ul className="mt-4 flex flex-wrap gap-2">
+            {grannar.map(({ k, n }) => (
+              <li key={k.code}>
+                <Link
+                  href={`/kommun/${k.slug}/${canonicalBransch}`}
+                  className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[var(--rule)] bg-white px-3 text-sm font-medium text-[var(--text-body)] transition-colors hover:border-[var(--brand)]/40 hover:bg-[var(--tint-1)] hover:text-[var(--brand-ink)]"
+                >
+                  {k.name}
+                  <span className="tabular-nums text-[var(--text-muted)]">{fmt(n)}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {andraKoder.length > 0 && (
+        <section aria-labelledby="andra-yrken">
+          <h2 id="andra-yrken" className="rd-serif text-3xl text-[var(--text-strong)] sm:text-4xl">
+            Andra yrken i {kommun.name}
+          </h2>
+          <ul className="mt-4 flex flex-wrap gap-2">
+            {andraKoder.map((r) => {
+              const registerNamn = andraNamn.get(String(r.ng1)) ?? null;
+              if (!registerNamn) return null;
+              return (
+                <li key={r.ng1}>
+                  <Link
+                    href={`/kommun/${kommun.slug}/${branschPageSlug(registerNamn, r.ng1)}`}
+                    className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[var(--rule)] bg-white px-3 text-sm font-medium text-[var(--text-body)] transition-colors hover:border-[var(--brand)]/40 hover:bg-[var(--tint-1)] hover:text-[var(--brand-ink)]"
+                  >
+                    {yrkesnamn(r.ng1, registerNamn)}
+                    <span className="tabular-nums text-[var(--text-muted)]">{fmt(r.n)}</span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+          <p className="mt-5 flex flex-wrap gap-x-6 gap-y-2 text-[15px]">
+            <Link
+              href={`/kommun/${kommun.slug}`}
+              className="inline-flex min-h-11 items-center font-semibold text-[var(--brand-ink)] underline underline-offset-4 decoration-[var(--brand)]/30 hover:decoration-[var(--brand)]"
+            >
               Alla hantverkare i {kommun.name}
-            </p>
-          </div>
-          <ArrowRight
-            aria-hidden
-            className="size-4 shrink-0 text-[var(--text-faint)] transition-transform group-hover:translate-x-0.5 group-hover:text-[var(--accent-cta)]"
-          />
-        </Link>
-        <Link
-          href={`/sok?q=${encodeURIComponent(branschName)}`}
-          className="rd-card rd-card-hover group flex items-center justify-between gap-3 p-5"
-        >
-          <div className="min-w-0">
-            <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-[var(--text-dim)]">
-              Hela Sverige
-            </p>
-            <p className="mt-1 flex items-center gap-1.5 text-base font-semibold text-[var(--text-strong)]">
-              <Layers aria-hidden className="size-4 text-[var(--accent-cta)]" />
-              {branschName} i hela landet
-            </p>
-          </div>
-          <ArrowRight
-            aria-hidden
-            className="size-4 shrink-0 text-[var(--text-faint)] transition-transform group-hover:translate-x-0.5 group-hover:text-[var(--accent-cta)]"
-          />
-        </Link>
-      </section>
+            </Link>
+            <Link
+              href={`/sok?q=${encodeURIComponent(branschName)}`}
+              className="inline-flex min-h-11 items-center font-semibold text-[var(--brand-ink)] underline underline-offset-4 decoration-[var(--brand)]/30 hover:decoration-[var(--brand)]"
+            >
+              {yrke} i hela Sverige
+            </Link>
+          </p>
+        </section>
+      )}
     </div>
   );
 }

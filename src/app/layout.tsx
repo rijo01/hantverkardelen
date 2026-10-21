@@ -90,7 +90,7 @@ export default function RootLayout({
               <div className="flex items-center gap-2.5">
                 <LogoMark />
                 <span className="text-sm font-semibold text-[var(--text-strong)]">
-                  Hantverkardelen<span className="text-[var(--accent-cta)]">.se</span>
+                  Hantverkardelen<span className="text-[var(--accent-text)]">.se</span>
                 </span>
               </div>
               <p className="max-w-sm text-sm text-[var(--text-muted)]">
@@ -100,14 +100,14 @@ export default function RootLayout({
               </p>
             </div>
             <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-dim)]">
-                Utforska
+              <p className="text-sm font-semibold text-[var(--text-strong)]">
+                Hitta hantverkare
               </p>
-              <ul className="space-y-1.5 text-sm">
+              <ul className="text-[15px]">
                 <li>
                   <a
                     href="/"
-                    className="text-[var(--text-body)] hover:text-[var(--brand-ink)]"
+                    className="inline-flex min-h-9 items-center text-[var(--text-body)] underline-offset-4 hover:text-[var(--brand-ink)] hover:underline"
                   >
                     Startsidan
                   </a>
@@ -115,7 +115,7 @@ export default function RootLayout({
                 <li>
                   <a
                     href="/kommuner"
-                    className="text-[var(--text-body)] hover:text-[var(--brand-ink)]"
+                    className="inline-flex min-h-9 items-center text-[var(--text-body)] underline-offset-4 hover:text-[var(--brand-ink)] hover:underline"
                   >
                     Alla 290 kommuner
                   </a>
@@ -123,31 +123,31 @@ export default function RootLayout({
                 <li>
                   <a
                     href="/branscher"
-                    className="text-[var(--text-body)] hover:text-[var(--brand-ink)]"
+                    className="inline-flex min-h-9 items-center text-[var(--text-body)] underline-offset-4 hover:text-[var(--brand-ink)] hover:underline"
                   >
-                    Hantverkskategorier
+                    Alla yrken
                   </a>
                 </li>
                 <li>
                   <a
                     href="/sok"
-                    className="text-[var(--text-body)] hover:text-[var(--brand-ink)]"
+                    className="inline-flex min-h-9 items-center text-[var(--text-body)] underline-offset-4 hover:text-[var(--brand-ink)] hover:underline"
                   >
-                    Fritextsök
+                    Sök
                   </a>
                 </li>
                 <li>
                   <a
                     href="/kontakt"
-                    className="text-[var(--text-body)] hover:text-[var(--brand-ink)]"
+                    className="inline-flex min-h-9 items-center text-[var(--text-body)] underline-offset-4 hover:text-[var(--brand-ink)] hover:underline"
                   >
-                    Kontakta oss
+                    För hantverkare
                   </a>
                 </li>
               </ul>
             </div>
             <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-dim)]">
+              <p className="text-sm font-semibold text-[var(--text-strong)]">
                 Integritet
               </p>
               <p className="text-sm text-[var(--text-muted)]">
@@ -169,14 +169,12 @@ export default function RootLayout({
             </div>
           </div>
           <div className="border-t border-[var(--rule)]">
-            <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-5 text-xs text-[var(--text-dim)] sm:flex-row sm:items-center sm:justify-between">
+            <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-5 text-sm text-[var(--text-muted)] sm:flex-row sm:items-center sm:justify-between">
               <span>
                 © {new Date().getFullYear()} Hantverkardelen · Data från
                 offentligt näringslivsregister, ca {REGISTER_AR}
               </span>
-              <span className="text-[var(--text-faint)]">
-                Byggt i Sverige
-              </span>
+
             </div>
           </div>
         </footer>

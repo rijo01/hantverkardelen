@@ -1,7 +1,9 @@
 import Link from "next/link";
-import { Filter, X, Users, MapPin, Layers, Building2 } from "lucide-react";
+import { Filter, X } from "lucide-react";
 import { ALL_KOMMUNER } from "@/lib/kommuner";
 import { TOP_BRANSCHER } from "@/lib/stats";
+import { yrkesnamn } from "@/lib/yrkesnamn";
+import { REGISTER_AR } from "@/lib/dataprovenans";
 
 export type FilterState = {
   q?: string;
@@ -55,13 +57,13 @@ export function FilterPanel({
   return (
     <aside aria-label="Filtrera resultat">
       {/* Mobile: collapsible drawer */}
-      <details className="rd-card overflow-hidden lg:hidden">
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3 text-sm font-semibold text-[var(--text-strong)]">
+      <details className="overflow-hidden rounded-xl border border-[var(--rule)] bg-white lg:hidden">
+        <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-2 px-4 py-2 text-sm font-semibold text-[var(--text-strong)]">
           <span className="inline-flex items-center gap-2">
             <Filter className="size-4 text-[var(--brand-2)]" aria-hidden />
             Filter
             {hasAnyFilter && (
-              <span className="rounded-full bg-[var(--tint-3)] px-2 py-0.5 text-[10px] font-semibold text-[var(--brand-ink)]">
+              <span className="rounded-sm bg-[var(--tint-2)] px-1.5 py-0.5 text-xs font-semibold text-[var(--brand-ink)]">
                 Aktivt
               </span>
             )}
@@ -86,7 +88,7 @@ export function FilterPanel({
 
       {/* Desktop: sticky panel */}
       <div className="hidden lg:block">
-        <div className="rd-card sticky top-20 overflow-hidden">
+        <div className="sticky top-20 overflow-hidden rounded-xl border border-[var(--rule)] bg-white">
           <div className="flex items-center justify-between border-b border-[var(--rule-soft)] px-5 py-4">
             <h2 className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--text-strong)]">
               <Filter className="size-4 text-[var(--brand-2)]" aria-hidden />
@@ -103,7 +105,7 @@ export function FilterPanel({
                 aeantMax: null,
                 page: null,
               })}
-                className="inline-flex items-center gap-1 text-[11px] font-medium text-[var(--text-muted)] hover:text-[var(--brand-ink)]"
+                className="inline-flex items-center gap-1 text-sm font-medium text-[var(--text-muted)] hover:text-[var(--brand-ink)]"
               >
                 Rensa
                 <X className="size-3" aria-hidden />
@@ -141,14 +143,13 @@ function FilterBody({
   return (
     <div className="space-y-6">
       {totalCount !== undefined && (
-        <p className="text-[11px] font-mono uppercase tracking-[0.14em] text-[var(--text-dim)]">
+        <p className="text-sm text-[var(--text-muted)]">
           {totalCount.toLocaleString("sv-SE")} träffar
         </p>
       )}
 
       <FilterGroup
         title="Antal anställda"
-        icon={<Users className="size-3.5" aria-hidden />}
       >
         <ul className="space-y-0.5">
           {sizeBuckets.map((b) => {
@@ -162,18 +163,15 @@ function FilterBody({
                     aeantMin: b.min ?? null,
                     aeantMax: b.max ?? null,
                   })}
-                  className={`flex items-center justify-between rounded-lg px-2 py-1.5 text-sm transition ${
+                  aria-current={isActive ? "true" : undefined}
+                  className={`flex min-h-10 items-center justify-between rounded-lg px-2 text-sm transition ${
                     isActive
-                      ? "bg-[var(--tint-3)] font-medium text-[var(--brand-ink)]"
+                      ? "bg-[var(--tint-2)] font-semibold text-[var(--brand-ink)]"
                       : "text-[var(--text-body)] hover:bg-[var(--surface-soft)]"
                   }`}
                 >
                   <span>{b.label}</span>
-                  {isActive && (
-                    <span aria-hidden className="text-[var(--brand-2)]">
-                      ●
-                    </span>
-                  )}
+
                 </Link>
               </li>
             );
@@ -183,24 +181,20 @@ function FilterBody({
 
       <FilterGroup
         title="Bransch"
-        icon={<Layers className="size-3.5" aria-hidden />}
       >
         <ul className="space-y-0.5">
           <li>
             <Link
               href={buildHref(pathname, state, { bransch: null })}
-              className={`flex items-center justify-between rounded-lg px-2 py-1.5 text-sm transition ${
+              aria-current={!state.bransch ? "true" : undefined}
+              className={`flex min-h-10 items-center justify-between rounded-lg px-2 text-sm transition ${
                 !state.bransch
-                  ? "bg-[var(--tint-3)] font-medium text-[var(--brand-ink)]"
+                  ? "bg-[var(--tint-2)] font-semibold text-[var(--brand-ink)]"
                   : "text-[var(--text-body)] hover:bg-[var(--surface-soft)]"
               }`}
             >
-              Alla branscher
-              {!state.bransch && (
-                <span aria-hidden className="text-[var(--brand-2)]">
-                  ●
-                </span>
-              )}
+              Alla yrken
+
             </Link>
           </li>
           {TOP_BRANSCHER.slice(0, 10).map((b) => {
@@ -209,19 +203,16 @@ function FilterBody({
               <li key={b.id}>
                 <Link
                   href={buildHref(pathname, state, { bransch: String(b.id) })}
-                  className={`flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-sm transition ${
+                  aria-current={isActive ? "true" : undefined}
+                  className={`flex min-h-10 items-center justify-between gap-2 rounded-lg px-2 text-sm transition ${
                     isActive
-                      ? "bg-[var(--tint-3)] font-medium text-[var(--brand-ink)]"
+                      ? "bg-[var(--tint-2)] font-semibold text-[var(--brand-ink)]"
                       : "text-[var(--text-body)] hover:bg-[var(--surface-soft)]"
                   }`}
-                  title={b.name}
+                  title={yrkesnamn(b.id, b.name)}
                 >
-                  <span className="truncate">{b.name}</span>
-                  {isActive && (
-                    <span aria-hidden className="text-[var(--brand-2)]">
-                      ●
-                    </span>
-                  )}
+                  <span className="truncate">{yrkesnamn(b.id, b.name)}</span>
+
                 </Link>
               </li>
             );
@@ -231,7 +222,6 @@ function FilterBody({
 
       <FilterGroup
         title="Kommun"
-        icon={<MapPin className="size-3.5" aria-hidden />}
       >
         <form action={pathname} method="GET" className="space-y-2">
           {/* Behåll övriga params via hidden inputs. Vi släpper lan/postort
@@ -255,7 +245,7 @@ function FilterBody({
           <select
             name="kommun"
             defaultValue={state.kommun ?? ""}
-            className="w-full appearance-none rounded-lg border border-[var(--rule)] bg-white px-2.5 py-2 text-sm text-[var(--text-strong)] shadow-[0_1px_2px_rgba(17,24,28,0.03)] outline-none transition focus:border-[var(--brand-2)]/60 focus:ring-2 focus:ring-[var(--brand-2)]/15"
+            className="min-h-10 w-full rounded-lg border border-[var(--rule-strong)] bg-white px-2.5 py-2 text-sm text-[var(--text-strong)] shadow-[0_1px_2px_rgba(17,24,28,0.03)] outline-none transition focus:border-[var(--brand-2)]/60 focus:ring-2 focus:ring-[var(--brand-2)]/15"
           >
             <option value="">Alla kommuner</option>
             {ALL_KOMMUNER.slice()
@@ -268,9 +258,9 @@ function FilterBody({
           </select>
           <button
             type="submit"
-            className="w-full rounded-lg rd-brand-gradient rd-cta-shadow py-2 text-xs font-semibold text-white transition hover:brightness-105 active:scale-[0.99]"
+            className="inline-flex min-h-10 w-full items-center justify-center rounded-lg border border-[var(--brand)]/35 bg-white text-sm font-semibold text-[var(--brand-ink)] transition-colors hover:border-[var(--brand)] hover:bg-[var(--tint-1)]"
           >
-            Använd
+            Visa kommunen
           </button>
         </form>
       </FilterGroup>
@@ -282,35 +272,29 @@ function FilterBody({
             className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-[var(--rule)] bg-white py-2 text-xs font-semibold text-[var(--text-body)] transition hover:border-[var(--brand-2)]/40 hover:text-[var(--brand-ink)]"
           >
             <X className="size-3.5" aria-hidden />
-            Rensa alla filter
+            Rensa filter
           </Link>
         </div>
       )}
 
-      <div className="rounded-xl border border-[var(--rule)] bg-[var(--surface-soft)] p-3 text-[11px] leading-relaxed text-[var(--text-muted)]">
-        <div className="mb-1 flex items-center gap-1.5 font-semibold text-[var(--text-strong)]">
-          <Building2 className="size-3.5 text-[var(--brand-2)]" aria-hidden />
-          Officiell registerdata
-        </div>
-        Data från SCB och offentliga register. Org.nr maskas av GDPR-skäl.
-      </div>
+      <p className="text-xs leading-relaxed text-[var(--text-muted)]">
+        Uppgifterna kommer från ett offentligt näringslivsregister från omkring{" "}
+        {REGISTER_AR}. Personnummer för enskilda firmor visas aldrig.
+      </p>
     </div>
   );
 }
 
 function FilterGroup({
   title,
-  icon,
   children,
 }: {
   title: string;
-  icon?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
-    <fieldset className="space-y-2">
-      <legend className="inline-flex items-center gap-1.5 pb-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-dim)]">
-        <span className="text-[var(--brand-2)]">{icon}</span>
+    <fieldset className="space-y-1.5">
+      <legend className="pb-1 text-sm font-semibold text-[var(--text-strong)]">
         {title}
       </legend>
       {children}

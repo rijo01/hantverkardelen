@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight, Layers, MapPin } from "lucide-react";
-import { kommunBySlug } from "@/lib/kommuner";
+import { ALL_KOMMUNER, kommunBySlug } from "@/lib/kommuner";
+import { lanByCode } from "@/lib/lan";
+import { yrkesnamn } from "@/lib/yrkesnamn";
+import { SearchBar } from "@/components/search-bar";
 import {
   branschPageSlug,
   countForetagInKommun,
@@ -65,6 +67,18 @@ export default async function KommunPage({ params }: { params: Params }) {
 
   const branschNames = await getBranschNamesBulk(fordelning.map((f) => f.ng1));
 
+  const lan = lanByCode(kommun.lan);
+  // Närliggande = samma län. Grannskapsdata finns inte; länet är det ärliga
+  // närmevärdet. Bara kommuner vars sida passerar indexgrinden, så att
+  // länkarna aldrig leder till en noindex-sida.
+  const grannar = ALL_KOMMUNER.filter(
+    (k) => k.lan === kommun.lan && k.code !== kommun.code,
+  )
+    .map((k) => ({ k, n: snapshotKommunCount(k.code) }))
+    .filter(({ n }) => hubIsIndexable(n))
+    .sort((a, b) => b.n - a.n)
+    .slice(0, 12);
+
   const breadcrumbItems = [
     { name: "Hantverkardelen", href: "/" },
     { name: kommun.name, href: `/kommun/${kommun.slug}` },
@@ -75,177 +89,109 @@ export default async function KommunPage({ params }: { params: Params }) {
     { name: kommun.name, url: `${SITE_URL}/kommun/${kommun.slug}` },
   ]);
 
+  const genitiv = kommun.name.endsWith("s") ? kommun.name : `${kommun.name}s`;
+
   return (
-    <div className="space-y-12">
+    <div className="space-y-12 pb-8">
       <JsonLd data={breadcrumbJsonLd} />
       <Breadcrumb items={breadcrumbItems} />
 
-      {/* ======= HERO ======= */}
-      <header className="rd-fade-up relative overflow-hidden rounded-3xl border border-[var(--rule)] bg-white rd-shadow-md">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 -z-0"
-          style={{
-            background:
-              "radial-gradient(ellipse 80% 60% at 0% 0%, rgba(10,77,140,0.08), transparent 65%),"
-              + "radial-gradient(ellipse 50% 40% at 100% 30%, rgba(242,116,12,0.06), transparent 70%),"
-              + "linear-gradient(180deg, #F4F6F8 0%, #ffffff 70%)",
-          }}
-        />
-        <div
-          aria-hidden
-          className="rd-dot-grid pointer-events-none absolute inset-0 opacity-30 [mask-image:linear-gradient(180deg,#000,transparent_70%)]"
-        />
-        <div className="relative grid gap-6 p-6 sm:grid-cols-[1fr_auto] sm:items-end sm:p-9">
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.16em] text-[var(--brand)]">
-              <MapPin aria-hidden className="size-3.5" />
-              Kommun · Län {kommun.lan}
-            </div>
-            <h1 className="text-balance text-3xl font-semibold leading-[1.05] tracking-tight text-[var(--text-strong)] sm:text-[2.75rem]">
-              Hantverkare i{" "}
-              <span className="rd-display rd-text-brand text-[1.15em]">
-                {kommun.name}
-              </span>
-            </h1>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-[var(--text-muted)] sm:text-base">
-              <span>
-                <span className="font-mono font-semibold tabular-nums text-[var(--text-strong)]">
-                  {fmt(liveTotal)}
-                </span>{" "}
-                hantverksföretag registrerade
-              </span>
-              <span aria-hidden className="text-[var(--text-faint)]">·</span>
-              <span className="font-mono text-[var(--text-dim)]">
-                SCB {kommun.scbCode}
-              </span>
-            </div>
-          </div>
-          <Link
-            href={`/sok?kommun=${kommun.slug}`}
-            className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full rd-brand-gradient rd-cta-shadow px-5 text-sm font-semibold text-white transition hover:brightness-105 active:scale-[0.99]"
-          >
-            Sök i {kommun.name}
-            <ArrowRight aria-hidden className="size-4" />
-          </Link>
+      <header className="max-w-4xl space-y-4">
+        <h1 className="rd-serif text-balance text-[2.5rem] text-[var(--text-strong)] sm:text-[3.5rem]">
+          Hantverkare i {kommun.name}
+        </h1>
+        <p className="max-w-2xl text-lg leading-relaxed text-[var(--text-muted)]">
+          <span className="font-semibold tabular-nums text-[var(--text-strong)]">
+            {fmt(liveTotal)}
+          </span>{" "}
+          registrerade hantverksföretag i {genitiv} kommun
+          {lan ? <>, {lan.name}s län</> : null}. Välj ett yrke, eller sök efter ett
+          företag.
+        </p>
+        <div className="pt-2">
+          <SearchBar variant="dual" initialOrt={kommun.name} snabbval />
         </div>
       </header>
 
-      {/* ======= LARGEST EMPLOYERS + BRANSCHFÖRDELNING ======= */}
-      <section className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_22rem]">
-        <div className="rd-fade-up rd-fade-up-delay-1 space-y-4">
-          <div className="flex items-end justify-between gap-3">
-            <div className="space-y-0.5">
-              <p className="font-mono text-[11px] uppercase tracking-[0.15em] text-[var(--brand)]">
-                Arbetsgivare
-              </p>
-              <h2 className="text-xl font-semibold text-[var(--text-strong)] sm:text-2xl">
-                Största hantverkare i {kommun.name}
-              </h2>
-            </div>
-            <Link
-              href={`/sok?kommun=${kommun.slug}`}
-              className="hidden text-sm text-[var(--text-muted)] hover:text-[var(--brand-ink)] sm:inline"
-            >
-              Se alla →
-            </Link>
-          </div>
-          {foretagSample.length === 0 ? (
-            <p className="text-sm text-[var(--text-muted)]">
-              Ingen hantverksdata tillgänglig.
-            </p>
-          ) : (
-            <CompanyCardList>
-              {foretagSample.map((f, i) => (
-                <li key={f.id}>
-                  <CompanyCard
-                    foretag={f}
-                    overlay={overlayFor(f, overlays)}
-                    rank={i + 1}
-                    kommunName={kommun.name}
-                  />
+      {fordelning.length > 0 && (
+        <section aria-labelledby="yrken">
+          <h2 id="yrken" className="rd-serif text-3xl text-[var(--text-strong)] sm:text-4xl">
+            Yrken i {kommun.name}
+          </h2>
+          <ul className="mt-5 grid grid-cols-1 border-t border-[var(--rule)] sm:grid-cols-2 sm:gap-x-8 lg:grid-cols-3">
+            {fordelning.map((f) => {
+              const registerNamn = branschNames.get(String(f.ng1)) ?? null;
+              const namn = yrkesnamn(f.ng1, registerNamn);
+              const href = `/kommun/${kommun.slug}/${branschPageSlug(registerNamn ?? namn, f.ng1)}`;
+              return (
+                <li key={f.ng1} className="border-b border-[var(--rule)]">
+                  <Link
+                    href={href}
+                    className="group flex min-h-12 items-center justify-between gap-3 py-2.5"
+                  >
+                    <span className="truncate font-medium text-[var(--text-strong)] underline-offset-4 group-hover:text-[var(--brand-ink)] group-hover:underline">
+                      {namn}
+                    </span>
+                    <span className="shrink-0 text-sm tabular-nums text-[var(--text-muted)]">
+                      {fmt(f.count)}
+                    </span>
+                  </Link>
                 </li>
-              ))}
-            </CompanyCardList>
-          )}
-        </div>
+              );
+            })}
+          </ul>
+        </section>
+      )}
 
-        <aside className="rd-fade-up rd-fade-up-delay-2 space-y-4">
-          <div className="flex items-end justify-between gap-3">
-            <div className="space-y-0.5">
-              <p className="font-mono text-[11px] uppercase tracking-[0.15em] text-[var(--brand)]">
-                Branscher
-              </p>
-              <h2 className="text-xl font-semibold text-[var(--text-strong)] sm:text-2xl">
-                Hantverkskategorier
-              </h2>
-            </div>
-            <span className="text-xs text-[var(--text-dim)]">
-              Topp {fordelning.length}
-            </span>
-          </div>
-          {fordelning.length === 0 ? (
-            <p className="text-sm text-[var(--text-muted)]">
-              Ingen branschdata tillgänglig.
-            </p>
-          ) : (
-            <ol className="rd-card divide-y divide-[var(--rule-soft)]">
-              {fordelning.map((f) => {
-                const name = branschNames.get(String(f.ng1)) ?? `SNI ${f.ng1}`;
-                const href = `/kommun/${kommun.slug}/${branschPageSlug(name, f.ng1)}`;
-                return (
-                  <li key={f.ng1}>
-                    <Link
-                      href={href}
-                      className="rd-row flex items-center justify-between gap-2 px-4 py-2.5 text-sm"
-                      title={`${name} i ${kommun.name}`}
-                    >
-                      <span className="flex min-w-0 items-center gap-2 text-[var(--text-body)]">
-                        <Layers
-                          aria-hidden
-                          className="size-3.5 shrink-0 text-[var(--accent-cta)]"
-                        />
-                        <span className="truncate">{name}</span>
-                      </span>
-                      <span className="shrink-0 font-mono text-xs tabular-nums text-[var(--text-muted)]">
-                        {fmt(f.count)}
-                      </span>
-                    </Link>
-                  </li>
-                );
-              })}
-            </ol>
-          )}
-        </aside>
-      </section>
-
-      {/* ======= SEO-TEXT + CTA ======= */}
-      <section className="rd-fade-up rd-fade-up-delay-3 grid grid-cols-1 gap-5 rounded-3xl border border-[var(--accent-cta)]/25 bg-[var(--surface-warm)] p-6 sm:grid-cols-[1fr_auto] sm:items-center sm:p-8">
-        <div className="space-y-2">
-          <p className="font-mono text-[11px] uppercase tracking-[0.15em] text-[var(--accent-cta-ink)]">
-            Om sidan
-          </p>
-          <h3 className="text-lg font-semibold text-[var(--text-strong)] sm:text-xl">
-            Lokal hantverkskatalog för {kommun.name} kommun
-          </h3>
-          <p className="max-w-2xl text-sm leading-relaxed text-[var(--text-body)]">
-            Här hittar du{" "}
-            <span className="font-semibold tabular-nums text-[var(--text-strong)]">
-              {fmt(liveTotal)}
-            </span>{" "}
-            registrerade hantverksföretag i {kommun.name}. Klicka på en
-            kategori för att se alla företag inom den nischen, eller använd
-            sökfunktionen för att hitta ett specifikt företag.
+      <section aria-labelledby="storst" className="space-y-4">
+        <div>
+          <h2 id="storst" className="rd-serif text-3xl text-[var(--text-strong)] sm:text-4xl">
+            Flest anställda i {kommun.name}
+          </h2>
+          <p className="mt-1 text-[15px] text-[var(--text-muted)]">
+            De {foretagSample.length} största företagen i registret, alla yrken.
           </p>
         </div>
-        <Link
-          href={`/sok?kommun=${kommun.slug}`}
-          className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full rd-brand-gradient rd-cta-shadow px-5 text-sm font-semibold text-white transition hover:brightness-105 active:scale-[0.99]"
-        >
-          Sök i {kommun.name}
-          <ArrowRight aria-hidden className="size-4" />
-        </Link>
+        {foretagSample.length === 0 ? (
+          <p className="text-[15px] text-[var(--text-muted)]">
+            Inga hantverksföretag registrerade i {kommun.name}.
+          </p>
+        ) : (
+          <CompanyCardList>
+            {foretagSample.map((f) => (
+              <li key={f.id}>
+                <CompanyCard
+                  foretag={f}
+                  overlay={overlayFor(f, overlays)}
+                  branschName={f.ng1 ? yrkesnamn(f.ng1) : null}
+                  kommunName={kommun.name}
+                />
+              </li>
+            ))}
+          </CompanyCardList>
+        )}
       </section>
+
+      {grannar.length > 0 && lan && (
+        <section aria-labelledby="grannar">
+          <h2 id="grannar" className="rd-serif text-3xl text-[var(--text-strong)] sm:text-4xl">
+            Fler kommuner i {lan.name}s län
+          </h2>
+          <ul className="mt-5 flex flex-wrap gap-2">
+            {grannar.map(({ k, n }) => (
+              <li key={k.code}>
+                <Link
+                  href={`/kommun/${k.slug}`}
+                  className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[var(--rule)] bg-white px-3 text-sm font-medium text-[var(--text-body)] transition-colors hover:border-[var(--brand)]/40 hover:bg-[var(--tint-1)] hover:text-[var(--brand-ink)]"
+                >
+                  {k.name}
+                  <span className="tabular-nums text-[var(--text-muted)]">{fmt(n)}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </div>
   );
 }
