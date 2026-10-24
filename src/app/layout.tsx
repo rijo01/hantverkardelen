@@ -1,8 +1,8 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
-import { Hammer } from "lucide-react";
+import { Archivo } from "next/font/google";
 import "./globals.css";
 import { SiteNav, MobileBottomNav } from "@/components/site-nav";
+import { Ordmarke } from "@/components/ordmarke";
 import {
   PERSONUPPGIFT_FORKLARING,
   REGISTER_AR,
@@ -11,31 +11,9 @@ import {
 import { GoogleAnalytics } from "@next/third-parties/google";
 import { GA_ID } from "@/lib/site";
 
-function LogoMark() {
-  return (
-    <span
-      aria-hidden
-      className="relative inline-flex size-7 items-center justify-center rounded-lg bg-[var(--brand)] text-white shadow-[0_2px_6px_-2px_rgba(10,77,140,0.5)]"
-    >
-      <Hammer className="size-4" strokeWidth={2.2} />
-    </span>
-  );
-}
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-const instrumentSerif = Instrument_Serif({
-  variable: "--font-instrument-serif",
-  weight: "400",
-  style: ["normal", "italic"],
+// Archivo är en variabel font: en fil täcker 400–800, i stället för fem.
+const archivo = Archivo({
+  variable: "--font-archivo",
   subsets: ["latin"],
 });
 
@@ -75,107 +53,60 @@ export default function RootLayout({
   };
 
   return (
-    <html
-      lang="sv"
-      className={`${geistSans.variable} ${geistMono.variable} ${instrumentSerif.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col bg-white text-[var(--text-body)]">
+    <html lang="sv" className={`${archivo.variable} h-full antialiased`}>
+      <body className="flex min-h-full flex-col bg-page text-ink-2">
         <SiteNav />
-        <main className="mx-auto w-full max-w-6xl flex-1 px-4 pb-24 md:pb-12">
-          {children}
-        </main>
-        <footer className="border-t border-[var(--rule)] bg-[var(--surface-soft)]">
-          <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 sm:grid-cols-[2fr_1fr_1fr] sm:gap-10">
-            <div className="space-y-3">
-              <div className="flex items-center gap-2.5">
-                <LogoMark />
-                <span className="text-sm font-semibold text-[var(--text-strong)]">
-                  Hantverkardelen<span className="text-[var(--accent-text)]">.se</span>
-                </span>
-              </div>
-              <p className="max-w-sm text-sm text-[var(--text-muted)]">
-                Sveriges katalog för hem &amp; hantverk. Uppgifterna är hämtade
-                ur ett offentligt näringslivsregister från omkring{" "}
-                {REGISTER_AR} och kan vara inaktuella.
+        <main className="w-full flex-1">{children}</main>
+        <footer className="sg-on-navy bg-navy pb-24 text-[var(--sg-on-navy-muted)] md:pb-0">
+          <div className="sg-wrap grid gap-10 py-12 md:grid-cols-[1.4fr_1fr_1.4fr]">
+            <div className="space-y-4">
+              <Ordmarke />
+              <p className="max-w-sm text-[15px] leading-relaxed">
+                Data från offentliga register. Är det här ditt företag?{" "}
+                <a href="/kontakt" className="font-semibold text-white underline underline-offset-4">
+                  Uppdatera dina uppgifter
+                </a>
               </p>
             </div>
-            <div className="space-y-2">
-              <p className="text-sm font-semibold text-[var(--text-strong)]">
-                Hitta hantverkare
-              </p>
-              <ul className="text-[15px]">
-                <li>
-                  <a
-                    href="/"
-                    className="inline-flex min-h-9 items-center text-[var(--text-body)] underline-offset-4 hover:text-[var(--brand-ink)] hover:underline"
-                  >
-                    Startsidan
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="/kommuner"
-                    className="inline-flex min-h-9 items-center text-[var(--text-body)] underline-offset-4 hover:text-[var(--brand-ink)] hover:underline"
-                  >
-                    Alla 290 kommuner
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="/branscher"
-                    className="inline-flex min-h-9 items-center text-[var(--text-body)] underline-offset-4 hover:text-[var(--brand-ink)] hover:underline"
-                  >
-                    Alla yrken
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="/sok"
-                    className="inline-flex min-h-9 items-center text-[var(--text-body)] underline-offset-4 hover:text-[var(--brand-ink)] hover:underline"
-                  >
-                    Sök
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="/kontakt"
-                    className="inline-flex min-h-9 items-center text-[var(--text-body)] underline-offset-4 hover:text-[var(--brand-ink)] hover:underline"
-                  >
-                    För hantverkare
-                  </a>
-                </li>
+            <div>
+              <p className="sg-label text-white">Hitta hantverkare</p>
+              <ul className="mt-3 text-[15px]">
+                {[
+                  ["/", "Startsidan"],
+                  ["/kommuner", "Alla 290 kommuner"],
+                  ["/branscher", "Alla yrken"],
+                  ["/sok", "Sök"],
+                  ["/kontakt", "För hantverkare"],
+                ].map(([href, text]) => (
+                  <li key={href}>
+                    <a
+                      href={href}
+                      className="inline-flex min-h-9 items-center underline-offset-4 hover:text-white hover:underline"
+                    >
+                      {text}
+                    </a>
+                  </li>
+                ))}
               </ul>
             </div>
-            <div className="space-y-2">
-              <p className="text-sm font-semibold text-[var(--text-strong)]">
-                Integritet
-              </p>
-              <p className="text-sm text-[var(--text-muted)]">
-                {PERSONUPPGIFT_FORKLARING}
-              </p>
-              <p className="text-sm text-[var(--text-muted)]">
-                {REGISTER_FORKLARING}
-              </p>
-              <p className="text-sm text-[var(--text-muted)]">
+            <div className="space-y-3 text-sm leading-relaxed">
+              <p className="sg-label text-white">Integritet</p>
+              <p>{PERSONUPPGIFT_FORKLARING}</p>
+              <p>{REGISTER_FORKLARING}</p>
+              <p>
                 Vill du få en uppgift rättad eller borttagen?{" "}
-                <a
-                  href="/kontakt"
-                  className="underline hover:text-[var(--brand-ink)]"
-                >
+                <a href="/kontakt" className="text-white underline underline-offset-4">
                   Kontakta oss
                 </a>
                 .
               </p>
             </div>
           </div>
-          <div className="border-t border-[var(--rule)]">
-            <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-5 text-sm text-[var(--text-muted)] sm:flex-row sm:items-center sm:justify-between">
-              <span>
-                © {new Date().getFullYear()} Hantverkardelen · Data från
-                offentligt näringslivsregister, ca {REGISTER_AR}
-              </span>
-
-            </div>
+          <div className="border-t border-white/15">
+            <p className="sg-wrap py-5 text-sm">
+              © {new Date().getFullYear()} Hantverkardelen · Data från
+              offentligt näringslivsregister, ca {REGISTER_AR}
+            </p>
           </div>
         </footer>
         <MobileBottomNav />

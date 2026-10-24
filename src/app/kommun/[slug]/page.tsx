@@ -1,10 +1,8 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ALL_KOMMUNER, kommunBySlug } from "@/lib/kommuner";
 import { lanByCode } from "@/lib/lan";
 import { yrkesnamn } from "@/lib/yrkesnamn";
-import { SearchBar } from "@/components/search-bar";
 import {
   branschPageSlug,
   countForetagInKommun,
@@ -16,6 +14,7 @@ import { JsonLd, buildBreadcrumb } from "@/components/json-ld";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { hubIsIndexable, robotsFor, snapshotKommunCount } from "@/lib/seo";
 import { CompanyCard, CompanyCardList } from "@/components/company-card";
+import { LankLista, ResultatVy } from "@/components/resultat-vy";
 import { loadAktivaOverlays, overlayFor } from "@/lib/overlay";
 import { ordnaBoostade } from "@/lib/overlay-rankning";
 
@@ -91,73 +90,57 @@ export default async function KommunPage({ params }: { params: Params }) {
 
   const genitiv = kommun.name.endsWith("s") ? kommun.name : `${kommun.name}s`;
 
+  const yrken = fordelning.map((f) => {
+    const registerNamn = branschNames.get(String(f.ng1)) ?? null;
+    const namn = yrkesnamn(f.ng1, registerNamn);
+    return {
+      href: `/kommun/${kommun.slug}/${branschPageSlug(registerNamn ?? namn, f.ng1)}`,
+      label: namn,
+      antal: f.count,
+    };
+  });
+
   return (
-    <div className="space-y-12 pb-8">
+    <div className="sg-wrap pb-16">
       <JsonLd data={breadcrumbJsonLd} />
       <Breadcrumb items={breadcrumbItems} />
 
-      <header className="max-w-4xl space-y-4">
-        <h1 className="rd-serif text-balance text-[2.5rem] text-[var(--text-strong)] sm:text-[3.5rem]">
-          Hantverkare i {kommun.name}
-        </h1>
-        <p className="max-w-2xl text-lg leading-relaxed text-[var(--text-muted)]">
-          <span className="font-semibold tabular-nums text-[var(--text-strong)]">
-            {fmt(liveTotal)}
-          </span>{" "}
-          registrerade hantverksföretag i {genitiv} kommun
-          {lan ? <>, {lan.name}s län</> : null}. Välj ett yrke, eller sök efter ett
-          företag.
-        </p>
-        <div className="pt-2">
-          <SearchBar variant="dual" initialOrt={kommun.name} snabbval />
-        </div>
-      </header>
-
-      {fordelning.length > 0 && (
-        <section aria-labelledby="yrken">
-          <h2 id="yrken" className="rd-serif text-3xl text-[var(--text-strong)] sm:text-4xl">
-            Yrken i {kommun.name}
-          </h2>
-          <ul className="mt-5 grid grid-cols-1 border-t border-[var(--rule)] sm:grid-cols-2 sm:gap-x-8 lg:grid-cols-3">
-            {fordelning.map((f) => {
-              const registerNamn = branschNames.get(String(f.ng1)) ?? null;
-              const namn = yrkesnamn(f.ng1, registerNamn);
-              const href = `/kommun/${kommun.slug}/${branschPageSlug(registerNamn ?? namn, f.ng1)}`;
-              return (
-                <li key={f.ng1} className="border-b border-[var(--rule)]">
-                  <Link
-                    href={href}
-                    className="group flex min-h-12 items-center justify-between gap-3 py-2.5"
-                  >
-                    <span className="truncate font-medium text-[var(--text-strong)] underline-offset-4 group-hover:text-[var(--brand-ink)] group-hover:underline">
-                      {namn}
-                    </span>
-                    <span className="shrink-0 text-sm tabular-nums text-[var(--text-muted)]">
-                      {fmt(f.count)}
-                    </span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      )}
-
-      <section aria-labelledby="storst" className="space-y-4">
-        <div>
-          <h2 id="storst" className="rd-serif text-3xl text-[var(--text-strong)] sm:text-4xl">
-            Flest anställda i {kommun.name}
-          </h2>
-          <p className="mt-1 text-[15px] text-[var(--text-muted)]">
-            De {foretagSample.length} största företagen i registret, alla yrken.
+      <ResultatVy
+        rubrik={`Hantverkare i ${kommun.name}`}
+        antal={`${fmt(liveTotal)} företag`}
+        ingress={
+          <p>
+            Registrerade hantverksföretag i {genitiv} kommun
+            {lan ? <>, {lan.name}s län</> : null}. Välj ett yrke, eller sök i fältet överst.
           </p>
-        </div>
+        }
+        sidospalt={{
+          under: (
+            <>
+              <LankLista rubrik={`Yrken i ${kommun.name}`} lankar={yrken} />
+              {lan && (
+                <LankLista
+                  rubrik={`Fler kommuner i ${lan.name}s län`}
+                  lankar={grannar.map(({ k, n }) => ({
+                    href: `/kommun/${k.slug}`,
+                    label: k.name,
+                    antal: n,
+                  }))}
+                />
+              )}
+            </>
+          ),
+        }}
+      >
+        <h2 id="storst" className="sg-label">
+          Flest anställda · de {foretagSample.length} största, alla yrken
+        </h2>
         {foretagSample.length === 0 ? (
-          <p className="text-[15px] text-[var(--text-muted)]">
+          <p className="sg-panel p-6 text-[15px] text-ink-2">
             Inga hantverksföretag registrerade i {kommun.name}.
           </p>
         ) : (
-          <CompanyCardList>
+          <CompanyCardList komplettaFinns={foretagSample.some((f) => (f.poang ?? 0) > 0)}>
             {foretagSample.map((f) => (
               <li key={f.id}>
                 <CompanyCard
@@ -170,28 +153,7 @@ export default async function KommunPage({ params }: { params: Params }) {
             ))}
           </CompanyCardList>
         )}
-      </section>
-
-      {grannar.length > 0 && lan && (
-        <section aria-labelledby="grannar">
-          <h2 id="grannar" className="rd-serif text-3xl text-[var(--text-strong)] sm:text-4xl">
-            Fler kommuner i {lan.name}s län
-          </h2>
-          <ul className="mt-5 flex flex-wrap gap-2">
-            {grannar.map(({ k, n }) => (
-              <li key={k.code}>
-                <Link
-                  href={`/kommun/${k.slug}`}
-                  className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[var(--rule)] bg-white px-3 text-sm font-medium text-[var(--text-body)] transition-colors hover:border-[var(--brand)]/40 hover:bg-[var(--tint-1)] hover:text-[var(--brand-ink)]"
-                >
-                  {k.name}
-                  <span className="tabular-nums text-[var(--text-muted)]">{fmt(n)}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+      </ResultatVy>
     </div>
   );
 }

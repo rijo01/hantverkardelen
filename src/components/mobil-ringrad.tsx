@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Phone } from "lucide-react";
 import { KONTAKT_NOTIS } from "@/lib/dataprovenans";
 
 /**
@@ -39,16 +38,15 @@ export function MobilRingrad({
     <div
       aria-hidden={!synlig}
       inert={!synlig}
-      className={`fixed inset-x-0 bottom-[calc(4rem+max(env(safe-area-inset-bottom),0.5rem))] z-30 border-t border-[var(--rule)] bg-white px-4 py-2.5 transition-[transform,opacity,visibility] duration-200 ease-out motion-reduce:transition-none md:hidden ${
+      className={`fixed inset-x-0 bottom-[calc(3.5rem+max(env(safe-area-inset-bottom),0.25rem))] z-30 border-t border-line bg-white px-4 py-2 transition-[transform,opacity,visibility] duration-200 ease-out motion-reduce:transition-none md:hidden ${
         synlig ? "visible translate-y-0 opacity-100" : "pointer-events-none invisible translate-y-4 opacity-0"
       }`}
     >
       <a
         href={`tel:${telefon.replace(/[^\d+]/g, "")}`}
         aria-label={`Ring ${namn}, ${telefon}. ${KONTAKT_NOTIS}.`}
-        className="flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-[var(--brand)] font-semibold tabular-nums text-white transition-colors active:bg-[var(--brand-2)]"
+        className="sg-btn sg-btn-navy h-12 w-full tabular-nums"
       >
-        <Phone className="size-4" aria-hidden />
         Ring {telefon}
       </a>
     </div>

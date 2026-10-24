@@ -29,40 +29,41 @@ export default function BranscherPage() {
   ]);
 
   return (
-    <div className="space-y-12 pb-8">
+    <div className="sg-wrap space-y-8 pb-16">
       <JsonLd data={breadcrumbJsonLd} />
-      <Breadcrumb items={breadcrumbItems} />
+      <div>
+        <Breadcrumb items={breadcrumbItems} />
+        <header className="max-w-3xl space-y-3 border-b border-line pb-6">
+          <h1 className="sg-display text-balance text-[2.125rem] sm:text-[2.75rem]">
+            Hantverkare efter yrke
+          </h1>
+          <p className="text-[17px] leading-relaxed text-ink-2">
+            {fmt(TOTAL_FORETAG)} registrerade hantverksföretag. Välj ett yrke för att
+            se företagen i hela Sverige, eller sök på yrke och ort.
+          </p>
+        </header>
+      </div>
 
-      <header className="max-w-3xl space-y-3">
-        <h1 className="rd-serif text-balance text-[2.5rem] text-[var(--text-strong)] sm:text-[3.5rem]">
-          Hantverkare efter yrke
-        </h1>
-        <p className="text-lg leading-relaxed text-[var(--text-muted)]">
-          {fmt(TOTAL_FORETAG)} registrerade hantverksföretag. Välj ett yrke för att
-          se företagen i hela Sverige, eller sök på yrke och ort.
-        </p>
-      </header>
-
-      <section aria-labelledby="yrken" className="space-y-4">
-        <h2 id="yrken" className="rd-serif text-3xl text-[var(--text-strong)] sm:text-4xl">
+      <section aria-labelledby="yrken" className="space-y-3">
+        <h2 id="yrken" className="sg-label">
           Yrken
         </h2>
-        <ul className="grid grid-cols-1 border-t border-[var(--rule)] sm:grid-cols-2 sm:gap-x-8">
+        <ul className="grid grid-cols-1 gap-px border border-line bg-line sm:grid-cols-2">
           {HANTVERK_KATEGORIER.slice()
             .sort((a, b) => b.count - a.count)
             .map((k) => (
-              <li key={k.slug} className="border-b border-[var(--rule)]">
+              <li key={k.slug} className="bg-white">
                 <Link
                   href={`/sok?kategori=${k.slug}`}
-                  className="group flex min-h-12 items-baseline justify-between gap-3 py-3"
+                  className="group flex min-h-[4.5rem] items-center justify-between gap-4 px-5 py-4 transition-colors hover:bg-page"
                 >
                   <span className="min-w-0">
-                    <span className="block font-semibold text-[var(--text-strong)] underline-offset-4 group-hover:text-[var(--brand-ink)] group-hover:underline">
+                    <span className="block text-[20px] font-bold leading-tight text-ink group-hover:underline group-hover:underline-offset-4">
                       {kategoriNamn(k.slug)}
                     </span>
-                    <span className="block text-sm text-[var(--text-muted)]">{k.description}</span>
+                    <span className="mt-0.5 block text-[15px] text-ink-2">{k.description}</span>
                   </span>
-                  <span className="shrink-0 text-sm tabular-nums text-[var(--text-muted)]">
+                  <span className="shrink-0 text-[15px] font-semibold tabular-nums text-ink-3">
                     {fmt(k.count)}
                   </span>
                 </Link>
@@ -71,8 +72,8 @@ export default function BranscherPage() {
         </ul>
       </section>
 
-      <section aria-labelledby="branscher" className="space-y-4">
-        <h2 id="branscher" className="rd-serif text-3xl text-[var(--text-strong)] sm:text-4xl">
+      <section aria-labelledby="branscher" className="space-y-3">
+        <h2 id="branscher" className="sg-label">
           Största branscherna i registret
         </h2>
         <ul className="flex flex-wrap gap-2">
@@ -80,10 +81,10 @@ export default function BranscherPage() {
             <li key={b.id}>
               <Link
                 href={`/sok?q=${encodeURIComponent(b.name)}`}
-                className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[var(--rule)] bg-white px-3 text-sm font-medium text-[var(--text-body)] transition-colors hover:border-[var(--brand)]/40 hover:bg-[var(--tint-1)] hover:text-[var(--brand-ink)]"
+                className="inline-flex min-h-11 items-center gap-2 border border-line bg-white px-3.5 text-[15px] font-semibold text-ink transition-colors hover:border-navy hover:text-navy"
               >
                 {yrkesnamn(b.id, b.name)}
-                <span className="tabular-nums text-[var(--text-muted)]">{fmt(b.count)}</span>
+                <span className="font-medium tabular-nums text-ink-3">{fmt(b.count)}</span>
               </Link>
             </li>
           ))}

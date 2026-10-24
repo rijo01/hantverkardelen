@@ -1,10 +1,9 @@
 import Link from "next/link";
 import { SearchBar } from "@/components/search-bar";
 import { JsonLd } from "@/components/json-ld";
-import { TOTAL_FORETAG, TOTAL_KOMMUNER, TOP_KOMMUNER } from "@/lib/stats";
+import { TOTAL_FORETAG, TOTAL_KOMMUNER } from "@/lib/stats";
 import { HANTVERK_KATEGORIER } from "@/lib/hantverk-kategorier";
 import { kategoriNamn } from "@/lib/sokfraga";
-import { REGISTER_AR } from "@/lib/dataprovenans";
 
 export const revalidate = 86400;
 
@@ -14,8 +13,10 @@ const fmt = (n: number) => n.toLocaleString("sv-SE");
 
 /**
  * Startsidan är en sökyta. Besökaren kommer med en fråga — "elektriker i
- * Kungälv" — och ska kunna ställa den i första skärmen. Under sökrutan finns
- * bara vägar vidare (yrken, orter) och fyra raka besked om vad katalogen är.
+ * Kungälv" — och ska kunna ställa den i första skärmen. Under heron finns
+ * yrkena och tre raka besked om vad katalogen är. Alla tal räknas ur
+ * registret (stats.ts, hantverk-kategorier.ts), inga är avrundade eller
+ * påhittade.
  */
 export default function HomePage() {
   const webSiteJsonLd = {
@@ -31,141 +32,100 @@ export default function HomePage() {
   };
 
   const yrken = [...HANTVERK_KATEGORIER].sort((a, b) => b.count - a.count);
-  const orter = TOP_KOMMUNER.slice(0, 16);
 
   return (
-    <div className="space-y-16 pb-8 sm:space-y-20">
+    <>
       <JsonLd data={webSiteJsonLd} />
 
-      <section aria-labelledby="hero-title" className="max-w-4xl pt-10 sm:pt-16">
-        <h1
-          id="hero-title"
-          className="rd-serif text-balance text-[2.75rem] text-[var(--text-strong)] sm:text-6xl"
-        >
-          Hitta en hantverkare i din kommun
-        </h1>
-        <p className="mt-4 max-w-2xl text-lg leading-relaxed text-[var(--text-muted)]">
-          {fmt(TOTAL_FORETAG)} registrerade hantverksföretag i Sveriges{" "}
-          {TOTAL_KOMMUNER} kommuner. Telefon och adress syns direkt, utan
-          offertformulär.
-        </p>
-        <div className="mt-8">
-          <SearchBar variant="dual" snabbval />
+      {/* Heron fortsätter sidhuvudets navy utan skarv. */}
+      <section aria-labelledby="hero-title" className="sg-on-navy bg-navy text-white">
+        <div className="sg-wrap pb-14 pt-8 sm:pb-20 sm:pt-14">
+          <p className="text-[13px] font-bold uppercase tracking-[0.06em] text-signal tabular-nums">
+            {fmt(TOTAL_FORETAG)} hantverksföretag · {TOTAL_KOMMUNER} kommuner
+          </p>
+          <h1
+            id="hero-title"
+            className="mt-4 max-w-4xl text-balance text-[2.625rem] font-extrabold leading-[1.02] tracking-[-0.035em] text-white sm:text-[4rem]"
+          >
+            Hitta rätt hantverkare. Ring direkt.
+          </h1>
+          <p className="mt-5 max-w-2xl text-lg leading-relaxed text-[var(--sg-on-navy-muted)] sm:text-xl">
+            Hela Sveriges register över elektriker, målare, snickare, VVS- och
+            byggfirmor. Inga offertformulär, inga köpta betyg.
+          </p>
+          <div className="mt-8 max-w-5xl">
+            <SearchBar variant="dual" snabbval />
+          </div>
         </div>
       </section>
 
-      <section className="grid gap-12 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:gap-16">
-        <div>
-          <h2 className="rd-serif text-3xl text-[var(--text-strong)] sm:text-4xl">
-            Alla yrken
-          </h2>
-          <ul className="mt-5 grid grid-cols-1 border-t border-[var(--rule)] sm:grid-cols-2 sm:gap-x-8">
-            {yrken.map((kat) => (
-              <li key={kat.slug} className="border-b border-[var(--rule)]">
+      <div className="bg-white">
+        <section aria-labelledby="valj-yrke" className="sg-wrap py-14 sm:py-20">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <h2 id="valj-yrke" className="sg-display text-[2rem] sm:text-[2.5rem]">
+              Välj yrke
+            </h2>
+            <Link href="/branscher" className="sg-link inline-flex min-h-11 items-center text-[15px]">
+              Alla {yrken.length} yrken
+            </Link>
+          </div>
+          {/* 1px-linjer mellan cellerna: rutnätets bakgrund syns i glappen. */}
+          <ul className="mt-6 grid grid-cols-1 gap-px border border-line bg-line sm:grid-cols-2 lg:grid-cols-3">
+            {yrken.slice(0, 12).map((kat) => (
+              <li key={kat.slug} className="bg-white">
                 <Link
                   href={`/sok?kategori=${kat.slug}`}
-                  className="group flex min-h-12 items-baseline justify-between gap-3 py-3"
+                  className="group flex min-h-[4.5rem] items-center justify-between gap-4 px-5 py-4 transition-colors hover:bg-page"
                 >
-                  <span className="min-w-0">
-                    <span className="block font-semibold text-[var(--text-strong)] underline-offset-4 group-hover:text-[var(--brand-ink)] group-hover:underline">
-                      {kategoriNamn(kat.slug)}
-                    </span>
-                    <span className="block text-sm text-[var(--text-muted)]">
-                      {kat.description}
-                    </span>
+                  <span className="text-[20px] font-bold leading-tight tracking-[-0.01em] text-ink group-hover:underline group-hover:underline-offset-4">
+                    {kategoriNamn(kat.slug)}
                   </span>
-                  <span className="shrink-0 text-sm tabular-nums text-[var(--text-muted)]">
+                  <span className="shrink-0 text-[15px] font-semibold tabular-nums text-ink-3">
                     {fmt(kat.count)}
                   </span>
                 </Link>
               </li>
             ))}
           </ul>
-        </div>
+        </section>
 
-        <div>
-          <h2 className="rd-serif text-3xl text-[var(--text-strong)] sm:text-4xl">
-            Största orterna
-          </h2>
-          <ul className="mt-5 grid grid-cols-2 border-t border-[var(--rule)] sm:gap-x-8">
-            {orter.map((o) => (
-              <li key={o.kommun.code} className="border-b border-[var(--rule)]">
-                <Link
-                  href={o.href}
-                  className="group flex min-h-12 items-center justify-between gap-2 py-2.5 pr-2"
-                >
-                  <span className="truncate font-medium text-[var(--text-strong)] underline-offset-4 group-hover:text-[var(--brand-ink)] group-hover:underline">
-                    {o.kommun.name}
-                  </span>
-                  <span className="shrink-0 text-sm tabular-nums text-[var(--text-muted)]">
-                    {fmt(o.count)}
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-          <Link
-            href="/kommuner"
-            className="mt-4 inline-flex min-h-11 items-center font-semibold text-[var(--brand-ink)] underline underline-offset-4 decoration-[var(--brand)]/30 hover:decoration-[var(--brand)]"
-          >
-            Alla {TOTAL_KOMMUNER} kommuner
-          </Link>
-        </div>
-      </section>
-
-      <section aria-labelledby="om-katalogen" className="border-t border-[var(--rule)] pt-10">
-        <h2 id="om-katalogen" className="rd-serif text-3xl text-[var(--text-strong)] sm:text-4xl">
-          Så fungerar katalogen
-        </h2>
-        <dl className="mt-6 grid gap-x-10 gap-y-6 sm:grid-cols-2 lg:grid-cols-4">
-          <div>
-            <dt className="font-semibold text-[var(--text-strong)]">Hela registret</dt>
-            <dd className="mt-1 text-[15px] leading-relaxed text-[var(--text-muted)]">
-              Alla hantverksföretag i registret finns med, inte bara de som
-              betalar för att synas.
-            </dd>
-          </div>
-          <div>
-            <dt className="font-semibold text-[var(--text-strong)]">Inga betyg</dt>
-            <dd className="mt-1 text-[15px] leading-relaxed text-[var(--text-muted)]">
-              Vi visar inga stjärnor eller omdömen som vi inte kan stå för. Det
-              du ser är registerfakta.
-            </dd>
-          </div>
-          <div>
-            <dt className="font-semibold text-[var(--text-strong)]">Utvald är en annons</dt>
-            <dd className="mt-1 text-[15px] leading-relaxed text-[var(--text-muted)]">
-              Företag kan betala för att synas först i listorna. De märks alltid
-              &ldquo;Utvald · annons&rdquo;.
-            </dd>
-          </div>
-          <div>
-            <dt className="font-semibold text-[var(--text-strong)]">Uppgifter från {REGISTER_AR}</dt>
-            <dd className="mt-1 text-[15px] leading-relaxed text-[var(--text-muted)]">
-              Telefonnummer och adresser kommer från ett register från omkring{" "}
-              {REGISTER_AR}. Kontrollera dem innan du åker dit.
-            </dd>
-          </div>
-        </dl>
-      </section>
-
-      <section className="flex flex-col gap-4 rounded-xl bg-[var(--surface-soft)] p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8">
-        <div>
-          <h2 className="text-lg font-semibold text-[var(--text-strong)]">
-            Driver du ett hantverksföretag?
-          </h2>
-          <p className="mt-1 max-w-xl text-[15px] text-[var(--text-muted)]">
-            Rätta dina uppgifter, eller lägg till logotyp, beskrivning och
-            tjänster så att kunderna hittar rätt nummer.
-          </p>
-        </div>
-        <Link
-          href="/kontakt"
-          className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-lg border border-[var(--brand)]/35 bg-white px-4 font-semibold text-[var(--brand-ink)] transition-colors hover:border-[var(--brand)] hover:bg-[var(--tint-1)]"
+        <section
+          id="sa-funkar-det"
+          aria-labelledby="sa-funkar-det-rubrik"
+          className="scroll-mt-4 border-t border-line"
         >
-          Uppdatera ditt företag
-        </Link>
-      </section>
-    </div>
+          <div className="sg-wrap py-14 sm:py-20">
+            <h2 id="sa-funkar-det-rubrik" className="sg-label">
+              Så funkar det
+            </h2>
+            <dl className="mt-6 grid gap-8 md:grid-cols-3 md:gap-10">
+              {LOFTEN.map((l) => (
+                <div key={l.rubrik} className="border-t-4 border-signal pt-5">
+                  <dt className="text-[22px] font-extrabold tracking-[-0.02em] text-ink">
+                    {l.rubrik}
+                  </dt>
+                  <dd className="mt-2 text-[16px] leading-relaxed text-ink-2">{l.text}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        </section>
+      </div>
+    </>
   );
 }
+
+const LOFTEN = [
+  {
+    rubrik: "Hela registret",
+    text: "Alla registrerade hantverksföretag finns med, inte bara de som betalar för att synas.",
+  },
+  {
+    rubrik: "Ring direkt",
+    text: "Numret syns direkt i listan och på företagets sida. Inga formulär, ingen mellanhand.",
+  },
+  {
+    rubrik: "Ärligt märkt",
+    text: "Inga köpta betyg. Företag som betalar för att synas först är märkta som annons.",
+  },
+];

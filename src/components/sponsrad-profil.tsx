@@ -1,17 +1,10 @@
-import {
-  BadgeCheck,
-  Globe,
-  Mail,
-  MapPin,
-  Phone,
-  User,
-} from "lucide-react";
-import { logoMatt, telefontypText } from "@/lib/overlay-contract";
+import { telefontypText } from "@/lib/overlay-contract";
 import type { OverlayProfilRow } from "@/lib/overlay-contract";
 import { normalizeWebb, shortWebb } from "@/lib/foretag-format";
 
 /**
- * Den betalda profilen — allt kunden köpt, samlat i ett kort.
+ * Den betalda profilen — allt kunden köpt, i de delar företagssidan visar det:
+ * "Om oss", "Tjänster", rutan "Kontakt" och rutan "Om märkningen".
  *
  * Visar ENBART det kunden själv lämnat: logotyp, egen beskrivning, sökord,
  * kategorier, hemsida och kontaktuppgifter. Ingen genererad text, inga betyg,
@@ -52,197 +45,126 @@ function adressrad(
   return rad.length > 0 ? rad : null;
 }
 
-export default function SponsradProfil({
-  overlay,
-  /** Namnet sidan redan visar. Används som fallback när popularnamn saknas. */
-  namn,
-  /** Sätts för ?preview= — då är detta ett utkast, inte något som ligger live. */
-  utkast = false,
-}: {
-  overlay: OverlayProfilRow;
-  namn: string;
-  utkast?: boolean;
-}) {
-  const rubriknamn = overlay.popularnamn?.trim() || namn;
-  const sokord = (overlay.keywords ?? []).filter((k) => k.trim().length > 0);
-  const kategorier = (overlay.kategorier ?? []).filter((k) => k.trim().length > 0);
-  const hemsida = normalizeWebb(overlay.hemsida);
-  const telefon = overlay.telefon_override?.trim() || null;
-  const epost = overlay.epost_override?.trim() || null;
+export type BetaldProfil = {
+  infoHtml: string | null;
+  /** Kundens kategorier och sökord, i den ordningen, utan dubbletter. */
+  tjanster: string[];
+  hemsida: string | null;
+  telefon: string | null;
+  telefonEtikett: string | null;
+  epost: string | null;
+  kontaktperson: string | null;
+  besok: string | null;
+  post: string | null;
+};
 
-  // Post- och besöksadress var för sig (1.1). Faller tillbaka på den odelade
-  // adress_override från 1.0 när de nya fälten saknas.
-  const besok = adressrad(overlay.adress_override_besok) ?? adressrad(overlay.adress_override);
-  const post = adressrad(overlay.adress_override_post);
+export function betaldProfil(overlay: OverlayProfilRow): BetaldProfil {
+  const tjanster: string[] = [];
+  const sedda = new Set<string>();
+  for (const ord of [...(overlay.kategorier ?? []), ...(overlay.keywords ?? [])]) {
+    const rent = ord.trim();
+    if (!rent || sedda.has(rent.toLowerCase())) continue;
+    sedda.add(rent.toLowerCase());
+    tjanster.push(rent);
+  }
+  return {
+    infoHtml: overlay.info_html?.trim() || null,
+    tjanster,
+    hemsida: normalizeWebb(overlay.hemsida),
+    telefon: overlay.telefon_override?.trim() || null,
+    telefonEtikett: telefonEtikett(overlay.telefon_typ),
+    epost: overlay.epost_override?.trim() || null,
+    kontaktperson: overlay.kontaktperson?.trim() || null,
+    // Post- och besöksadress var för sig (1.1). Faller tillbaka på den odelade
+    // adress_override från 1.0 när de nya fälten saknas.
+    besok: adressrad(overlay.adress_override_besok) ?? adressrad(overlay.adress_override),
+    post: adressrad(overlay.adress_override_post),
+  };
+}
 
-  const harInnehall =
-    overlay.logo_url ||
-    overlay.info_html ||
-    sokord.length > 0 ||
-    kategorier.length > 0 ||
-    hemsida ||
-    overlay.kontaktperson ||
-    telefon ||
-    epost ||
-    besok ||
-    post;
-
-  // Ett tomt kort är värre än inget kort: det ser ut som ett fel.
-  if (!harInnehall) return null;
-
+/** Sätts för ?preview= — då är detta ett utkast, inte något som ligger live. */
+export function UtkastBanner() {
   return (
-    <section className="overflow-hidden rounded-xl border border-[var(--brand)]/30 bg-white">
-      {utkast && (
-        <p className="bg-[var(--brand)] px-5 py-2 text-sm font-medium text-white">
-          Förhandsvisning — så här kommer profilen att se ut. Ingen ser den här
-          sidan förrän ordern godkänns.
-        </p>
-      )}
+    <p className="bg-navy px-5 py-3 text-[15px] font-semibold text-white">
+      Förhandsvisning — så här kommer profilen att se ut. Ingen ser den här
+      sidan förrän ordern godkänns.
+    </p>
+  );
+}
 
-      <div className="p-6 sm:p-7">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0">
-            <span className="inline-flex items-center gap-1.5 rounded-sm bg-[var(--tint-2)] px-2 py-0.5 text-sm font-semibold text-[var(--brand-ink)]">
-              <BadgeCheck className="size-3.5" aria-hidden />
-              Företagets egen profil
-            </span>
-            <h2 className="rd-serif mt-3 text-3xl text-[var(--text-strong)]">
-              Om {rubriknamn}
-            </h2>
-            {overlay.kontaktperson && (
-              <p className="mt-1 inline-flex items-center gap-1.5 text-sm text-[var(--text-muted)]">
-                <User className="size-3.5 shrink-0 text-[var(--text-dim)]" aria-hidden />
-                {overlay.kontaktperson}
-              </p>
-            )}
+/** Höger spalt i betalt läge: kundens egna kontaktuppgifter. */
+export function KontaktRuta({
+  profil,
+  omrade,
+}: {
+  profil: BetaldProfil;
+  /** Kommun och län — var företaget finns enligt registret. */
+  omrade: string | null;
+}) {
+  const rader: Array<{ etikett: string; varde: React.ReactNode }> = [];
+  if (profil.kontaktperson) rader.push({ etikett: "Kontaktperson", varde: profil.kontaktperson });
+  if (profil.telefon) {
+    rader.push({
+      etikett: profil.telefonEtikett ? `Telefon · ${profil.telefonEtikett}` : "Telefon",
+      varde: (
+        <a href={`tel:${profil.telefon.replace(/\s+/g, "")}`} className="sg-link tabular-nums">
+          {profil.telefon}
+        </a>
+      ),
+    });
+  }
+  if (profil.hemsida) {
+    rader.push({
+      etikett: "Hemsida",
+      varde: (
+        <a href={profil.hemsida} target="_blank" rel="noopener noreferrer" className="sg-link break-all">
+          {shortWebb(profil.hemsida) ?? profil.hemsida}
+        </a>
+      ),
+    });
+  }
+  if (profil.epost) {
+    rader.push({
+      etikett: "E-post",
+      varde: (
+        <a href={`mailto:${profil.epost}`} className="sg-link break-all">
+          {profil.epost}
+        </a>
+      ),
+    });
+  }
+  if (profil.besok) rader.push({ etikett: "Besöksadress", varde: profil.besok });
+  if (profil.post) rader.push({ etikett: "Postadress", varde: profil.post });
+  if (omrade) rader.push({ etikett: "Område", varde: omrade });
+
+  if (rader.length === 0) return null;
+  return (
+    <section className="sg-panel p-5">
+      <h2 className="sg-label">Kontakt</h2>
+      <dl className="mt-3 divide-y divide-line-soft">
+        {rader.map((r) => (
+          <div key={r.etikett} className="py-2.5">
+            <dt className="text-[13px] text-ink-3">{r.etikett}</dt>
+            <dd className="mt-0.5 text-[15px] font-medium text-ink">{r.varde}</dd>
           </div>
+        ))}
+      </dl>
+    </section>
+  );
+}
 
-          {/* Plain <img>, inte next/image: logotypen ligger i sajtens egen
-              storage-bucket, och en ny bucket-host ska inte kräva en ändring i
-              next.config.ts innan en betald logotyp kan visas. */}
-          {overlay.logo_url && (
-            /* eslint-disable-next-line @next/next/no-img-element */
-            <img
-              src={overlay.logo_url}
-              alt={`${rubriknamn} logotyp`}
-              width={logoMatt(overlay.logo_url)?.bredd}
-              height={logoMatt(overlay.logo_url)?.hojd}
-              loading="lazy"
-              decoding="async"
-              className="h-16 w-auto max-w-[180px] shrink-0 self-start object-contain sm:h-20"
-            />
-          )}
-        </div>
-
-        {overlay.info_html && (
-          <div
-            className="rd-rich-text mt-4 text-[15px] leading-relaxed text-[var(--text-body)]"
-            dangerouslySetInnerHTML={{ __html: overlay.info_html }}
-          />
-        )}
-
-        {kategorier.length > 0 && (
-          <div className="mt-6">
-            <h3 className="mb-2 text-sm font-semibold text-[var(--text-strong)]">
-              Verksamhet
-            </h3>
-            <ul className="flex flex-wrap gap-1.5">
-              {kategorier.map((k) => (
-                <li
-                  key={k}
-                  className="inline-flex items-center rounded-md bg-[var(--tint-2)] px-2.5 py-1 text-sm font-medium text-[var(--brand-ink)]"
-                >
-                  {k}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {sokord.length > 0 && (
-          <div className="mt-6">
-            <h3 className="mb-2 text-sm font-semibold text-[var(--text-strong)]">
-              Tjänster &amp; sökord
-            </h3>
-            <ul className="flex flex-wrap gap-1.5">
-              {sokord.map((s) => (
-                <li
-                  key={s}
-                  className="inline-flex items-center rounded-md border border-[var(--rule)] bg-white px-2.5 py-1 text-sm text-[var(--text-body)]"
-                >
-                  {s}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {(besok || post) && (
-          <div className="mt-6 grid gap-3 sm:grid-cols-2">
-            {besok && (
-              <div>
-                <h3 className="mb-1 text-sm font-semibold text-[var(--text-strong)]">
-                  Besöksadress
-                </h3>
-                <p className="inline-flex items-start gap-1.5 text-sm text-[var(--text-body)]">
-                  <MapPin className="mt-0.5 size-3.5 shrink-0 text-[var(--text-dim)]" aria-hidden />
-                  {besok}
-                </p>
-              </div>
-            )}
-            {post && (
-              <div>
-                <h3 className="mb-1 text-sm font-semibold text-[var(--text-strong)]">
-                  Postadress
-                </h3>
-                <p className="inline-flex items-start gap-1.5 text-sm text-[var(--text-body)]">
-                  <MapPin className="mt-0.5 size-3.5 shrink-0 text-[var(--text-dim)]" aria-hidden />
-                  {post}
-                </p>
-              </div>
-            )}
-          </div>
-        )}
-
-        {(telefon || epost || hemsida) && (
-          <div className="mt-6 flex flex-wrap gap-x-5 gap-y-2 border-t border-[var(--rule-soft)] pt-4 text-sm">
-            {telefon && (
-              <a
-                href={`tel:${telefon.replace(/\s+/g, "")}`}
-                className="inline-flex items-center gap-1.5 font-medium text-[var(--brand-ink)] hover:underline"
-              >
-                <Phone className="size-4 shrink-0" aria-hidden />
-                {telefon}
-                {telefonEtikett(overlay.telefon_typ) && (
-                  <span className="text-sm font-normal text-[var(--text-muted)]">
-                    {telefonEtikett(overlay.telefon_typ)}
-                  </span>
-                )}
-              </a>
-            )}
-            {epost && (
-              <a
-                href={`mailto:${epost}`}
-                className="inline-flex items-center gap-1.5 font-medium text-[var(--brand-ink)] hover:underline"
-              >
-                <Mail className="size-4 shrink-0" aria-hidden />
-                {epost}
-              </a>
-            )}
-            {hemsida && (
-              <a
-                href={hemsida}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 font-medium text-[var(--brand-ink)] hover:underline"
-              >
-                <Globe className="size-4 shrink-0" aria-hidden />
-                {shortWebb(hemsida) ?? hemsida}
-              </a>
-            )}
-          </div>
-        )}
-      </div>
+/**
+ * Vad märkningen betyder. "Syns först i listorna" står bara när det är sant:
+ * det är `featured` som lyfter raden, inte profilen i sig.
+ */
+export function OmMarkningen({ featured }: { featured: boolean }) {
+  return (
+    <section className="sg-panel border-t-4 border-t-signal p-5">
+      <h2 className="sg-label">Om märkningen</h2>
+      <p className="mt-2 text-[15px] leading-relaxed text-ink-2">
+        Företaget betalar för en utökad profil{featured ? " och syns först i listorna" : ""}.
+        Texten och bilderna kommer från företaget själv. Det är inget betyg.
+      </p>
     </section>
   );
 }

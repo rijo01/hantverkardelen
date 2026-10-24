@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
-import { ArrowLeft, ArrowRight } from "lucide-react";
 import { kommunByCode, kommunBySlug } from "@/lib/kommuner";
 import { lanBySlug } from "@/lib/lan";
 import {
@@ -14,11 +13,11 @@ import { getKategoriBySlug } from "@/lib/hantverk-kategorier";
 import { yrkesnamn } from "@/lib/yrkesnamn";
 import { JsonLd, buildBreadcrumb } from "@/components/json-ld";
 import { Breadcrumb } from "@/components/breadcrumb";
-import { SearchBar } from "@/components/search-bar";
 import { CompanyCard, CompanyCardList } from "@/components/company-card";
 import { loadAktivaOverlays, overlayFor } from "@/lib/overlay";
 import { ordnaBoostade } from "@/lib/overlay-rankning";
-import { FilterPanel, buildHref, type FilterState } from "@/components/filter-panel";
+import { buildHref, sokSidospalt, type FilterState } from "@/components/filter-panel";
+import { ResultatVy, Sidbyte } from "@/components/resultat-vy";
 import {
   SNABBVAL,
   kategoriNamn,
@@ -130,48 +129,43 @@ export default async function SokPage({
 
   // Visa resultaten även när det inte finns query, så länge en kategori valts.
   const showResults = Boolean(query) || Boolean(kategori);
+  const rubrik = sokRubrik({ query, kommun, postort, lan, kategoriSlug: kategori?.slug, ng1 });
+  // Sidospalten beror bara på adressen — samma i skelettet och i svaret.
+  const sidospalt = sokSidospalt({ state: filterState, pathname: "/sok", kommun });
 
+  // Sökrutan sitter i sidhuvudet (site-nav.tsx), ifylld med den här sökningen.
   return (
-    <div className="space-y-6">
+    <div className="sg-wrap pb-16">
       <JsonLd data={breadcrumbJsonLd} />
       <Breadcrumb items={breadcrumbItems} />
-
-      <SearchBar
-        key={`${sp.q ?? ""}|${sp.kategori ?? ""}|${sp.kommun ?? ""}|${sp.lan ?? ""}|${sp.postort ?? ""}`}
-        variant="dual"
-        preserveFilters
-        kompakt
-        params={sp}
-      />
 
       {!showResults ? (
         <EmptyState />
       ) : (
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[16rem_1fr] lg:gap-8">
-          <FilterPanel state={filterState} pathname="/sok" />
-          <Suspense
-            key={`${query}|${sp.kategori ?? ""}|${sp.kommun ?? ""}|${sp.lan ?? ""}|${sp.postort ?? ""}|${ng1 ?? ""}|${aeantMin ?? ""}|${aeantMax ?? ""}|${sp.page ?? "1"}`}
-            fallback={
-              <ResultsSkeleton
-                rubrik={sokRubrik({ query, kommun, postort, lan, kategoriSlug: kategori?.slug, ng1 })}
-              />
-            }
-          >
-            <ResultsAsync
-              query={query}
-              kategoriSlug={kategori?.slug ?? null}
-              kommun={kommun}
-              lan={lan}
-              postort={postort}
-              ng1={ng1}
-              aeantMin={aeantMin}
-              aeantMax={aeantMax}
-              pageStr={sp.page}
-              filterState={filterState}
-              tolkning={tolkning}
-            />
-          </Suspense>
-        </div>
+        <Suspense
+          key={`${query}|${sp.kategori ?? ""}|${sp.kommun ?? ""}|${sp.lan ?? ""}|${sp.postort ?? ""}|${ng1 ?? ""}|${aeantMin ?? ""}|${aeantMax ?? ""}|${sp.page ?? "1"}`}
+          fallback={
+            <ResultatVy rubrik={rubrik} antal={null} sidospalt={sidospalt}>
+              <ResultsSkeleton />
+            </ResultatVy>
+          }
+        >
+          <ResultsAsync
+            query={query}
+            kategoriSlug={kategori?.slug ?? null}
+            kommun={kommun}
+            lan={lan}
+            postort={postort}
+            ng1={ng1}
+            aeantMin={aeantMin}
+            aeantMax={aeantMax}
+            pageStr={sp.page}
+            filterState={filterState}
+            tolkning={tolkning}
+            rubrik={rubrik}
+            sidospalt={sidospalt}
+          />
+        </Suspense>
       )}
     </div>
   );
@@ -189,6 +183,8 @@ async function ResultsAsync({
   pageStr,
   filterState,
   tolkning,
+  rubrik,
+  sidospalt,
 }: {
   query: string;
   kategoriSlug: string | null;
@@ -201,6 +197,9 @@ async function ResultsAsync({
   pageStr?: string;
   filterState: FilterState;
   tolkning: Tolkning | null;
+  /** Samma rubrik som skelettet visar medan söket körs — den beror bara på adressen. */
+  rubrik: string;
+  sidospalt: React.ComponentProps<typeof ResultatVy>["sidospalt"];
 }) {
   const page = Math.max(1, Number(pageStr) || 1);
   const kategori = kategoriSlug ? getKategoriBySlug(kategoriSlug) : null;
@@ -237,20 +236,15 @@ async function ResultsAsync({
   const rows = ordnaBoostade(oboostade, overlays);
 
   const offset = (page - 1) * PAGE_SIZE;
-  // Samma rubrik som skelettet visar medan söket körs — den beror bara på
-  // adressen, så den står still när träffarna kommer.
-  const rubrik = sokRubrik({ query, kommun, postort, lan, kategoriSlug, ng1 });
-  const harUtvalda = rows.some((f) => overlayFor(f, overlays)?.featured);
-  const harKompletta = rows.some((f) => (f.poang ?? 0) > 0);
-  const sortering = [
-    harUtvalda && "Utvalda (annons) först",
-    harKompletta && (harUtvalda ? "sedan komplett profil" : "Komplett profil först"),
-    harUtvalda || harKompletta ? "sedan efter antal anställda." : "Sorterat efter antal anställda.",
-  ]
-    .filter(Boolean)
-    .join(", ");
+  const komplettaFinns = rows.some((f) => (f.poang ?? 0) > 0);
   const fran = offset + 1;
   const till = offset + rows.length;
+  const antal =
+    rows.length === 0
+      ? "Inga träffar"
+      : total != null
+        ? `${total.toLocaleString("sv-SE")} företag`
+        : `${rows.length} träff${rows.length === 1 ? "" : "ar"}`;
 
   const landning =
     landningNg1
@@ -260,33 +254,17 @@ async function ResultsAsync({
         : null;
 
   return (
-    <div className="min-w-0 space-y-5">
-      <header className="space-y-1.5">
-        <h1 className="rd-serif text-[2rem] text-[var(--text-strong)] sm:text-[2.5rem]">
-          {rubrik}
-        </h1>
-        <p className="text-[15px] text-[var(--text-muted)]">
-          {rows.length === 0 ? (
-            "Inga träffar."
-          ) : (
-            <>
-              <span className="font-semibold text-[var(--text-strong)]">
-                {total != null
-                  ? `${total.toLocaleString("sv-SE")} företag`
-                  : `${rows.length} träff${rows.length === 1 ? "" : "ar"}`}
-              </span>
-              {total != null && total > rows.length ? `, visar ${fran}\u2013${till}` : ""}
-              {". "}
-              {sortering}
-            </>
-          )}
+    <ResultatVy rubrik={rubrik} antal={antal} sidospalt={sidospalt}>
+      {total != null && total > rows.length && (
+        <p className="text-sm tabular-nums text-ink-3">
+          Visar {fran}–{till} av {total.toLocaleString("sv-SE")}
         </p>
-      </header>
+      )}
 
       {rows.length === 0 ? (
         <TomtResultat query={query} tolkning={tolkning} kommunSlug={kommun?.slug} kommunNamn={kommun?.name} />
       ) : (
-        <CompanyCardList>
+        <CompanyCardList komplettaFinns={komplettaFinns}>
           {rows.map((f) => {
             const k = f.kommun ? kommunByCode(f.kommun) : null;
             return (
@@ -303,47 +281,25 @@ async function ResultsAsync({
         </CompanyCardList>
       )}
 
-      {(page > 1 || hasMore) && (
-        <nav aria-label="Sidor" className="flex items-center justify-between border-t border-[var(--rule)] pt-5 text-sm">
-          {page > 1 ? (
-            <Link
-              href={buildHref("/sok", filterState, { page: page > 2 ? String(page - 1) : null })}
-              className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-[var(--rule)] bg-white px-4 font-medium text-[var(--text-body)] transition hover:border-[var(--brand)]/40 hover:bg-[var(--tint-1)] hover:text-[var(--brand-ink)]"
-            >
-              <ArrowLeft aria-hidden className="size-4" />
-              Föregående
-            </Link>
-          ) : (
-            <span />
-          )}
-          <span className="text-[var(--text-muted)]">Sida {page}</span>
-          {hasMore ? (
-            <Link
-              href={buildHref("/sok", filterState, { page: String(page + 1) })}
-              className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-[var(--rule)] bg-white px-4 font-medium text-[var(--text-body)] transition hover:border-[var(--brand)]/40 hover:bg-[var(--tint-1)] hover:text-[var(--brand-ink)]"
-            >
-              Nästa
-              <ArrowRight aria-hidden className="size-4" />
-            </Link>
-          ) : (
-            <span />
-          )}
-        </nav>
-      )}
+      <Sidbyte
+        sida={page}
+        foregaende={page > 1 ? buildHref("/sok", filterState, { page: page > 2 ? String(page - 1) : null }) : null}
+        nasta={hasMore ? buildHref("/sok", filterState, { page: String(page + 1) }) : null}
+      />
 
       {rows.length > 0 && kommun && landning?.namn && (
-        <p className="text-[15px] text-[var(--text-muted)]">
+        <p className="text-[15px] text-ink-2">
           Se också{" "}
           <Link
             href={`/kommun/${kommun.slug}/${branschPageSlug(landning.namn, landning.ng1)}`}
-            className="font-semibold text-[var(--brand-ink)] underline underline-offset-4 decoration-[var(--brand)]/30 hover:decoration-[var(--brand)]"
+            className="sg-link"
           >
             {landning.namn} i {kommun.name}
           </Link>{" "}
           med närliggande kommuner och andra yrken i orten.
         </p>
       )}
-    </div>
+    </ResultatVy>
   );
 }
 
@@ -365,29 +321,29 @@ function TomtResultat({
   const ortParam = kommunSlug ? `&kommun=${kommunSlug}` : "";
   const ortText = kommunNamn ? ` i ${kommunNamn}` : "";
   return (
-    <div className="rounded-xl border border-[var(--rule)] bg-white p-6 sm:p-8">
+    <div className="sg-panel p-6 sm:p-8">
       {tolkning?.saknatYrke ? (
         <>
-          <p className="text-lg font-semibold text-[var(--text-strong)]">
+          <p className="text-xl font-extrabold tracking-[-0.02em] text-ink">
             {tolkning.saknatYrke} finns inte i katalogen
           </p>
-          <p className="mt-1 max-w-xl text-[15px] text-[var(--text-muted)]">
+          <p className="mt-1 max-w-xl text-[15px] text-ink-2">
             Hantverkardelen listar bygg-, el-, VVS-, måleri- och andra
             hantverksföretag. {tolkning.saknatYrke} ingår inte.
           </p>
         </>
       ) : tolkning?.kategori ? (
         <>
-          <p className="text-lg font-semibold text-[var(--text-strong)]">
+          <p className="text-xl font-extrabold tracking-[-0.02em] text-ink">
             Vi förstod yrket men inte resten av sökningen
           </p>
-          <p className="mt-1 max-w-xl text-[15px] text-[var(--text-muted)]">
+          <p className="mt-1 max-w-xl text-[15px] text-ink-2">
             &ldquo;{tolkning.rest.join(" ")}&rdquo; är varken en kommun eller en ort vi
             känner till. Skriv orten i fältet Var?, eller visa alla:
           </p>
           <Link
             href={`/sok?kategori=${tolkning.kategori}${ortParam}`}
-            className="mt-4 inline-flex min-h-11 items-center rounded-lg border border-[var(--brand)]/35 px-4 font-semibold text-[var(--brand-ink)] hover:border-[var(--brand)] hover:bg-[var(--tint-1)]"
+            className="sg-btn sg-btn-outline mt-4"
           >
             {kategoriNamn(tolkning.kategori)}
             {ortText}
@@ -395,10 +351,10 @@ function TomtResultat({
         </>
       ) : (
         <>
-          <p className="text-lg font-semibold text-[var(--text-strong)]">
+          <p className="text-xl font-extrabold tracking-[-0.02em] text-ink">
             Inget företag heter &ldquo;{query}&rdquo;{ortText}
           </p>
-          <p className="mt-1 max-w-xl text-[15px] text-[var(--text-muted)]">
+          <p className="mt-1 max-w-xl text-[15px] text-ink-2">
             Söker du ett yrke? Välj det här{ortText ? ", så visar vi alla" + ortText : ""}:
           </p>
         </>
@@ -408,7 +364,7 @@ function TomtResultat({
           <li key={s.kategori}>
             <Link
               href={`/sok?kategori=${s.kategori}${ortParam}`}
-              className="inline-flex min-h-10 items-center rounded-lg border border-[var(--rule)] bg-white px-3 text-sm font-medium text-[var(--text-body)] transition-colors hover:border-[var(--brand)]/40 hover:bg-[var(--tint-1)] hover:text-[var(--brand-ink)]"
+              className="inline-flex min-h-11 items-center border border-line bg-white px-3.5 text-[15px] font-semibold text-ink-2 transition-colors hover:border-navy hover:text-navy"
             >
               {s.label}
             </Link>
@@ -446,39 +402,29 @@ function sokRubrik({
   return `${yrke}${geo}`;
 }
 
-function ResultsSkeleton({ rubrik }: { rubrik: string }) {
+function ResultsSkeleton() {
   return (
-    <div className="min-w-0 space-y-5" aria-busy="true">
-      <header className="space-y-2">
-        <h1 className="rd-serif text-[2rem] text-[var(--text-strong)] sm:text-[2.5rem]">
-          {rubrik}
-        </h1>
-        <p className="text-[15px] text-[var(--text-muted)]">Söker i registret…</p>
-      </header>
-      <ol className="divide-y divide-[var(--rule-soft)] rounded-xl border border-[var(--rule)] bg-white">
-        {Array.from({ length: 8 }).map((_, i) => (
-          <li key={i} className="flex items-center gap-4 px-5 py-4">
-            <div className="flex-1 space-y-2">
-              <div className="rd-skeleton h-4 w-[45%] rounded" />
-              <div className="rd-skeleton h-3 w-[60%] rounded" />
-            </div>
-            <div className="rd-skeleton hidden h-11 w-36 rounded-lg sm:block" />
-          </li>
-        ))}
-      </ol>
-    </div>
+    <ol className="space-y-2" aria-busy="true">
+      {Array.from({ length: 8 }).map((_, i) => (
+        <li key={i} className="sg-panel flex items-center gap-4 px-5 py-5">
+          <div className="flex-1 space-y-2">
+            <div className="sg-skeleton h-4 w-[45%]" />
+            <div className="sg-skeleton h-3 w-[60%]" />
+          </div>
+          <div className="sg-skeleton hidden h-11 w-40 sm:block" />
+        </li>
+      ))}
+    </ol>
   );
 }
 
 function EmptyState() {
   return (
-    <div className="max-w-2xl space-y-2 py-6">
-      <h1 className="rd-serif text-[2rem] text-[var(--text-strong)] sm:text-[2.5rem]">
-        Sök bland hantverkare
-      </h1>
-      <p className="text-[15px] text-[var(--text-muted)]">
-        Skriv ett yrke och en ort, till exempel &ldquo;elektriker Kungälv&rdquo;, eller
-        ett företagsnamn.
+    <div className="max-w-2xl space-y-2 pb-12 pt-2">
+      <h1 className="sg-display text-[2.125rem] sm:text-[2.75rem]">Sök bland hantverkare</h1>
+      <p className="text-[16px] text-ink-2">
+        Skriv ett yrke och en ort i sökfältet överst, till exempel &ldquo;elektriker
+        Kungälv&rdquo;, eller ett företagsnamn.
       </p>
     </div>
   );

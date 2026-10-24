@@ -80,25 +80,20 @@ export function SearchBar({
   preserveFilters = false,
   snabbval = false,
   initialOrt,
-  kompakt = false,
   params = {},
 }: {
   /**
-   * "compact" — en rad i sidhuvudet (bara desktop, se site-nav.tsx).
-   * "dual"    — startsidan och /sok: två fält med synliga etiketter.
+   * "compact" — sidhuvudet på alla sidor utom startsidan (se site-nav.tsx).
+   *             En rad från md; på mobil yrke överst, ort och Sök under.
+   * "dual"    — startsidans hero: två fält med synliga etiketter.
    */
   variant?: "compact" | "dual";
   initialValue?: string;
   preserveFilters?: boolean;
-  /** Visa snabbvalen för de vanligaste yrkena under rutan. */
+  /** Visa snabbvalen för de vanligaste yrkena under rutan (på navy). */
   snabbval?: boolean;
   /** Förifylld ort, t.ex. kommunen på en kommunsida. */
   initialOrt?: string;
-  /**
-   * Lägre ruta på mobil: ort och Sök på samma rad. För sidor där träffarna,
-   * inte sökrutan, ska fylla första skärmen (/sok).
-   */
-  kompakt?: boolean;
   /**
    * Sidans sökparametrar (q, kategori, kommun, lan, postort, bransch), när
    * sidan har några. Skickas som props i stället för useSearchParams(): den
@@ -402,21 +397,21 @@ export function SearchBar({
       <div
         id={listId}
         role="listbox"
-        className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-xl border border-[var(--rule)] bg-white shadow-[0_16px_40px_-16px_rgba(17,24,38,0.25)]"
+        className="absolute left-0 right-0 top-full z-50 mt-1 border border-line bg-white text-left"
       >
         {loadingSuggest && allaForslag.length === 0 ? (
           <div className="space-y-2 p-3">
-            <div className="rd-skeleton h-4 w-3/5 rounded" />
-            <div className="rd-skeleton h-4 w-4/5 rounded" />
-            <div className="rd-skeleton h-4 w-2/3 rounded" />
+            <div className="sg-skeleton h-4 w-3/5" />
+            <div className="sg-skeleton h-4 w-4/5" />
+            <div className="sg-skeleton h-4 w-2/3" />
           </div>
         ) : (
-          <ul className="max-h-[60vh] overflow-y-auto py-1">
+          <ul className="max-h-[60vh] overflow-y-auto">
             {allaForslag.map((s, i) => {
               const Icon = iconFor(s.type);
               const active = i === activeIndex;
               return (
-                <li key={`${s.type}-${s.href}-${i}`}>
+                <li key={`${s.type}-${s.href}-${i}`} className="border-b border-line-soft">
                   <button
                     type="button"
                     role="option"
@@ -427,44 +422,40 @@ export function SearchBar({
                       goToSuggestion(s);
                     }}
                     className={`flex min-h-11 w-full items-center gap-3 px-3 py-2 text-left transition-colors ${
-                      active ? "bg-[var(--tint-2)]" : "hover:bg-[var(--surface-soft)]"
+                      active ? "bg-line-soft" : "hover:bg-page"
                     }`}
                   >
                     <Icon
-                      className={`size-4 shrink-0 ${
-                        s.type === "kombination" ? "text-[var(--brand)]" : "text-[var(--text-dim)]"
-                      }`}
+                      className={`size-4 shrink-0 ${s.type === "kombination" ? "text-navy" : "text-ink-3"}`}
                       aria-hidden
                     />
                     <span className="min-w-0 flex-1">
                       <span
-                        className={`block truncate text-sm text-[var(--text-strong)] ${
-                          s.type === "kombination" ? "font-semibold" : "font-medium"
+                        className={`block truncate text-[15px] text-ink ${
+                          s.type === "kombination" ? "font-bold" : "font-medium"
                         }`}
                       >
                         {s.label}
                       </span>
                     </span>
-                    <span className="shrink-0 text-xs text-[var(--text-dim)]">{s.sub}</span>
+                    <span className="shrink-0 text-xs text-ink-3">{s.sub}</span>
                   </button>
                 </li>
               );
             })}
-            <li className="border-t border-[var(--rule-soft)]">
+            <li>
               <button
                 type="button"
                 onMouseDown={(e) => {
                   e.preventDefault();
                   goToSearch(q, ort);
                 }}
-                className="flex min-h-11 w-full items-center gap-3 px-3 py-2 text-left text-sm text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-soft)]"
+                className="flex min-h-11 w-full items-center gap-3 px-3 py-2 text-left text-sm text-ink-2 transition-colors hover:bg-page"
               >
-                <Search className="size-4 shrink-0 text-[var(--text-dim)]" aria-hidden />
+                <Search className="size-4 shrink-0 text-ink-3" aria-hidden />
                 <span>
                   Sök efter{" "}
-                  <span className="font-medium text-[var(--text-strong)]">
-                    &ldquo;{q.trim()}&rdquo;
-                  </span>
+                  <span className="font-semibold text-ink">&ldquo;{q.trim()}&rdquo;</span>
                 </span>
               </button>
             </li>
@@ -492,14 +483,14 @@ export function SearchBar({
     return (
       <div
         role="listbox"
-        className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-xl border border-[var(--rule)] bg-white shadow-[0_16px_40px_-16px_rgba(17,24,38,0.25)]"
+        className="absolute left-0 right-0 top-full z-50 mt-1 border border-line bg-white text-left"
       >
-        <ul className="max-h-[60vh] overflow-y-auto py-1">
+        <ul className="max-h-[60vh] overflow-y-auto">
           {ortSuggestions.map((s, i) => {
             const active = i === ortActiveIndex;
             const key = s.type === "postort" ? `postort-${s.value}-${i}` : `${s.type}-${s.slug}-${i}`;
             return (
-              <li key={key}>
+              <li key={key} className="border-b border-line-soft last:border-b-0">
                 <button
                   type="button"
                   role="option"
@@ -510,14 +501,14 @@ export function SearchBar({
                     pickOrt(s);
                   }}
                   className={`flex min-h-11 w-full items-center gap-3 px-3 py-2 text-left transition-colors ${
-                    active ? "bg-[var(--tint-2)]" : "hover:bg-[var(--surface-soft)]"
+                    active ? "bg-line-soft" : "hover:bg-page"
                   }`}
                 >
-                  <MapPin className="size-4 shrink-0 text-[var(--text-dim)]" aria-hidden />
-                  <span className="min-w-0 flex-1 truncate text-sm font-medium text-[var(--text-strong)]">
+                  <MapPin className="size-4 shrink-0 text-ink-3" aria-hidden />
+                  <span className="min-w-0 flex-1 truncate text-[15px] font-medium text-ink">
                     {s.label}
                   </span>
-                  <span className="shrink-0 text-xs text-[var(--text-dim)]">{s.sub}</span>
+                  <span className="shrink-0 text-xs text-ink-3">{s.sub}</span>
                 </button>
               </li>
             );
@@ -581,29 +572,27 @@ export function SearchBar({
     />
   );
 
-  // === COMPACT — en rad i sidhuvudet (lg+) ===
+  // === COMPACT — sidhuvudet. Vita fält på navy, 1px linje mellan dem. ===
   if (variant === "compact") {
     return (
-      <div ref={wrapRef} className="relative w-full max-w-lg">
+      <div ref={wrapRef} className="relative w-full">
         <form
           onSubmit={onSubmit}
           role="search"
           aria-label="Sök hantverkare"
-          className="rd-search-box flex h-10 w-full items-center rounded-lg border border-[var(--rule-strong)] bg-white"
+          className="grid w-full grid-cols-[minmax(0,1fr)_auto] gap-px bg-line md:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_auto]"
         >
-          <label className="relative flex min-w-0 flex-[1.3] items-center">
+          <label className="relative col-span-2 flex bg-white focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-signal md:col-span-1">
             <span className="sr-only">Vad behöver du hjälp med?</span>
-            <Search aria-hidden className="absolute left-3 size-4 text-[var(--text-dim)]" />
             {qInput(
-              "h-full w-full bg-transparent pl-9 pr-2 text-sm text-[var(--text-strong)] focus:outline-none",
+              "h-11 w-full appearance-none rounded-none bg-transparent px-3 text-[15px] text-ink focus:outline-none",
               "Yrke eller företag",
             )}
           </label>
-          <div aria-hidden className="h-5 w-px bg-[var(--rule)]" />
-          <label className="relative flex min-w-0 flex-1 items-center">
+          <label className="relative flex bg-white focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-signal">
             <span className="sr-only">Var?</span>
             {ortInput(
-              "h-full w-full bg-transparent px-3 text-sm text-[var(--text-strong)] focus:outline-none",
+              "h-11 w-full appearance-none rounded-none bg-transparent px-3 text-[15px] text-ink focus:outline-none",
               "Kommun eller ort",
             )}
             {ortDropdown}
@@ -611,7 +600,7 @@ export function SearchBar({
           <button
             type="submit"
             disabled={pending}
-            className="rd-btn-primary m-1 inline-flex h-8 shrink-0 items-center rounded-md px-3.5 text-sm font-semibold"
+            className="sg-btn sg-btn-sok h-11 px-5 text-[15px]"
           >
             {pending ? "Söker…" : "Sök"}
           </button>
@@ -621,7 +610,7 @@ export function SearchBar({
     );
   }
 
-  // === DUAL — startsidan och /sok ===
+  // === DUAL — startsidans hero: vit yta, två fält med versala etiketter ===
   return (
     <div className="w-full">
       <div ref={wrapRef} className="relative w-full">
@@ -629,38 +618,33 @@ export function SearchBar({
           onSubmit={onSubmit}
           role="search"
           aria-label="Sök hantverkare"
-          className={`rd-search-box grid w-full overflow-visible rounded-xl border border-[var(--rule-strong)] bg-white sm:grid-cols-[1.4fr_1fr_auto] ${
-            kompakt ? "grid-cols-[1fr_auto]" : "grid-cols-1"
-          }`}
+          className="grid w-full grid-cols-1 bg-white md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_auto]"
         >
-          <div className={`relative px-4 pb-2 sm:pb-2.5 sm:pt-3 ${kompakt ? "col-span-2 pt-2 sm:col-span-1" : "pt-3"}`}>
-            <label htmlFor={qId} className="block text-[13px] font-semibold text-[var(--text-strong)]">
+          <div className="relative px-4 pb-2 pt-3 focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-navy md:px-5 md:pt-4">
+            <label htmlFor={qId} className="sg-label block text-ink-2">
               Vad behöver du hjälp med?
             </label>
             {qInput(
-              "mt-0.5 h-9 w-full bg-transparent text-base text-[var(--text-strong)] focus:outline-none",
+              "mt-1 h-10 w-full appearance-none rounded-none bg-transparent text-lg font-medium text-ink focus:outline-none",
               "Elektriker, målare, VVS …",
             )}
           </div>
-          <div className={`relative border-t border-[var(--rule)] px-4 pb-2 sm:border-l sm:border-t-0 sm:pb-2.5 sm:pt-3 ${kompakt ? "pt-2" : "pt-3"}`}>
-            <label htmlFor={ortId} className="block text-[13px] font-semibold text-[var(--text-strong)]">
+          <div className="relative border-t border-line px-4 pb-2 pt-3 focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-navy md:border-l md:border-t-0 md:px-5 md:pt-4">
+            <label htmlFor={ortId} className="sg-label block text-ink-2">
               Var?
             </label>
             {ortInput(
-              "mt-0.5 h-9 w-full bg-transparent text-base text-[var(--text-strong)] focus:outline-none",
+              "mt-1 h-10 w-full appearance-none rounded-none bg-transparent text-lg font-medium text-ink focus:outline-none",
               "Kommun eller ort",
             )}
             {ortDropdown}
           </div>
-          <div className={`p-2 sm:pl-0 ${kompakt ? "border-t border-[var(--rule)] sm:border-t-0" : ""}`}>
+          <div className="p-2 md:pl-0">
             <button
               type="submit"
               disabled={pending}
-              className={`rd-btn-primary inline-flex w-full items-center justify-center gap-2 rounded-lg text-base font-semibold sm:h-full sm:min-h-14 sm:px-7 ${
-                kompakt ? "h-full min-h-12 px-5" : "h-12 px-7"
-              }`}
+              className="sg-btn sg-btn-sok h-14 w-full px-9 text-lg md:h-full md:min-h-[4.5rem]"
             >
-              <Search aria-hidden className="size-5" />
               {pending ? "Söker…" : "Sök"}
             </button>
           </div>
@@ -669,20 +653,30 @@ export function SearchBar({
       </div>
 
       {snabbval && (
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          <span className="mr-1 text-sm text-[var(--text-muted)]">Vanliga yrken:</span>
-          {SNABBVAL.map((s) => (
-            <button
-              key={s.kategori}
-              type="button"
-              onClick={() => goToKategori(s.kategori)}
-              className="inline-flex min-h-10 items-center rounded-lg border border-[var(--rule)] bg-white px-3 text-sm font-medium text-[var(--text-body)] transition-colors hover:border-[var(--brand)]/40 hover:bg-[var(--tint-1)] hover:text-[var(--brand-ink)]"
-            >
-              {s.label}
-            </button>
+        <ul className="mt-5 flex flex-wrap gap-2" aria-label="Vanliga yrken">
+          {HERO_SNABBVAL.map((s) => (
+            <li key={s.kategori}>
+              <a
+                href={`/sok?kategori=${s.kategori}`}
+                onClick={(e) => {
+                  // Står en ort i fältet söks yrket där; annars hela landet.
+                  if (!ort.trim()) return;
+                  e.preventDefault();
+                  goToKategori(s.kategori);
+                }}
+                className="inline-flex min-h-11 items-center border border-white/40 px-3.5 text-[15px] font-semibold text-white transition-colors hover:border-white hover:bg-white/10"
+              >
+                {s.label}
+              </a>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
     </div>
   );
 }
+
+/** Heroens snabbval — ett urval och en ordning ur SNABBVAL. */
+const HERO_SNABBVAL = ["el", "maleri", "vvs", "snickeri", "tak", "mark-anlaggning"]
+  .map((k) => SNABBVAL.find((s) => s.kategori === k))
+  .filter((s): s is (typeof SNABBVAL)[number] => Boolean(s));

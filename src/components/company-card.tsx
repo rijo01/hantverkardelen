@@ -1,13 +1,13 @@
 import Link from "next/link";
-import { Phone } from "lucide-react";
 import { foretagSlug, type Foretag } from "@/lib/queries";
-import type { OverlayProfilRow } from "@/lib/overlay-contract";
+import { sidhuvudetsLogotyp, type OverlayProfilRow } from "@/lib/overlay-contract";
 import { visatTelefon } from "@/lib/visat-telefon";
+import { safeLogotypUrl } from "@/lib/sanitize-html";
 import { KONTAKT_NOTIS, REGISTER_AR } from "@/lib/dataprovenans";
+import { yrkesnamn } from "@/lib/yrkesnamn";
 import {
   displayName,
   employerSize,
-  legalFormFor,
   profilMarkning,
   type ProfilMarkning,
 } from "@/lib/foretag-format";
@@ -17,14 +17,18 @@ import {
  *
  * Besökaren skannar efter tre saker: vem, var och vilket nummer. Raden visar
  * exakt dem. Namnet är radens starkaste element och den enda länken till
- * profilen; numret står i klartext (även på mobil) så att man kan se
+ * profilen; numret står i klartext i Ring-knappen så att man kan se
  * riktnumret innan man ringer ett nummer ur ett register från 2011.
  *
- * Ingen platshållaravatar: en bokstav på en gradient säger ingenting och tog
- * 70px av varje rad. Logotyp visas bara när kunden själv lämnat en.
+ * Logotypen visas när företaget har en — den köpta före registrets, samma
+ * regel som profilsidans huvud (kontraktets sidhuvudetsLogotyp()). Saknas den
+ * visas ingenting: ingen monogram-avatar, ingen platshållare.
  *
- * "Utvald · annons" visas bara för ett aktuellt overlay-köp (featured).
- * Registrets gamla poang får den neutrala "Komplett profil". Se profilMarkning().
+ * Tre lägen, och bara profilMarkning() avgör vilket:
+ *   "betald"   — aktivt overlay-köp: 2px orange ram, "Utvald · annons",
+ *                kundens egen beskrivning på en rad och navy Ring-knapp.
+ *   "komplett" — registrets gamla poang: neutral etikett, ingen ram.
+ *   null       — registerraden som den är.
  */
 export function CompanyCard({
   foretag,
@@ -50,73 +54,69 @@ export function CompanyCard({
   // Samma regel som profilsidan: kundens köpta nummer ersätter registrets.
   const telefon = visatTelefon(foretag.tel, overlay);
   const size = employerSize(foretag.aeant);
-  const legalForm = legalFormFor(foretag);
   const markning = profilMarkning(foretag, overlay);
+  const betald = markning === "betald";
+  const logo = sidhuvudetsLogotyp(overlay, safeLogotypUrl(foretag.logotyp))?.url ?? null;
   const href = `/foretag/${foretagSlug(foretag)}`;
-  const adress = [foretag.gatuadress, foretag.postort].filter(Boolean).join(", ");
-  const plats = showOrt ? adress || kommunName || null : null;
-  const sokord = (overlay?.keywords ?? [])
-    .map((k) => k.trim())
-    .filter(Boolean)
-    .slice(0, 4);
-
-  const fakta = [branschName, plats, size?.label, legalForm].filter(Boolean);
+  const yrke = branschName ?? (foretag.ng1 ? yrkesnamn(foretag.ng1) : null);
+  const ort = showOrt ? kommunName || ortnamn(foretag.postort) : null;
+  const fakta = [yrke, ort, size?.label].filter(Boolean);
+  const beskrivning = betald ? forstaRaden(overlay?.info_html) : null;
 
   return (
     <article
-      className={`rd-list-row px-4 py-3.5 sm:px-5 ${markning === "betald" ? "rd-list-row-featured" : ""}`}
+      className={
+        betald
+          ? "border-2 border-signal bg-white px-[15px] py-[15px] sm:px-[19px]"
+          : "sg-panel px-4 py-4 sm:px-5"
+      }
     >
-      <div className="flex items-start gap-3 sm:grid sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-6">
-        <div className="flex min-w-0 flex-1 items-start gap-3">
-          {overlay?.logo_url && (
-            /* eslint-disable-next-line @next/next/no-img-element */
-            <img
-              src={overlay.logo_url}
-              alt=""
-              loading="lazy"
-              decoding="async"
-              className="mt-0.5 size-10 shrink-0 rounded-md border border-[var(--rule)] bg-white object-contain p-0.5"
+      <div className="flex items-start gap-4 sm:items-center">
+        {logo && (
+          /* Plain <img>: logotyperna ligger i klustrets storage, och en ny
+             bucket-host ska inte kräva en ändring i next.config.ts. */
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img
+            src={logo}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            className="size-14 shrink-0 border border-line-soft bg-white object-contain p-1 sm:size-16"
+          />
+        )}
+        <div className="min-w-0 flex-1">
+          {betald && <AnnonsEtikett />}
+          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+            <Link
+              href={href}
+              className="text-[19px] font-bold leading-snug tracking-[-0.01em] text-ink underline-offset-4 hover:underline"
+            >
+              {name}
+            </Link>
+            {markning === "komplett" && <KomplettEtikett />}
+          </div>
+          {fakta.length > 0 && (
+            <p className="mt-0.5 text-[15px] leading-snug text-ink-2">{fakta.join(" · ")}</p>
+          )}
+          {beskrivning && (
+            <p className="mt-1 line-clamp-1 text-[15px] text-ink-2">{beskrivning}</p>
+          )}
+          {telefon && (
+            <RingKnapp
+              telefon={telefon}
+              name={name}
+              fylld={betald}
+              className="mt-3 flex w-full sm:hidden"
             />
           )}
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-              <Link
-                href={href}
-                className="text-[15px] font-semibold leading-snug text-[var(--text-strong)] underline-offset-4 hover:text-[var(--brand-ink)] hover:underline sm:text-base"
-              >
-                {name}
-              </Link>
-              <ProfilEtikett markning={markning} />
-            </div>
-            {fakta.length > 0 && (
-              <p className="mt-0.5 text-sm leading-snug text-[var(--text-muted)]">
-                {fakta.join(" · ")}
-              </p>
-            )}
-            {sokord.length > 0 && (
-              <ul className="mt-1.5 flex flex-wrap gap-1.5" aria-label="Företagets tjänster">
-                {sokord.map((s) => (
-                  <li
-                    key={s}
-                    className="rounded-sm bg-white px-1.5 py-0.5 text-xs text-[var(--brand-ink)] ring-1 ring-[var(--rule)]"
-                  >
-                    {s}
-                  </li>
-                ))}
-              </ul>
-            )}
-            {telefon && (
-              <RingKnapp
-                telefon={telefon}
-                name={name}
-                className="mt-2 inline-flex sm:hidden"
-              />
-            )}
-          </div>
         </div>
-
         {telefon && (
-          <RingKnapp telefon={telefon} name={name} className="hidden sm:inline-flex" />
+          <RingKnapp
+            telefon={telefon}
+            name={name}
+            fylld={betald}
+            className="hidden shrink-0 sm:inline-flex"
+          />
         )}
         {/* Plats för "Begär offert" när offertflödet finns — bredvid numret,
             aldrig i stället för det. */}
@@ -127,87 +127,113 @@ export function CompanyCard({
 
 /** Etiketten för profilMarkning(): annons för köp, neutral för registrets poang. */
 export function ProfilEtikett({ markning }: { markning: ProfilMarkning }) {
-  if (markning === "betald") return <UtvaldMarke />;
-  if (markning === "komplett") {
-    return (
-      <span
-        className="inline-flex items-center rounded-sm bg-[var(--surface-soft)] px-1.5 py-0.5 text-xs font-medium text-[var(--text-muted)] ring-1 ring-[var(--rule)]"
-        title="Företagets registeruppgifter är kompletta. Inte en annons."
-      >
-        Komplett profil
-      </span>
-    );
-  }
+  if (markning === "betald") return <AnnonsEtikett />;
+  if (markning === "komplett") return <KomplettEtikett />;
   return null;
 }
 
-/** Märket för betald placering. Texten säger vad det är, inte bara att det syns. */
-export function UtvaldMarke() {
+/** Betald placering. Texten säger vad det är, inte bara att det syns. */
+export function AnnonsEtikett() {
   return (
-    <span
-      className="inline-flex items-center gap-1 rounded-sm bg-[var(--tint-3)] px-1.5 py-0.5 text-xs font-semibold text-[var(--accent-cta-ink)]"
+    <p
+      className="mb-0.5 text-[12px] font-bold uppercase tracking-[0.06em] text-ad"
       title="Företaget betalar för att synas först. Placeringen säger inget om kvaliteten."
     >
-      Utvald
-      <span className="font-normal">· annons</span>
+      Utvald · annons
+    </p>
+  );
+}
+
+/** Registrets gamla poang. Neutral — det är inte en annons och inget betyg. */
+export function KomplettEtikett() {
+  return (
+    <span
+      className="inline-flex items-center border border-line px-1.5 py-0.5 text-xs font-semibold text-ink-2"
+      title="Företagets registeruppgifter är kompletta. Inte en annons."
+    >
+      Komplett profil
     </span>
   );
 }
 
 /**
- * Ringknappen — samma utseende i alla listor och på företagssidan.
- * Blå kontur: orange är reserverat för sökningen. Numret står alltid i
- * klartext; märkningen om registrets ålder ligger i aria-label och title.
+ * Ringknappen — samma i alla listor och på företagssidan. Kantad navy som
+ * standard, fylld navy för betalda rader och företagssidans huvud. Numret
+ * står alltid i klartext; märkningen om registrets ålder ligger i
+ * aria-label och title.
  */
 export function RingKnapp({
   telefon,
   name,
   className = "",
   stor = false,
+  fylld = false,
 }: {
   telefon: string;
   name: string;
   className?: string;
   stor?: boolean;
+  fylld?: boolean;
 }) {
   return (
     <a
       href={`tel:${telefon.replace(/[^\d+]/g, "")}`}
       aria-label={`Ring ${name}, ${telefon}. ${KONTAKT_NOTIS}.`}
       title={KONTAKT_NOTIS}
-      className={`items-center gap-2 rounded-lg border border-[var(--brand)]/35 bg-white font-semibold tabular-nums text-[var(--brand-ink)] transition-colors hover:border-[var(--brand)] hover:bg-[var(--tint-1)] active:bg-[var(--tint-2)] ${
-        stor ? "min-h-12 px-4 text-base" : "min-h-11 px-3.5 text-[15px]"
+      className={`sg-btn whitespace-nowrap tabular-nums ${fylld ? "sg-btn-navy" : "sg-btn-outline"} ${
+        stor ? "min-h-[3.25rem] px-5 text-[17px]" : "text-[15px]"
       } ${className || "inline-flex"}`}
     >
-      <Phone className="size-4 shrink-0" aria-hidden />
-      {telefon}
+      Ring
+      <span className={fylld ? "font-semibold" : "font-semibold text-ink-2"}>{telefon}</span>
     </a>
   );
 }
 
 /**
- * Listan bär proveniensmärkningen överst — där ögat är när man ska ringa —
- * och förklaringen av "Utvald" i foten.
+ * Listan. Raderna är fristående vita ytor; under dem står hur listan är
+ * sorterad och varifrån numren kommer.
  */
 export function CompanyCardList({
   children,
+  komplettaFinns = false,
 }: {
   children: React.ReactNode;
+  /** Finns rader med registrets poang ("Komplett profil")? Då nämns de i sorteringen. */
+  komplettaFinns?: boolean;
 }) {
   return (
-    <div className="space-y-2">
-      <p className="text-xs text-[var(--text-muted)]">
-        Telefonnummer och adresser kommer från ett register från {REGISTER_AR} och
-        kan vara inaktuella.
-      </p>
-      <ol className="overflow-hidden rounded-xl border border-[var(--rule)] bg-white divide-y divide-[var(--rule-soft)]">
-        {children}
-      </ol>
-      <p className="text-xs text-[var(--text-muted)]">
-        <span className="font-semibold text-[var(--accent-cta-ink)]">Utvald · annons</span>{" "}
-        betyder att företaget betalar för att synas först. Därefter kommer
-        företag med komplett profil, sedan övriga efter antal anställda.
+    <div>
+      <ol className="space-y-2">{children}</ol>
+      <p className="mt-4 text-sm leading-relaxed text-ink-3">
+        Sorterat: annonser först,{" "}
+        {komplettaFinns ? "därefter företag med komplett profil och sedan" : "därefter"} efter
+        antal anställda. Telefonnummer från registret (ca {REGISTER_AR}) kan vara inaktuella.
       </p>
     </div>
   );
+}
+
+/** "KUNGÄLV" → "Kungälv". Registrets postorter står ofta i versaler. */
+function ortnamn(postort: string | null): string | null {
+  const s = postort?.trim();
+  if (!s) return null;
+  if (s !== s.toUpperCase()) return s;
+  return s.toLowerCase().replace(/(^|[\s-])(\p{L})/gu, (_, f: string, c: string) => f + c.toUpperCase());
+}
+
+/** Kundens infotext som en rad ren text — taggarna bort, entiteterna tolkade. */
+function forstaRaden(html: string | null | undefined): string | null {
+  if (!html) return null;
+  const text = html
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, "&")
+    .replace(/\s+/g, " ")
+    .trim();
+  return text || null;
 }

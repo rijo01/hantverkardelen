@@ -5,19 +5,23 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  /* Signal — sajtens egna färger som Tailwind-klasser: bg-navy, text-ink … */
+  --color-navy: var(--sg-navy);
+  --color-navy-2: var(--sg-navy-2);
+  --color-signal: var(--sg-orange);
+  --color-signal-2: var(--sg-orange-2);
+  --color-ink: var(--sg-text);
+  --color-ink-2: var(--sg-text-2);
+  --color-ink-3: var(--sg-muted);
+  --color-line: var(--sg-line);
+  --color-line-soft: var(--sg-line-soft);
+  --color-page: var(--sg-bg);
+  --color-ad: var(--sg-ad);
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --color-surface: var(--surface);
-  --color-surface-soft: var(--surface-soft);
-  --color-brand: var(--brand);
-  --color-brand-2: var(--brand-2);
-  --color-brand-ink: var(--brand-ink);
-  --color-accent-cta: var(--accent-cta);
-  --color-accent-cta-2: var(--accent-cta-2);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-display: var(--font-instrument-serif);
-  --font-heading: var(--font-instrument-serif);
+  --font-sans: var(--font-archivo);
+  --font-heading: var(--font-archivo);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -47,131 +51,120 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
-  --radius-sm: calc(var(--radius) * 0.55);
-  --radius-md: calc(var(--radius) * 0.85);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.5);
-  --radius-2xl: calc(var(--radius) * 2);
-  --radius-3xl: calc(var(--radius) * 2.6);
-  --radius-4xl: calc(var(--radius) * 3.4);
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
+  --radius-2xl: 0;
+  --radius-3xl: 0;
+  --radius-4xl: 0;
 }
 
 :root {
-  /* === Hantverkardelen — Skandinavisk premium ===
-     Vit + ljusgrå bakgrund, kall primärblå för identitet/text,
-     varm orange accent för CTAs och "Utvald"-detaljer. */
+  /* === Signal (designriktning A) ===
+     Navy för identitet och primära handlingar, orange för sökningen och
+     annonsmarkeringen. Raka hörn, 1px-linjer, inga skuggor, inga gradienter.
 
-  /* Atmosfär */
+     Kontrast (WCAG 2.x, AA = 4,5:1 för text):
+       ink     #0E1B2C på vitt 17,4  · på #F4F6F9 16,0
+       ink-2   #3D4C5E på vitt  8,7  · på #F4F6F9  8,0
+       ink-3   #5A6B80 på vitt  5,5  · på #F4F6F9  5,0
+       ad      #B4530A på vitt  5,0  · på #F4F6F9  4,6
+       navy    #0B2A4A på orange 5,1 — orange yta har alltid navy text
+       orange  #F2740C på navy  5,1  (överraden på startsidan)
+       vitt på navy 14,6
+     Orange som TEXT på vitt når bara 2,9 — använd --sg-ad då. */
+  --sg-navy: #0B2A4A;
+  --sg-navy-2: #123A63;           /* hover på navy-knappar */
+  --sg-orange: #F2740C;
+  --sg-orange-2: #F5862F;         /* hover: ljusare, navy-texten behåller kontrasten */
+  --sg-text: #0E1B2C;
+  --sg-text-2: #3D4C5E;
+  --sg-muted: #5A6B80;
+  --sg-line: #DCE3EC;
+  --sg-line-soft: #EEF2F7;
+  --sg-bg: #F4F6F9;
+  --sg-ad: #B4530A;
+  /* Dämpad text på navy (sidfot, ingress i heron): 8,4:1 */
+  --sg-on-navy-muted: #B9C6D6;
+
   --background: #ffffff;
-  --foreground: #1A2233;
-  --surface: #ffffff;
-  --surface-soft: #F4F6F8;        /* ljusgrå sektion-bakgrund */
-  --surface-warm: #FFF7EE;        /* extra mild orange-ton för featured */
-  --tint-1: #F2F6FB;              /* svag blå-vatten */
-  --tint-2: #E4EDF7;              /* chip-bakgrund (svag blå) */
-  --tint-3: #FFEAD1;              /* svag varm orange chip */
+  --foreground: var(--sg-text);
 
-  /* Texttoner */
-  --text-strong: #1A2233;
-  --text-body: #2A3344;
-  --text-muted: #5C6577;
-  /* dim klarar AA (4,9:1) även på ljusgrå och varm botten. faint är bara
-     för dekor — avgränsare och tomma värden — aldrig för text man ska läsa. */
-  --text-dim: #646D80;
-  --text-faint: #A3ABB9;
-
-  /* Brand — primär blå (identitet, headings, länkar) */
-  --brand: #0A4D8C;
-  --brand-2: #083D70;             /* mörkare blå för topbar/hover */
-  --brand-ink: #0A4D8C;           /* länkar */
-  --brand-deep: #062A4D;
-
-  /* Accent — varm orange (CTAs, "Utvald", primära knappar) */
-  --accent-cta: #F2740C;
-  --accent-cta-2: #D85F00;        /* hover för accent */
-  --accent-cta-ink: #8A4007;      /* mörk text på svag orange */
-  --accent-text: #B8520A;         /* orange som text (".se" i loggan) — 4,9:1 på vitt, 4,6:1 på ljusgrått */
-
-  /* Borders */
-  --rule: #E5E9EE;
-  --rule-soft: #EEF1F5;
-  --rule-strong: #CFD5DE;
-
-  /* shadcn-kompatibla kanaler */
+  /* shadcn-kompatibla kanaler (components/ui) — samma system */
   --card: #ffffff;
-  --card-foreground: #1A2233;
+  --card-foreground: var(--sg-text);
   --popover: #ffffff;
-  --popover-foreground: #1A2233;
-  --primary: #F2740C;             /* primär = orange CTA */
+  --popover-foreground: var(--sg-text);
+  --primary: var(--sg-navy);
   --primary-foreground: #ffffff;
-  --secondary: #F4F6F8;
-  --secondary-foreground: #1A2233;
-  --muted: #F4F6F8;
-  --muted-foreground: #5C6577;
-  --accent: #FFEAD1;
-  --accent-foreground: #8A4007;
-  --destructive: #C0392B;
-  --border: #E5E9EE;
-  --input: #CFD5DE;
-  --ring: rgba(242, 116, 12, 0.45);
-  --chart-1: #0A4D8C;
-  --chart-2: #F2740C;
-  --chart-3: #083D70;
-  --chart-4: #FFAC5E;
-  --chart-5: #4A7BB0;
-  --radius: 0.75rem;
+  --secondary: var(--sg-bg);
+  --secondary-foreground: var(--sg-text);
+  --muted: var(--sg-bg);
+  --muted-foreground: var(--sg-muted);
+  --accent: var(--sg-line-soft);
+  --accent-foreground: var(--sg-text);
+  --destructive: #B42318;
+  --border: var(--sg-line);
+  --input: var(--sg-line);
+  --ring: var(--sg-navy);
+  --chart-1: var(--sg-navy);
+  --chart-2: var(--sg-orange);
+  --chart-3: var(--sg-text-2);
+  --chart-4: var(--sg-muted);
+  --chart-5: var(--sg-line);
+  --radius: 0;
   --sidebar: #ffffff;
-  --sidebar-foreground: #1A2233;
-  --sidebar-primary: #F2740C;
+  --sidebar-foreground: var(--sg-text);
+  --sidebar-primary: var(--sg-navy);
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #FFEAD1;
-  --sidebar-accent-foreground: #8A4007;
-  --sidebar-border: #E5E9EE;
-  --sidebar-ring: rgba(242, 116, 12, 0.45);
-
-  /* Skuggor — flerlagrade för premium-djup */
-  --shadow-sm: 0 1px 2px rgba(17,24,38,0.04);
-  --shadow-md: 0 1px 3px rgba(17,24,38,0.05), 0 1px 2px rgba(17,24,38,0.03);
-  --shadow-lg: 0 1px 2px rgba(17,24,38,0.04), 0 10px 24px -10px rgba(17,24,38,0.12);
-  --shadow-xl: 0 1px 2px rgba(17,24,38,0.04), 0 24px 48px -16px rgba(17,24,38,0.16);
-  --shadow-glow: 0 18px 40px -16px rgba(242, 116, 12, 0.38);
+  --sidebar-accent: var(--sg-line-soft);
+  --sidebar-accent-foreground: var(--sg-text);
+  --sidebar-border: var(--sg-line);
+  --sidebar-ring: var(--sg-navy);
 }
 
 @layer base {
   * {
-    @apply border-border outline-ring/40;
+    @apply border-border;
   }
   html {
-    font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+    font-family: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     color-scheme: light;
-    background-color: var(--background);
+    background-color: var(--sg-bg);
   }
   body {
-    background-color: var(--background);
-    color: var(--text-body);
-    font-feature-settings: "ss01" 1, "cv01" 1, "cv11" 1;
+    background-color: var(--sg-bg);
+    color: var(--sg-text-2);
   }
   h1, h2, h3, h4, h5 {
-    color: var(--text-strong);
-    @apply tracking-tight;
-    letter-spacing: -0.022em;
+    color: var(--sg-text);
+    font-weight: 800;
+    letter-spacing: -0.02em;
   }
   ::selection {
     background-color: #FFD9AC;
-    color: var(--text-strong);
+    color: var(--sg-text);
   }
   p, dd, li {
     text-wrap: pretty;
   }
   :focus-visible {
-    outline: 2px solid var(--brand);
+    outline: 2px solid var(--sg-navy);
     outline-offset: 2px;
   }
+  /* På navy syns en navy ring inte — orange i stället (5,1:1 mot navy). */
+  .sg-on-navy :focus-visible {
+    outline-color: var(--sg-orange);
+  }
   input::placeholder {
-    color: var(--text-dim);
+    color: var(--sg-muted);
+  }
+  input[type="search"]::-webkit-search-cancel-button {
+    -webkit-appearance: none;
   }
   html { scroll-behavior: smooth; }
   @media (prefers-reduced-motion: reduce) {
@@ -179,161 +172,143 @@
   }
 }
 
-@keyframes rd-fade-up {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+@keyframes sg-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
 }
-@keyframes rd-fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
+
+/* Signal-klasserna som riktiga Tailwind-utilities (@utility), inte som
+   @layer-regler: då sorteras de med övriga klasser och varianter som
+   sm:hidden, text-white eller border-t-signal går före dem. */
+
+/* Sidans innehållsbredd. 16px marginal på mobil. */
+@utility sg-wrap {
+  width: 100%;
+  max-width: 75rem;
+  margin-inline: auto;
+  padding-inline: 1rem;
+  @media (min-width: 640px) {
+    padding-inline: 1.5rem;
+  }
 }
-@keyframes rd-shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+
+/* Stora, täta rubriker. Storleken sätts där de används. */
+@utility sg-display {
+  color: var(--sg-text);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.04;
 }
-@keyframes rd-blob-drift {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33% { transform: translate(3%, -2%) scale(1.05); }
-  66% { transform: translate(-2%, 3%) scale(0.97); }
+
+/* Små versala etiketter för sektionsrubriker: 13px, 700, 0.06em. Färgen
+   ärvs (ink-2 från body); sätt text-white/text-ad där den ska avvika. */
+@utility sg-label {
+  font-size: 13px;
+  line-height: 1.3;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* Vit yta med 1px kant — kort, rader, sidospaltens rutor. */
+@utility sg-panel {
+  background-color: #ffffff;
+  border: 1px solid var(--sg-line);
+}
+
+/* Knappar. Minst 44px höga; raka hörn; ingen skugga. */
+@utility sg-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  padding-inline: 1rem;
+  border-width: 1px;
+  border-style: solid;
+  border-color: transparent;
+  font-weight: 700;
+  line-height: 1.2;
+  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+@utility sg-btn-navy {
+  background-color: var(--sg-navy);
+  border-color: var(--sg-navy);
+  color: #ffffff;
+  &:hover {
+    background-color: var(--sg-navy-2);
+    border-color: var(--sg-navy-2);
+  }
+}
+@utility sg-btn-outline {
+  background-color: #ffffff;
+  border-color: var(--sg-navy);
+  color: var(--sg-navy);
+  &:hover {
+    background-color: var(--sg-line-soft);
+  }
+}
+/* Sök — orange med navy text (5,1:1). Vit text på orange når bara 2,9. */
+@utility sg-btn-sok {
+  background-color: var(--sg-orange);
+  border-color: var(--sg-orange);
+  color: var(--sg-navy);
+  font-weight: 800;
+  &:hover {
+    background-color: var(--sg-orange-2);
+    border-color: var(--sg-orange-2);
+  }
+}
+
+/* Kantad tagg — tjänster, sökord. */
+@utility sg-tag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  padding-inline: 0.625rem;
+  border: 1px solid var(--sg-line);
+  background-color: #ffffff;
+  font-size: 14px;
+  color: var(--sg-text-2);
+}
+
+/* Textlänk i brödtext. */
+@utility sg-link {
+  color: var(--sg-navy);
+  font-weight: 600;
+  text-decoration-line: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--sg-line);
+  &:hover {
+    text-decoration-color: var(--sg-navy);
+  }
+}
+
+/* Platshållare medan söket körs — platt, ingen glansgradient. */
+@utility sg-skeleton {
+  background-color: var(--sg-line-soft);
+  animation: sg-pulse 1.4s ease-in-out infinite;
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
 }
 
 @layer utilities {
-  /* Sidrubriker — Instrument Serif, upprätt. Hela rubriken, aldrig ett
-     enstaka ord i avvikande stil. */
-  .rd-serif {
-    font-family: var(--font-instrument-serif), Georgia, "Times New Roman", serif;
-    font-weight: 400;
-    letter-spacing: -0.012em;
-    line-height: 1.05;
-  }
-
-  /* Rad i träfflista. Utvald (betald) får varm botten — ingen färgad kant. */
-  .rd-list-row {
-    background-color: #ffffff;
-    transition: background-color 160ms ease;
-  }
-  .rd-list-row:hover {
-    background-color: var(--tint-1);
-  }
-  .rd-list-row-featured {
-    background-color: var(--surface-warm);
-  }
-  .rd-list-row-featured:hover {
-    background-color: #FFF1E0;
-  }
-
-  /* Primärknapp — sökningen. Orange med mörk text: vit text på #F2740C
-     når bara 2,9:1, mörkblå når 5,0:1. */
-  .rd-btn-primary {
-    background-color: var(--accent-cta);
-    color: var(--brand-deep);
-    transition: background-color 160ms ease;
-  }
-  .rd-btn-primary:hover {
-    background-color: #F5852B;
-  }
-
-  /* Primär CTA-gradient — varm orange (används på Sök-knappar, primära CTA:n) */
-  .rd-brand-gradient {
-    background-image: linear-gradient(135deg, #F89045 0%, #F2740C 55%, #D85F00 100%);
-  }
-  .rd-brand-gradient-warm {
-    background-image: linear-gradient(135deg, #FFB37E 0%, #F2740C 60%, #8A4007 100%);
-  }
-  .rd-brand-gradient-soft {
-    background-image:
-      radial-gradient(ellipse 65% 50% at 50% 0%, rgba(242, 116, 12, 0.12), transparent 65%),
-      radial-gradient(ellipse 45% 35% at 85% 25%, rgba(10, 77, 140, 0.06), transparent 70%),
-      radial-gradient(ellipse 35% 30% at 10% 30%, rgba(242, 116, 12, 0.10), transparent 70%),
-      linear-gradient(180deg, #ffffff 0%, #ffffff 70%);
-  }
-  /* Accent-text — solid orange för signaturord i rubriker */
-  .rd-text-brand {
-    color: #F2740C;
-    background: none;
-    -webkit-background-clip: initial;
-    background-clip: initial;
-  }
-  /* Blå variant för "Sverige"-typografi */
-  .rd-text-brand-blue {
-    color: #0A4D8C;
-  }
-
-  /* Premium-skuggor */
-  .rd-shadow-sm { box-shadow: var(--shadow-sm); }
-  .rd-shadow-md { box-shadow: var(--shadow-md); }
-  .rd-shadow-lg { box-shadow: var(--shadow-lg); }
-  .rd-shadow-xl { box-shadow: var(--shadow-xl); }
-  .rd-shadow-glow { box-shadow: var(--shadow-glow); }
-
-  /* Card-kärna — vit, mjuk skugga, fin border */
-  .rd-card {
-    background: var(--surface);
-    border: 1px solid var(--rule);
-    border-radius: 1rem;
-    box-shadow: var(--shadow-md);
-  }
-  .rd-card-hover {
-    transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1),
-                box-shadow 220ms cubic-bezier(0.16, 1, 0.3, 1),
-                border-color 160ms ease;
-  }
-  .rd-card-hover:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-lg);
-    border-color: #d0d6df;
-  }
-
-  /* Subtila staggered fade-in:s */
-  .rd-fade-up {
-    animation: rd-fade-up 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
-  }
-  .rd-fade-in {
-    animation: rd-fade-in 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
-  }
-  .rd-fade-up-delay-1 { animation-delay: 0.06s; }
-  .rd-fade-up-delay-2 { animation-delay: 0.12s; }
-  .rd-fade-up-delay-3 { animation-delay: 0.18s; }
-  .rd-fade-up-delay-4 { animation-delay: 0.24s; }
-  .rd-fade-up-delay-5 { animation-delay: 0.30s; }
-
-  /* Företagskort i lista — hover ljus blå-tint, ingen aktiv ram */
-  .rd-card-row {
-    background-color: #ffffff;
-    transition: background-color 160ms ease;
-  }
-  .rd-card-row:hover {
-    background-color: #F2F6FB;
-  }
-
-  /* Utvald (poang > 0) — subtil varm orange tint + accent-streck till vänster */
-  .rd-card-featured {
-    background-color: #FFF7EE;
-    padding-left: calc(1rem + 4px);
-  }
-  @media (min-width: 640px) {
-    .rd-card-featured {
-      padding-left: calc(1.25rem + 4px);
-    }
-  }
-  .rd-card-featured:hover {
-    background-color: #FFEAD1;
-  }
-
   /* Rich-text rendering (saniterad infotext från databasen) */
   .rd-rich-text b,
   .rd-rich-text strong {
-    color: var(--text-strong);
-    font-weight: 600;
+    color: var(--sg-text);
+    font-weight: 700;
   }
   .rd-rich-text a {
-    color: var(--brand-ink);
+    color: var(--sg-navy);
     text-decoration: underline;
     text-decoration-thickness: 1px;
     text-underline-offset: 2px;
   }
   .rd-rich-text a:hover {
-    color: var(--brand-deep);
+    color: var(--sg-text);
   }
   .rd-rich-text p {
     margin: 0.75em 0;
@@ -347,124 +322,17 @@
     margin: 0.75em 0;
     padding-left: 1.5em;
   }
+  .rd-rich-text ul { list-style: square; }
+  .rd-rich-text ol { list-style: decimal; }
   .rd-rich-text li {
     margin: 0.25em 0;
   }
   .rd-rich-text h2, .rd-rich-text h3, .rd-rich-text h4 {
-    color: var(--text-strong);
-    font-weight: 600;
+    color: var(--sg-text);
+    font-weight: 700;
     margin: 1em 0 0.5em;
   }
   .rd-rich-text h2 { font-size: 1.05em; }
   .rd-rich-text h3 { font-size: 1em; }
   .rd-rich-text h4 { font-size: 0.95em; }
-
-  /* Listrad — vänster orange bar glider in */
-  .rd-row {
-    position: relative;
-    transition: background-color 160ms ease;
-  }
-  .rd-row::before {
-    content: "";
-    position: absolute;
-    inset: 0 auto 0 0;
-    width: 3px;
-    background-image: linear-gradient(180deg, #F89045, #D85F00);
-    opacity: 0;
-    transform: scaleY(0.4);
-    transform-origin: center;
-    transition: opacity 160ms ease, transform 160ms ease;
-  }
-  .rd-row:hover::before,
-  .rd-row:focus-visible::before {
-    opacity: 1;
-    transform: scaleY(1);
-  }
-  .rd-row:hover,
-  .rd-row:focus-visible {
-    background-color: #F2F6FB;
-  }
-
-  /* Sökboxen — vit, en låg skugga, blå fokusring (orange hör till knappen) */
-  .rd-search-box {
-    box-shadow: 0 1px 2px rgba(17, 24, 38, 0.05), 0 4px 12px -6px rgba(17, 24, 38, 0.08);
-    transition: box-shadow 160ms ease, border-color 160ms ease;
-  }
-  .rd-search-box:focus-within {
-    border-color: var(--brand) !important;
-    box-shadow: 0 0 0 3px rgba(10, 77, 140, 0.14);
-  }
-  .rd-search-box input:focus-visible {
-    outline: none;
-  }
-
-  /* CTA-knappskugga */
-  .rd-cta-shadow {
-    box-shadow:
-      0 1px 0 rgba(255, 255, 255, 0.45) inset,
-      0 4px 14px -4px rgba(242, 116, 12, 0.55);
-  }
-
-  /* Skeleton — mjuk grå shimmer */
-  .rd-skeleton {
-    background: linear-gradient(
-      90deg,
-      #eef0f3 0%,
-      #f7f8fa 50%,
-      #eef0f3 100%
-    );
-    background-size: 200% 100%;
-    animation: rd-shimmer 1.6s linear infinite;
-  }
-
-  /* Drifting hero-blob */
-  .rd-blob {
-    animation: rd-blob-drift 18s ease-in-out infinite;
-  }
-
-  /* "Premium grid" — subtilt punktmönster */
-  .rd-dot-grid {
-    background-image: radial-gradient(rgba(17,24,38,0.06) 1px, transparent 1px);
-    background-size: 22px 22px;
-    background-position: 0 0;
-  }
-
-  /* Full-bleed — låter en sektion bryta ut ur föräldraelementets max-width
-     och täcka hela viewporten. Används av startsidans hero/grå-sektion. */
-  .rd-full-bleed {
-    margin-left: calc(50% - 50vw);
-    margin-right: calc(50% - 50vw);
-    width: 100vw;
-  }
-
-  /* Initial-ring för företagsprofil */
-  .rd-monogram {
-    background-image: linear-gradient(135deg, #FFB37E 0%, #F2740C 65%, #8A4007 100%);
-    box-shadow:
-      0 1px 0 rgba(255,255,255,0.4) inset,
-      0 -8px 24px rgba(255,255,255,0.2) inset,
-      0 14px 32px -10px rgba(242, 116, 12, 0.55);
-  }
-
-  /* Blå brand-knapp (sekundär CTA) — för "Anslut/Logga in" där vi vill
-     identitets-blå utan att slåss om uppmärksamhet med orange. */
-  .rd-btn-brand {
-    background-color: var(--brand);
-    color: #ffffff;
-    transition: background-color 160ms ease;
-  }
-  .rd-btn-brand:hover {
-    background-color: var(--brand-2);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .rd-fade-up,
-  .rd-fade-in,
-  .rd-skeleton,
-  .rd-blob {
-    animation: none !important;
-    opacity: 1;
-    transform: none;
-  }
 }

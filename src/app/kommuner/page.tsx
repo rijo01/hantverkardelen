@@ -38,35 +38,36 @@ export default function KommunerPage() {
   ]);
 
   return (
-    <div className="space-y-12 pb-8">
+    <div className="sg-wrap space-y-8 pb-16">
       <JsonLd data={breadcrumbJsonLd} />
-      <Breadcrumb items={breadcrumbItems} />
+      <div>
+        <Breadcrumb items={breadcrumbItems} />
+        <header className="max-w-3xl space-y-3 border-b border-line pb-6">
+          <h1 className="sg-display text-balance text-[2.125rem] sm:text-[2.75rem]">
+            Hantverkare i alla {TOTAL_KOMMUNER} kommuner
+          </h1>
+          <p className="text-[17px] leading-relaxed text-ink-2">
+            {fmt(TOTAL_FORETAG)} registrerade hantverksföretag i {TOTAL_LAN} län.
+            Välj din kommun för att se yrkena där.
+          </p>
+        </header>
+      </div>
 
-      <header className="max-w-3xl space-y-3">
-        <h1 className="rd-serif text-balance text-[2.5rem] text-[var(--text-strong)] sm:text-[3.5rem]">
-          Hantverkare i alla {TOTAL_KOMMUNER} kommuner
-        </h1>
-        <p className="text-lg leading-relaxed text-[var(--text-muted)]">
-          {fmt(TOTAL_FORETAG)} registrerade hantverksföretag i {TOTAL_LAN} län.
-          Välj din kommun för att se yrkena där.
-        </p>
-      </header>
-
-      <section aria-labelledby="flest" className="space-y-4">
-        <h2 id="flest" className="rd-serif text-3xl text-[var(--text-strong)] sm:text-4xl">
+      <section aria-labelledby="flest" className="space-y-3">
+        <h2 id="flest" className="sg-label">
           Flest hantverkare
         </h2>
-        <ul className="grid grid-cols-2 border-t border-[var(--rule)] sm:grid-cols-3 sm:gap-x-8 lg:grid-cols-4">
+        <ul className="grid grid-cols-1 gap-px border border-line bg-line sm:grid-cols-2 lg:grid-cols-4">
           {TOP_KOMMUNER.slice(0, 12).map((k) => (
-            <li key={k.kommun.code} className="border-b border-[var(--rule)]">
+            <li key={k.kommun.code} className="bg-white">
               <Link
                 href={k.href}
-                className="group flex min-h-12 items-center justify-between gap-2 py-2.5 pr-2"
+                className="group flex min-h-14 items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-page"
               >
-                <span className="truncate font-medium text-[var(--text-strong)] underline-offset-4 group-hover:text-[var(--brand-ink)] group-hover:underline">
+                <span className="truncate text-[18px] font-bold text-ink group-hover:underline group-hover:underline-offset-4">
                   {k.kommun.name}
                 </span>
-                <span className="shrink-0 text-sm tabular-nums text-[var(--text-muted)]">
+                <span className="shrink-0 text-[15px] font-semibold tabular-nums text-ink-3">
                   {fmt(k.count)}
                 </span>
               </Link>
@@ -75,20 +76,20 @@ export default function KommunerPage() {
         </ul>
       </section>
 
-      <section id="alla" aria-labelledby="alla-kommuner" className="space-y-4">
-        <h2 id="alla-kommuner" className="rd-serif text-3xl text-[var(--text-strong)] sm:text-4xl">
+      <section id="alla" aria-labelledby="alla-kommuner" className="space-y-3">
+        <h2 id="alla-kommuner" className="sg-label">
           Alla kommuner A–Ö
         </h2>
-        <div className="divide-y divide-[var(--rule-soft)] border-y border-[var(--rule)]">
+        <div className="sg-panel divide-y divide-line-soft px-4 sm:px-6">
           {Array.from(groups.entries()).map(([letter, kommuner]) => (
-            <div key={letter} className="grid grid-cols-[2.5rem_1fr] items-start gap-3 py-3">
-              <h3 className="rd-serif text-3xl text-[var(--brand)]">{letter}</h3>
+            <div key={letter} className="grid grid-cols-[2.25rem_1fr] items-start gap-3 py-3">
+              <h3 className="pt-1 text-2xl font-extrabold leading-none text-navy">{letter}</h3>
               <ul className="flex flex-wrap gap-x-4 gap-y-0.5">
                 {kommuner.map((k) => (
                   <li key={k.code}>
                     <Link
                       href={`/kommun/${k.slug}`}
-                      className="inline-flex min-h-9 items-center text-[15px] text-[var(--text-body)] underline-offset-4 transition-colors hover:text-[var(--brand-ink)] hover:underline"
+                      className="inline-flex min-h-9 items-center text-[15px] text-ink-2 underline-offset-4 transition-colors hover:text-navy hover:underline"
                       title={`Hantverkare i ${k.name} kommun`}
                     >
                       {k.name}

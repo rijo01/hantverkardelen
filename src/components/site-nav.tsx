@@ -1,107 +1,136 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
-import { Home, Search, MapPin, Layers, Briefcase, Hammer } from "lucide-react";
+import { usePathname, useSearchParams } from "next/navigation";
+import { Suspense } from "react";
+import { Home, Search, MapPin, Layers, Briefcase } from "lucide-react";
 import { SearchBar } from "@/components/search-bar";
+import { Ordmarke } from "@/components/ordmarke";
+import { kommunBySlug } from "@/lib/kommuner";
+import { yrkesnamn } from "@/lib/yrkesnamn";
 
 /**
- * Sidhuvudet — en rad: logo, sök (desktop), nav och väg in för hantverkare.
+ * Sidhuvudet — navy på alla sidor.
  *
- * Den mörkblå topbaren ovanför är borttagen: den upprepade taglinen och tog
- * 36px före första sökträffen. Sökrutan i huvudet visas bara från lg och
- * aldrig på startsidan eller /sok, som har en egen stor sökruta — förut låg
- * två sökrutor ovanpå varandra där, och på mobil lade sig huvudets ruta över
- * logotypen och brödsmulorna. Mobilen har Sök i bottenmenyn.
+ * Startsidan: märket och navigeringen, och heron under fortsätter i samma
+ * navy. Övriga sidor: kompakt huvud med sökformuläret, ifyllt med den sökning
+ * sidan visar — på /sok ur adressens parametrar, på kommun- och yrkessidorna
+ * ur sökvägen. Där finns ingen egen stor sökruta längre; den här är den.
  */
 export function SiteNav() {
   const pathname = usePathname();
-  const egenSokruta = pathname === "/" || pathname.startsWith("/sok");
-  const [scrolled, setScrolled] = useState(false);
 
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 8);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+  if (pathname === "/") {
+    return (
+      <header className="sg-on-navy bg-navy text-white">
+        <div className="sg-wrap flex h-16 items-center gap-4 sm:h-[72px]">
+          <Link href="/" aria-label="Hantverkardelen, till startsidan" className="shrink-0">
+            <Ordmarke stor />
+          </Link>
+          <nav aria-label="Huvudmeny" className="ml-auto flex items-center gap-1 text-[15px] font-semibold">
+            <NavLink href="/branscher" label="Yrken" />
+            <NavLink href="/kommuner" label="Kommuner" />
+            <NavLink href="/#sa-funkar-det" label="Så funkar det" />
+            <Link
+              href="/kontakt"
+              className="ml-2 inline-flex min-h-10 items-center bg-white px-3.5 font-bold text-navy transition-colors hover:bg-[var(--sg-line-soft)]"
+            >
+              För företag
+            </Link>
+          </nav>
+        </div>
+      </header>
+    );
+  }
 
   return (
-    <header
-      className={`sticky top-0 z-40 border-b bg-white transition-shadow duration-200 ${
-        scrolled
-          ? "border-[var(--rule)] shadow-[0_2px_8px_-4px_rgba(17,24,38,0.08)]"
-          : "border-[var(--rule-soft)]"
-      }`}
-    >
-      <div className="mx-auto flex h-16 max-w-6xl items-center gap-4 px-4 lg:gap-6">
-        <Link
-          href="/"
-          aria-label="Hantverkardelen.se, till startsidan"
-          className="flex shrink-0 items-center gap-2.5 text-[var(--text-strong)]"
-        >
-          <span
-            aria-hidden
-            className="inline-flex size-9 items-center justify-center rounded-lg bg-[var(--brand)] text-white"
+    <header className="sg-on-navy z-40 border-b border-white/10 bg-navy text-white md:sticky md:top-0">
+      <div className="sg-wrap flex flex-col gap-3 py-3 md:h-[72px] md:flex-row md:items-center md:gap-6 md:py-0">
+        <div className="flex items-center justify-between gap-4">
+          <Link href="/" aria-label="Hantverkardelen, till startsidan" className="shrink-0">
+            <Ordmarke />
+          </Link>
+          <Link
+            href="/kontakt"
+            className="inline-flex min-h-10 items-center border border-white/40 px-3 text-sm font-bold text-white transition-colors hover:border-white md:hidden"
           >
-            <Hammer className="size-[18px]" strokeWidth={2.2} />
-          </span>
-          <span className="text-[17px] font-bold tracking-tight">
-            Hantverkardelen<span className="text-[var(--accent-text)]">.se</span>
-          </span>
-        </Link>
-
-        <div className="hidden min-w-0 flex-1 lg:block">
-          {!egenSokruta ? (
-            <SearchBar variant="compact" />
-          ) : null}
+            För företag
+          </Link>
         </div>
-        <div className="flex-1 lg:hidden" />
-
-        <nav aria-label="Huvudmeny" className="hidden shrink-0 items-center gap-0.5 text-sm md:flex">
-          <NavLink href="/sok" label="Sök" current={pathname.startsWith("/sok")} />
-          <NavLink
-            href="/kommuner"
-            label="Kommuner"
-            current={pathname.startsWith("/kommun")}
-          />
-          <NavLink
-            href="/branscher"
-            label="Yrken"
-            current={pathname === "/branscher"}
-          />
-        </nav>
-
-        {/* Hantverkarnas väg in. Blå kontur: orange hör till sökningen. */}
-        <Link
-          href="/kontakt"
-          className="hidden h-10 shrink-0 items-center rounded-lg border border-[var(--brand)]/35 px-3.5 text-sm font-semibold text-[var(--brand-ink)] transition-colors hover:border-[var(--brand)] hover:bg-[var(--tint-1)] sm:inline-flex"
+        <div className="min-w-0 flex-1 md:max-w-[44rem]">
+          <Suspense fallback={<SearchBar variant="compact" {...franSokvag(pathname)} />}>
+            <HuvudetsSok pathname={pathname} />
+          </Suspense>
+        </div>
+        <nav
+          aria-label="Huvudmeny"
+          className="ml-auto hidden shrink-0 items-center gap-1 text-[15px] font-semibold lg:flex"
         >
-          För hantverkare
-        </Link>
+          <NavLink href="/branscher" label="Yrken" current={pathname === "/branscher"} />
+          <NavLink href="/kommuner" label="Kommuner" current={pathname.startsWith("/kommun")} />
+          <Link
+            href="/kontakt"
+            aria-current={pathname === "/kontakt" ? "page" : undefined}
+            className="ml-2 inline-flex min-h-10 items-center bg-white px-3.5 font-bold text-navy transition-colors hover:bg-[var(--sg-line-soft)]"
+          >
+            För företag
+          </Link>
+        </nav>
       </div>
     </header>
   );
 }
 
+/**
+ * Sökrutan med sidans parametrar. useSearchParams() kräver en Suspense-gräns;
+ * reservläget är samma ruta ifylld ur sökvägen, så att huvudet har samma höjd
+ * före och efter och ingenting knuffas.
+ *
+ * Nyckeln byts vid varje navigering: huvudet ligger i layouten och lever kvar
+ * mellan sidor, och utan ny nyckel stod förra sökningen kvar i fälten.
+ */
+function HuvudetsSok({ pathname }: { pathname: string }) {
+  const sp = useSearchParams();
+  const qs = sp.toString();
+  const pasok = pathname.startsWith("/sok");
+  const params = Object.fromEntries(sp.entries());
+  return (
+    <SearchBar
+      key={`${pathname}?${qs}`}
+      variant="compact"
+      preserveFilters={pasok}
+      {...(pasok ? { params } : franSokvag(pathname))}
+    />
+  );
+}
+
+/** /kommun/kungalv → ort; /kommun/kungalv/elektriker-43210 → ort och yrke. */
+function franSokvag(pathname: string): { initialOrt?: string; initialValue?: string } {
+  const m = pathname.match(/^\/kommun\/([^/]+)(?:\/[^/]*?-(\d+))?\/?$/);
+  if (!m) return {};
+  const kommun = kommunBySlug(m[1]);
+  const ng1 = m[2] ? Number(m[2]) : null;
+  return {
+    initialOrt: kommun?.name,
+    initialValue: ng1 ? yrkesnamn(ng1) : undefined,
+  };
+}
+
 function NavLink({
   href,
   label,
-  current,
+  current = false,
 }: {
   href: string;
   label: string;
-  current: boolean;
+  current?: boolean;
 }) {
   return (
     <Link
       href={href}
       aria-current={current ? "page" : undefined}
-      className={`inline-flex h-10 items-center rounded-md px-3 font-medium transition-colors ${
-        current
-          ? "text-[var(--brand-ink)] bg-[var(--tint-2)]"
-          : "text-[var(--text-body)] hover:bg-[var(--surface-soft)] hover:text-[var(--text-strong)]"
+      className={`hidden min-h-10 items-center px-3 transition-colors hover:text-white md:inline-flex ${
+        current ? "text-white underline decoration-signal decoration-2 underline-offset-[6px]" : "text-[var(--sg-on-navy-muted)]"
       }`}
     >
       {label}
@@ -110,7 +139,8 @@ function NavLink({
 }
 
 /**
- * Mobil bottom-nav — fixerad nederst på små skärmar.
+ * Mobilens bottenmeny — fixerad nederst på små skärmar. Platt: vit yta,
+ * 1px linje, den aktiva sidan markeras med en orange linje överst.
  */
 export function MobileBottomNav() {
   const pathname = usePathname();
@@ -146,10 +176,9 @@ export function MobileBottomNav() {
   return (
     <nav
       aria-label="Huvudnavigering"
-      className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--rule)] bg-white/92 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-2 backdrop-blur supports-[backdrop-filter]:bg-white/80 md:hidden"
-      style={{ boxShadow: "0 -8px 24px -16px rgba(17,24,38,0.18)" }}
+      className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-white pb-[max(env(safe-area-inset-bottom),0.25rem)] md:hidden"
     >
-      <ul className="mx-auto flex max-w-md items-stretch justify-around px-2 text-xs">
+      <ul className="mx-auto flex max-w-md items-stretch justify-around text-xs">
         {items.map((it) => {
           const active = it.match(pathname);
           const Icon = it.icon;
@@ -158,17 +187,14 @@ export function MobileBottomNav() {
               <Link
                 href={it.href}
                 aria-current={active ? "page" : undefined}
-                className={`flex h-12 flex-col items-center justify-center gap-0.5 rounded-xl transition-colors ${
+                className={`flex h-14 flex-col items-center justify-center gap-0.5 border-t-2 transition-colors ${
                   active
-                    ? "text-[var(--brand-ink)]"
-                    : "text-[var(--text-dim)] hover:text-[var(--text-strong)]"
+                    ? "border-signal font-bold text-navy"
+                    : "border-transparent text-ink-3 hover:text-ink"
                 }`}
               >
-                <Icon
-                  aria-hidden
-                  className={`size-[18px] ${active ? "stroke-[2.4px]" : ""}`}
-                />
-                <span className={active ? "font-medium" : ""}>{it.label}</span>
+                <Icon aria-hidden className="size-[18px]" strokeWidth={active ? 2.4 : 2} />
+                <span>{it.label}</span>
               </Link>
             </li>
           );
