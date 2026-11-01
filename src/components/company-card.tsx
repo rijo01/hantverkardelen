@@ -5,9 +5,9 @@ import { visatTelefon } from "@/lib/visat-telefon";
 import { safeLogotypUrl } from "@/lib/sanitize-html";
 import { KONTAKT_NOTIS, REGISTER_AR } from "@/lib/dataprovenans";
 import { yrkesnamn } from "@/lib/yrkesnamn";
+import { anstallda } from "@/lib/storleksklass";
 import {
   displayName,
-  employerSize,
   profilMarkning,
   type ProfilMarkning,
 } from "@/lib/foretag-format";
@@ -53,7 +53,7 @@ export function CompanyCard({
   const name = overlay?.popularnamn?.trim() || displayName(foretag);
   // Samma regel som profilsidan: kundens köpta nummer ersätter registrets.
   const telefon = visatTelefon(foretag.tel, overlay);
-  const size = employerSize(foretag.aeant);
+  const size = anstallda(foretag.storleksklass);
   const markning = profilMarkning(foretag, overlay);
   const betald = markning === "betald";
   const logo = sidhuvudetsLogotyp(overlay, safeLogotypUrl(foretag.logotyp))?.url ?? null;
@@ -208,7 +208,8 @@ export function CompanyCardList({
       <p className="mt-4 text-sm leading-relaxed text-ink-3">
         Sorterat: annonser först,{" "}
         {komplettaFinns ? "därefter företag med komplett profil och sedan" : "därefter"} efter
-        antal anställda. Telefonnummer från registret (ca {REGISTER_AR}) kan vara inaktuella.
+        antal arbetsställen. Antal anställda är registrets storleksklass från ca {REGISTER_AR}.
+        Telefonnummer från registret kan vara inaktuella.
       </p>
     </div>
   );

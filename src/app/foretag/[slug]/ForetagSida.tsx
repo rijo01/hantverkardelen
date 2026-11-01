@@ -22,7 +22,6 @@ import { MobilRingrad } from "@/components/mobil-ringrad";
 import { yrkesnamn } from "@/lib/yrkesnamn";
 import {
   displayName,
-  employerSize,
   googleMapsUrl,
   profilMarkning,
   legalFormFor,
@@ -32,6 +31,7 @@ import {
 } from "@/lib/foretag-format";
 import { isPersonalOrgnr } from "@/lib/jurform";
 import { arKund } from "@/lib/personuppgifter";
+import { anstallda, anstalldaMening, anstalldaSchema } from "@/lib/storleksklass";
 import {
   PERSONUPPGIFT_FORKLARING,
   REGISTER_AR,
@@ -136,7 +136,7 @@ export default async function ForetagSida({
   const branschName = f.ng1 ? await getBranschName(f.ng1) : null;
   let name = displayName(f);
   const legalForm = legalFormFor(f);
-  const size = employerSize(f.aeant);
+  const size = anstallda(f.storleksklass);
   const mapsUrl = googleMapsUrl(f);
   const webb = normalizeWebb(f.webb);
   const orgnrInfo = orgnrDisplay(f);
@@ -247,7 +247,7 @@ export default async function ForetagSida({
     ...(visatTelefon ? { telephone: visatTelefon } : {}),
     ...(webb ? { url: webb } : {}),
     ...(f.epostadress ? { email: f.epostadress } : {}),
-    ...(f.aeant ? { numberOfEmployees: f.aeant } : {}),
+    ...(size ? { numberOfEmployees: anstalldaSchema(size) } : {}),
     ...(strukturSokord.length > 0
       ? {
           keywords: strukturSokord.join(", "),
@@ -502,7 +502,14 @@ export default async function ForetagSida({
               />
               <InfoRow
                 label="Anställda"
-                value={size ? <span className="tabular-nums">{size.label}</span> : null}
+                value={
+                  size ? (
+                    <>
+                      <span className="tabular-nums">{size.label}</span>
+                      <span className="text-ink-3"> · storleksklass, ca {REGISTER_AR}</span>
+                    </>
+                  ) : null
+                }
               />
               <InfoRow
                 label="Besöksadress"
@@ -660,13 +667,8 @@ function buildDescription({
         : ""
     }${kommun ? ` i ${kommun} kommun` : ""}.`,
   );
-  if (f.aeant && f.aeant > 0) {
-    segs.push(
-      f.aeant === 1
-        ? "Företaget har 1 anställd enligt senast tillgängliga uppgifter."
-        : `Företaget har ca ${f.aeant.toLocaleString("sv-SE")} anställda enligt senast tillgängliga uppgifter.`,
-    );
-  }
+  const size = anstallda(f.storleksklass);
+  if (size) segs.push(anstalldaMening(name, size));
   if (f.gatuadress) {
     segs.push(
       `Besöksadress: ${f.gatuadress}${f.postort ? `, ${f.postort}` : ""}.`,
@@ -731,13 +733,11 @@ function buildFaq({
     });
   }
 
-  if (f.aeant) {
+  const size = anstallda(f.storleksklass);
+  if (size) {
     items.push({
       q: `Hur många anställda har ${name}?`,
-      a:
-        f.aeant === 1
-          ? `${name} har 1 anställd enligt senast tillgängliga data.`
-          : `${name} har cirka ${f.aeant.toLocaleString("sv-SE")} anställda enligt senast tillgängliga data.`,
+      a: `${anstalldaMening(name, size)} Registret anger storleken som ett intervall, inte ett exakt antal.`,
     });
   }
 

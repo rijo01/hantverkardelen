@@ -133,7 +133,7 @@ export default async function KommunPage({ params }: { params: Params }) {
         }}
       >
         <h2 id="storst" className="sg-label">
-          Flest anställda · de {foretagSample.length} största, alla yrken
+          Flest arbetsställen · {foretagSample.length} företag, alla yrken
         </h2>
         {foretagSample.length === 0 ? (
           <p className="sg-panel p-6 text-[15px] text-ink-2">

@@ -15,7 +15,7 @@ import { isHantverkBransch } from "@/lib/hantverk-branscher";
 import { JsonLd, buildBreadcrumb } from "@/components/json-ld";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { CompanyCard, CompanyCardList } from "@/components/company-card";
-import { LankLista, ResultatVy, Sidbyte, StorlekVal } from "@/components/resultat-vy";
+import { LankLista, ResultatVy, Sidbyte } from "@/components/resultat-vy";
 import { loadAktivaOverlays, overlayFor } from "@/lib/overlay";
 import { ordnaBoostade } from "@/lib/overlay-rankning";
 import {
@@ -65,13 +65,6 @@ export async function generateMetadata({
 
 const PAGE_SIZE = 25;
 
-const SIZE_BUCKETS: Array<{ label: string; min?: number; max?: number }> = [
-  { label: "Alla" },
-  { label: "1–9", min: 1, max: 9 },
-  { label: "10–49", min: 10, max: 49 },
-  { label: "50–249", min: 50, max: 249 },
-  { label: "250+", min: 250 },
-];
 
 export default async function BranschPage({
   params,
@@ -210,21 +203,6 @@ export default async function BranschPage({
           </p>
         }
         sidospalt={{
-          overst: (
-            <StorlekVal
-              val={SIZE_BUCKETS.map((b) => ({
-                label: b.label,
-                href: withParams({
-                  aeantMin: b.min ? String(b.min) : null,
-                  aeantMax: b.max ? String(b.max) : null,
-                  page: null,
-                }),
-                aktiv:
-                  (aeantMin ?? null) === (b.min ?? null) &&
-                  (aeantMax ?? null) === (b.max ?? null),
-              }))}
-            />
-          ),
           under: (
             <>
               {lan && (
@@ -257,17 +235,10 @@ export default async function BranschPage({
         {rows.length === 0 ? (
           <div className="sg-panel p-6 sm:p-8">
             <p className="text-xl font-extrabold tracking-[-0.02em] text-ink">
-              Inga företag i den storleken
+              Inga företag på den här sidan
             </p>
-            <p className="mt-1 text-[15px] text-ink-2">
-              Inga registrerade företag inom {yrke.toLowerCase()} i {kommun.name} har
-              så många anställda.
-            </p>
-            <Link
-              href={withParams({ aeantMin: null, aeantMax: null, page: null })}
-              className="sg-btn sg-btn-outline mt-4"
-            >
-              Visa alla storlekar
+            <Link href={basePath} className="sg-btn sg-btn-outline mt-4">
+              Till första sidan
             </Link>
           </div>
         ) : (

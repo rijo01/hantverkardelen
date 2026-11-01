@@ -3,7 +3,7 @@ import { HANTVERK_KATEGORIER } from "@/lib/hantverk-kategorier";
 import { KOMMUN_BRANSCH_FORETAG } from "@/lib/seo-snapshot";
 import { kategoriNamn } from "@/lib/sokfraga";
 import { REGISTER_AR } from "@/lib/dataprovenans";
-import { LankLista, SidoRuta, StorlekVal } from "@/components/resultat-vy";
+import { LankLista, SidoRuta } from "@/components/resultat-vy";
 
 export type FilterState = {
   q?: string;
@@ -21,7 +21,7 @@ export type FilterState = {
  * Sökets sidospalt. Server-renderad — varje val är en länk som behåller
  * övriga parametrar.
  *
- * Bara filter som fungerar mot faktisk data: storlek (aeant) och ort. Antalen
+ * Bara filter som fungerar mot faktisk data: ort och yrke. Antalen
  * i länklistorna kommer ur registrets snapshot (seo-snapshot.ts), summerade
  * över yrkets branschkoder — inga uppskattningar.
  */
@@ -34,29 +34,9 @@ export function sokSidospalt({
   pathname: string;
   kommun?: Kommun;
 }): { overst: React.ReactNode; under: React.ReactNode } {
-  const storlekar: Array<{ label: string; min?: string; max?: string }> = [
-    { label: "Alla" },
-    { label: "1–9", min: "1", max: "9" },
-    { label: "10–49", min: "10", max: "49" },
-    { label: "50–249", min: "50", max: "249" },
-    { label: "250+", min: "250" },
-  ];
-
-  const overst = (
-    <StorlekVal
-      val={storlekar.map((b) => ({
-        label: b.label,
-        href: buildHref(pathname, state, {
-          aeantMin: b.min ?? null,
-          aeantMax: b.max ?? null,
-          page: null,
-        }),
-        aktiv:
-          (state.aeantMin ?? "") === (b.min ?? "") &&
-          (state.aeantMax ?? "") === (b.max ?? ""),
-      }))}
-    />
-  );
+  // Storleksfiltret är borttaget 2026-11-01: det filtrerade på `aeant`, som är
+  // antal arbetsställen och inte antal anställda (se lib/storleksklass.ts).
+  const overst = null;
 
   const kategori = state.kategori
     ? HANTVERK_KATEGORIER.find((k) => k.slug === state.kategori)

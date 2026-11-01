@@ -9,6 +9,7 @@ import { kommunCodesForLan } from "./lan";
 import { filtreraSokord, kontaktsparrFilter } from "./kontaktsparr";
 import type { KontaktsparrFilter } from "./overlay-contract";
 import { foretagIsIndexable } from "./seo";
+import { storleksklassFor } from "./storleksklass";
 import { arPersonnamn, harPrivatKontakt, publiktNamn, rensaRegisterrad, rensaSokord } from "./personuppgifter";
 
 type GeoFilter = { kommun?: string; postort?: string; lan?: string };
@@ -46,6 +47,17 @@ type AeantFilter = { aeantMin?: number; aeantMax?: number };
  * katalogens: /branscher sa 1 689 trädgårdsföretag medan söket sa 1 550.
  */
 function applyAeantFilter<T>(q: T, opts: AeantFilter): T {
+  // AVSTÄNGT 2026-11-01. `aeant` är bolagets antal arbetsställen, inte antal
+  // anställda (scripts/hamta-storleksklass.mjs), så "10–49 anställda" filtrerade
+  // fram kedjor med 10–49 arbetsställen. Anställda finns bara som storleksklass,
+  // och den går inte att filtrera på i databasen utan att ändra vyn. Gamla
+  // adresser med aeantMin/aeantMax visar därför hela listan.
+  void opts;
+  return q;
+}
+
+/** Den gamla filtreringen, kvar för en framtida storleksklass-kolumn i vyn. */
+export function _aeantFilterArbetsstallen<T>(q: T, opts: AeantFilter): T {
   let out = q;
   if (opts.aeantMin != null && opts.aeantMin > 0) {
     out = (out as unknown as { gte(c: string, v: number): T }).gte("aeant", opts.aeantMin);
@@ -96,7 +108,14 @@ export type Foretag = {
   epostadress: string | null;
   ng1: number | null;
   kommun: string | null;
+  /**
+   * Bolagets antal ARBETSSTÄLLEN i registret — inte antal anställda, trots
+   * namnet. Används bara för sorteringen. Visa aldrig som anställda; använd
+   * `storleksklass` (lib/storleksklass.ts).
+   */
   aeant: number | null;
+  /** Arbetsställets SCB-storleksklass (anstkl), ur ögonblicksbilden. */
+  storleksklass: number | null;
   /**
    * Rått orgnr för juridiska personer. NULL för enskild firma och andra
    * fysisk-person-fall (då är källkolumnen ett personnummer som DB-vyn
@@ -190,6 +209,7 @@ function mapRad(row: Partial<PublikRow>, kf: KontaktsparrFilter): Foretag {
     ng1: row.ng1 ?? null,
     kommun: row.kommun ?? null,
     aeant: row.aeant ?? null,
+    storleksklass: row.cfarnr != null ? storleksklassFor(row.cfarnr) : null,
     orgnr: row.orgnr ?? null,
     arEnskildFirma: row.ar_enskild_firma ?? false,
     orgnrMaskerat: row.orgnr_maskerat ?? null,
