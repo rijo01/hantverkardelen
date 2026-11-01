@@ -16,6 +16,16 @@ export const revalidate = 86400;
 
 export { generateMetadata } from "./ForetagSida";
 
+/**
+ * Tom lista: ingen företagssida byggs i förväg, men routen blir ISR — varje
+ * sida renderas vid första anropet och cachas i ett dygn. Utan
+ * generateStaticParams var varje anrop `private, no-store` (1,1–1,2 s,
+ * mätt 2026-11-01), trots `revalidate` ovan.
+ */
+export function generateStaticParams() {
+  return [];
+}
+
 export default async function ForetagPage({
   params,
 }: {

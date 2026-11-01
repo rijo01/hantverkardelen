@@ -20,6 +20,15 @@ import { ordnaBoostade } from "@/lib/overlay-rankning";
 
 export const revalidate = 86400;
 
+/**
+ * Tom lista: inga kommunsidor byggs i förväg, men routen blir ISR — renderad
+ * vid första anropet och cachad i ett dygn. Utan generateStaticParams var
+ * varje anrop `private, no-store` (1,0–1,2 s, mätt 2026-11-01).
+ */
+export function generateStaticParams() {
+  return [];
+}
+
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://hantverkardelen.se";
 const fmt = (n: number) => n.toLocaleString("sv-SE");
 
