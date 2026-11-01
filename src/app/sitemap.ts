@@ -58,6 +58,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   push("/kommuner", { lastModified: now, changeFrequency: "weekly", priority: 0.9 });
   push("/branscher", { lastModified: now, changeFrequency: "weekly", priority: 0.9 });
   push("/kontakt", { lastModified: now, changeFrequency: "monthly", priority: 0.5 });
+  push("/integritetspolicy", { lastModified: now, changeFrequency: "yearly", priority: 0.2 });
 
   // ---- Grind 1: kommunhubbar ---------------------------------------------
   const branschNamn = await getBranschNamesBulk([...HANTVERK_BRANSCHER]);

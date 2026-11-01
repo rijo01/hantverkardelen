@@ -77,6 +77,7 @@ export default function RootLayout({
                   ["/branscher", "Alla yrken"],
                   ["/sok", "Sök"],
                   ["/kontakt", "För hantverkare"],
+                  ["/integritetspolicy", "Integritetspolicy"],
                 ].map(([href, text]) => (
                   <li key={href}>
                     <a
@@ -98,7 +99,10 @@ export default function RootLayout({
                 <a href="/kontakt" className="text-white underline underline-offset-4">
                   Kontakta oss
                 </a>
-                .
+                .{" "}
+                <a href="/integritetspolicy" className="text-white underline underline-offset-4">
+                  Integritetspolicy
+                </a>
               </p>
             </div>
           </div>
