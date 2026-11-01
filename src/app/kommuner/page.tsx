@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
+import { REGISTER_AR } from "@/lib/dataprovenans";
 import Link from "next/link";
 import { ALL_KOMMUNER } from "@/lib/kommuner";
-import { TOP_KOMMUNER, TOTAL_KOMMUNER, TOTAL_LAN, TOTAL_FORETAG } from "@/lib/stats";
+import { TOP_KOMMUNER, TOTAL_KOMMUNER, TOTAL_LAN } from "@/lib/stats";
 import { JsonLd, buildBreadcrumb } from "@/components/json-ld";
 import { Breadcrumb } from "@/components/breadcrumb";
 
@@ -47,7 +48,7 @@ export default function KommunerPage() {
             Hantverkare i alla {TOTAL_KOMMUNER} kommuner
           </h1>
           <p className="text-[17px] leading-relaxed text-ink-2">
-            {fmt(TOTAL_FORETAG)} registrerade hantverksföretag i {TOTAL_LAN} län.
+            Hantverksföretag i {TOTAL_LAN} län, ur ett register från omkring {REGISTER_AR}.
             Välj din kommun för att se yrkena där.
           </p>
         </header>

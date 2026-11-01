@@ -62,7 +62,7 @@ export default function RootLayout({
             <div className="space-y-4">
               <Ordmarke />
               <p className="max-w-sm text-[15px] leading-relaxed">
-                Data från offentliga register. Är det här ditt företag?{" "}
+                Uppgifter ur ett näringslivsregister från omkring {REGISTER_AR}. Är det här ditt företag?{" "}
                 <a href="/kontakt" className="font-semibold text-white underline underline-offset-4">
                   Uppdatera dina uppgifter
                 </a>
@@ -108,8 +108,8 @@ export default function RootLayout({
           </div>
           <div className="border-t border-white/15">
             <p className="sg-wrap py-5 text-sm">
-              © {new Date().getFullYear()} Hantverkardelen · Data från
-              offentligt näringslivsregister, ca {REGISTER_AR}
+              © {new Date().getFullYear()} Hantverkardelen · QS Group AB · Data från
+              näringslivsregister, ca {REGISTER_AR}
             </p>
           </div>
         </footer>

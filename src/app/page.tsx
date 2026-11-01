@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { SearchBar } from "@/components/search-bar";
 import { JsonLd } from "@/components/json-ld";
-import { TOTAL_FORETAG, TOTAL_KOMMUNER } from "@/lib/stats";
+import { TOTAL_KOMMUNER } from "@/lib/stats";
+import { REGISTER_AR } from "@/lib/dataprovenans";
 import { HANTVERK_KATEGORIER } from "@/lib/hantverk-kategorier";
 import { kategoriNamn } from "@/lib/sokfraga";
 
@@ -9,14 +10,14 @@ export const revalidate = 86400;
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://hantverkardelen.se";
 
-const fmt = (n: number) => n.toLocaleString("sv-SE");
-
 /**
  * Startsidan är en sökyta. Besökaren kommer med en fråga — "elektriker i
  * Kungälv" — och ska kunna ställa den i första skärmen. Under heron finns
- * yrkena och tre raka besked om vad katalogen är. Alla tal räknas ur
- * registret (stats.ts, hantverk-kategorier.ts), inga är avrundade eller
- * påhittade.
+ * yrkena och tre raka besked om vad katalogen är.
+ *
+ * Inga totalsiffror och inget "hela registret" (beslut 2026-11-01): registret
+ * är från omkring 2011, och ett antal företag eller ett löfte om fullständighet
+ * säger något datat inte kan stå för. Tillbaka först när källan är färsk.
  */
 export default function HomePage() {
   const webSiteJsonLd = {
@@ -41,7 +42,7 @@ export default function HomePage() {
       <section aria-labelledby="hero-title" className="sg-on-navy bg-navy text-white">
         <div className="sg-wrap pb-14 pt-8 sm:pb-20 sm:pt-14">
           <p className="text-[13px] font-bold uppercase tracking-[0.06em] text-signal tabular-nums">
-            {fmt(TOTAL_FORETAG)} hantverksföretag · {TOTAL_KOMMUNER} kommuner
+            {TOTAL_KOMMUNER} kommuner · register från omkring {REGISTER_AR}
           </p>
           <h1
             id="hero-title"
@@ -50,8 +51,9 @@ export default function HomePage() {
             Hitta rätt hantverkare. Ring direkt.
           </h1>
           <p className="mt-5 max-w-2xl text-lg leading-relaxed text-[var(--sg-on-navy-muted)] sm:text-xl">
-            Hela Sveriges register över elektriker, målare, snickare, VVS- och
-            byggfirmor. Inga offertformulär, inga köpta betyg.
+            Elektriker, målare, snickare, VVS- och byggfirmor i alla kommuner,
+            ur ett företagsregister från omkring {REGISTER_AR}. Inga offertformulär,
+            inga köpta betyg.
           </p>
           <div className="mt-8 max-w-5xl">
             <SearchBar variant="dual" snabbval />
@@ -79,9 +81,6 @@ export default function HomePage() {
                 >
                   <span className="text-[20px] font-bold leading-tight tracking-[-0.01em] text-ink group-hover:underline group-hover:underline-offset-4">
                     {kategoriNamn(kat.slug)}
-                  </span>
-                  <span className="shrink-0 text-[15px] font-semibold tabular-nums text-ink-3">
-                    {fmt(kat.count)}
                   </span>
                 </Link>
               </li>
@@ -117,12 +116,12 @@ export default function HomePage() {
 
 const LOFTEN = [
   {
-    rubrik: "Hela registret",
-    text: "Alla registrerade hantverksföretag finns med, inte bara de som betalar för att synas.",
+    rubrik: "Ärligt om åldern",
+    text: `Uppgifterna kommer från ett register från omkring ${REGISTER_AR}. Vid varje nummer står att det kan vara inaktuellt.`,
   },
   {
     rubrik: "Ring direkt",
-    text: "Numret syns direkt i listan och på företagets sida. Inga formulär, ingen mellanhand.",
+    text: "Finns ett nummer står det direkt i listan och på företagets sida. Inga formulär, ingen mellanhand.",
   },
   {
     rubrik: "Ärligt märkt",

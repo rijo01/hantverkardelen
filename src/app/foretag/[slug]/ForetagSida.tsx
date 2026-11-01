@@ -72,7 +72,7 @@ export async function generateMetadata({
   const title = kommun ? `${name} – ${kommun.name}` : name;
   const description = `${name}${
     kommun ? ` i ${kommun.name} kommun` : ""
-  }${f.gatuadress ? `, ${f.gatuadress}` : ""}. Kontaktuppgifter, bransch och företagsinformation från offentliga register.`;
+  }${f.gatuadress ? `, ${f.gatuadress}` : ""}. Kontaktuppgifter och bransch ur ett register från omkring ${REGISTER_AR}.`;
   return {
     title,
     description,
@@ -721,7 +721,7 @@ function buildFaq({
     items.push({
       q: `Hur kontaktar jag ${name}?`,
       a: `Enligt registret når du ${name} via ${ch.join(", ")}. Uppgiften är ` +
-        `hämtad från ett offentligt näringslivsregister från omkring ` +
+        `hämtad från ett näringslivsregister från omkring ` +
         `${REGISTER_AR} och kan vara inaktuell.`,
     });
   } else {
@@ -749,7 +749,7 @@ function buildFaq({
   } else if (f.orgnr) {
     items.push({
       q: `Vad är organisationsnumret för ${name}?`,
-      a: `Organisationsnumret för ${name} är ${f.orgnr}. Uppgiften kommer från ett offentligt näringslivsregister från omkring ${REGISTER_AR}.`,
+      a: `Organisationsnumret för ${name} är ${f.orgnr}. Uppgiften kommer från ett näringslivsregister från omkring ${REGISTER_AR}.`,
     });
   } else {
     items.push({

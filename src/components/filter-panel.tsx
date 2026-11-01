@@ -104,7 +104,7 @@ export function sokSidospalt({
         sist={kommun ? { href: `/kommun/${kommun.slug}`, label: `Alla hantverkare i ${kommun.name}` } : undefined}
       />
       <p className="px-1 text-xs leading-relaxed text-ink-3">
-        Uppgifterna kommer från ett offentligt näringslivsregister från omkring{" "}
+        Uppgifterna kommer från ett näringslivsregister från omkring{" "}
         {REGISTER_AR}. Personnummer för enskilda firmor visas aldrig.
       </p>
     </>

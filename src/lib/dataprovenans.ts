@@ -20,7 +20,7 @@ export const KONTAKT_NOTIS = `Uppgift från register ${REGISTER_AR} — kan vara
 
 /** Längre förklaring — används i informationsrutor och sidfot. */
 export const REGISTER_FORKLARING =
-  `Kontaktuppgifterna kommer från ett offentligt näringslivsregister som ` +
+  `Kontaktuppgifterna kommer från ett näringslivsregister som ` +
   `senast uppdaterades omkring ${REGISTER_AR}. Telefonnummer, adresser och ` +
   `e-postadresser kan ha ändrats sedan dess, och företag kan ha upphört. ` +
   `Kontrollera uppgiften innan du förlitar dig på den.`;
