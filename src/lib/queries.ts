@@ -10,7 +10,7 @@ import { filtreraSokord, kontaktsparrFilter } from "./kontaktsparr";
 import type { KontaktsparrFilter } from "./overlay-contract";
 import { foretagIsIndexable } from "./seo";
 import { storleksklassFor } from "./storleksklass";
-import { arPersonnamn, harPrivatKontakt, rensaRegisterrad, rensaSokord } from "./kluster/personuppgifter";
+import { arPersonnamn, harPrivatKontakt, namnsokFarTraffa, rensaRegisterrad, rensaSokord } from "./kluster/personuppgifter";
 
 type GeoFilter = { kommun?: string; postort?: string; lan?: string };
 
@@ -631,8 +631,10 @@ async function runBranschSearch(
   }
 
   const branschRows = branschRes.data as Partial<PublikRow>[];
-  const nameRows =
-    nameRes && !nameRes.error && nameRes.data ? (nameRes.data as Partial<PublikRow>[]) : [];
+  // Namnträffar på en maskerad enskild firma kom från ägarens namn — bort.
+  const nameRows = (
+    nameRes && !nameRes.error && nameRes.data ? (nameRes.data as Partial<PublikRow>[]) : []
+  ).filter((r) => namnsokFarTraffa(namnRad(r)));
 
   const hasMoreFromBransch = branschRows.length > pageSize;
   const pageBransch = branschRows.slice(0, pageSize);
@@ -667,6 +669,16 @@ async function runBranschSearch(
     pageSize,
     matchedBransch: branschInfo.primaryName,
     total,
+  };
+}
+
+/** Namnfälten ur en rå vyrad, för personuppgiftsregeln. */
+function namnRad(r: Partial<PublikRow>) {
+  return {
+    firma: r.firma ?? null,
+    namn: r.namn ?? null,
+    jurform: r.jurform ?? null,
+    poang: r.poang ?? null,
   };
 }
 
@@ -718,7 +730,8 @@ async function runTextSearch(
   }
   const rows = textRes.data as Partial<PublikRow>[];
   const hasMore = rows.length > pageSize;
-  const pageRows = rows.slice(0, pageSize);
+  // Namnträffar på en maskerad enskild firma kom från ägarens namn — bort.
+  const pageRows = rows.slice(0, pageSize).filter((r) => namnsokFarTraffa(namnRad(r)));
   const seen = new Set<number>(
     pageRows.map((r) => r.cfarnr).filter((c): c is number => c != null),
   );

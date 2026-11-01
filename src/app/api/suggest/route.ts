@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAnon } from "@/lib/supabase";
 import { foretagSlug } from "@/lib/queries";
-import { publiktNamn } from "@/lib/kluster/personuppgifter";
+import { namnsokFarTraffa, publiktNamn } from "@/lib/kluster/personuppgifter";
 import { kontaktsparrFilter } from "@/lib/kontaktsparr";
 import { ALL_KOMMUNER } from "@/lib/kommuner";
 import { TOP_BRANSCHER } from "@/lib/stats";
@@ -150,7 +150,10 @@ export async function GET(req: Request) {
           jurform: number | null;
           poang: number | null;
         }>
-      ).map((r) => {
+      )
+        // Ägarens namn i search_vector får aldrig hitta en maskerad firma.
+        .filter(namnsokFarTraffa)
+        .map((r) => {
         // Personuppgiftsregeln: en enskild firma utan firmanamn föreslås som
         // "Enskild firma i <ort>", aldrig med ägarens namn.
         const p = publiktNamn(r);
