@@ -70,3 +70,34 @@ export function isHantverkBransch(ng1: number | null | undefined): boolean {
   if (ng1 == null) return false;
   return HANTVERK_BRANSCHER_SET.has(ng1);
 }
+
+/**
+ * Offentliga juridiska former: 81 Statlig enhet, 82 Kommun,
+ * 83 Kommunalförbund, 84 Region. Samma koder som vårddelens
+ * OFFENTLIGA_JURFORMER.
+ *
+ * Mätt 21 okt 2026 i foretag_publik inom HANTVERK_BRANSCHER: 752 rader har
+ * 81–83 (inga 84). Nästan alla är Vägverket, Banverket och kommunernas egna
+ * gatu-, park- och VA-förvaltningar under 42110, 42120, 42990 och 81300 —
+ * "Kungälvs kommun" en gång per förvaltning. De är inte hantverkare man kan
+ * anlita.
+ */
+export const OFFENTLIGA_JURFORMER: readonly number[] = [81, 82, 83, 84];
+
+/**
+ * PostgREST-villkor att lägga på VARJE publik fråga mot foretag_publik bredvid
+ * .in("ng1", HANTVERK_BRANSCHER): "inte offentlig juridisk form, eller okänd
+ * form, eller inget offentligt organisationsnummer".
+ *
+ * Organisationsnumret är en spärr mot fel i källan. Fyra rader har offentlig
+ * jurform men ett privat nummer — tre aktiebolag (55…: Svevia AB,
+ * E.L Betonghåltagning AB, K Sjuntorps Mark & Anläggning) och en enskild firma
+ * (Perdegårds Bygg). Offentliga organisationer har nummer som börjar på 2
+ * (20 stat, 21 kommun, 22 kommunalförbund, 23 region); privata aldrig. Bara
+ * rader där BÅDA säger offentlig filtreras bort, så ingen privat firma
+ * försvinner på en felkodad jurform. Rader utan jurform (20 st) behålls.
+ *
+ * Flera .or() i samma fråga AND:as av PostgREST, så villkoret kan läggas
+ * bredvid ett befintligt .or().
+ */
+export const NISCH_JURFORM_VILLKOR = `jurform.not.in.(${OFFENTLIGA_JURFORMER.join(",")}),jurform.is.null,orgnr.not.like.2*,orgnr.is.null`;

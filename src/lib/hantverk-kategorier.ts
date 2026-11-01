@@ -47,7 +47,7 @@ export const HANTVERK_KATEGORIER: ReadonlyArray<HantverkKategori> = [
     name: "Byggföretag",
     description: "Byggmästare, byggentreprenörer, husbyggare",
     ng1: [41200, 43999, 16231],
-    count: 21633,
+    count: 21629,
     icon: HardHat,
   },
   {
@@ -55,7 +55,7 @@ export const HANTVERK_KATEGORIER: ReadonlyArray<HantverkKategori> = [
     name: "Mark & anläggning",
     description: "Grundarbete, vägbygge, rivning, infrastruktur",
     ng1: [43120, 43110, 42110, 42120, 42210, 42220, 42910, 42990],
-    count: 11071,
+    count: 10457,
     icon: Mountain,
   },
   {
@@ -71,7 +71,7 @@ export const HANTVERK_KATEGORIER: ReadonlyArray<HantverkKategori> = [
     name: "Snickeri & kök",
     description: "Snickare, köksinredning, dörrar & fönster",
     ng1: [43320, 16233, 25120],
-    count: 9722,
+    count: 9721,
     icon: Hammer,
   },
   {
@@ -119,7 +119,7 @@ export const HANTVERK_KATEGORIER: ReadonlyArray<HantverkKategori> = [
     name: "Trädgård",
     description: "Skötsel av grönytor, trädgårdsarbete",
     ng1: [81300],
-    count: 1689,
+    count: 1560,
     icon: Trees,
   },
   {

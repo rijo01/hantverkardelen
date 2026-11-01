@@ -1,6 +1,10 @@
 import { getSupabaseAnon } from "./supabase";
 import { branschSlug } from "./branscher";
-import { HANTVERK_BRANSCHER, HANTVERK_BRANSCHER_SET } from "./hantverk-branscher";
+import {
+  HANTVERK_BRANSCHER,
+  HANTVERK_BRANSCHER_SET,
+  NISCH_JURFORM_VILLKOR,
+} from "./hantverk-branscher";
 import { kommunCodesForLan } from "./lan";
 import { filtreraSokord, kontaktsparrFilter } from "./kontaktsparr";
 import type { KontaktsparrFilter } from "./overlay-contract";
@@ -193,7 +197,8 @@ export async function countForetagInKommun(kommunCode: string): Promise<number> 
     .from(VIEW)
     .select("id", { count: "exact", head: true })
     .eq("kommun", kommunCode)
-    .in("ng1", HANTVERK_BRANSCHER);
+    .in("ng1", HANTVERK_BRANSCHER)
+    .or(NISCH_JURFORM_VILLKOR);
   if (error) {
     console.error("countForetagInKommun", error);
     return 0;
@@ -214,6 +219,7 @@ export async function listForetagInKommun(
     .select(COLUMNS_LIST)
     .eq("kommun", kommunCode)
     .in("ng1", HANTVERK_BRANSCHER)
+    .or(NISCH_JURFORM_VILLKOR)
     .order("aeant", { ascending: false, nullsFirst: false })
     .order("cfarnr", { ascending: true })
     .limit(limit);
@@ -244,7 +250,8 @@ export async function getBranschFordelning(
         .from(VIEW)
         .select("id", { count: "exact", head: true })
         .eq("kommun", kommunCode)
-        .eq("ng1", ng1);
+        .eq("ng1", ng1)
+        .or(NISCH_JURFORM_VILLKOR);
       if (error) {
         // Hellre utelämna branschen än visa ett tal vi inte kan stå för.
         console.error("getBranschFordelning", ng1, error);
@@ -288,7 +295,8 @@ export async function listForetagInKommunByBransch(
     .from(VIEW)
     .select(COLUMNS_LIST)
     .eq("kommun", kommunCode)
-    .eq("ng1", ng1);
+    .eq("ng1", ng1)
+    .or(NISCH_JURFORM_VILLKOR);
   q = applyAeantFilter(q, opts);
 
   const { data, error } = await q
@@ -446,7 +454,8 @@ async function runKategoriBrowse(
   let q = supa
     .from(VIEW)
     .select(COLUMNS_LIST)
-    .in("ng1", ng1List as number[]);
+    .in("ng1", ng1List as number[])
+    .or(NISCH_JURFORM_VILLKOR);
   q = applyGeoFilter(q, opts);
   q = applyAeantFilter(q, opts);
 
@@ -464,7 +473,8 @@ async function runKategoriBrowse(
       let cq = supa
         .from(VIEW)
         .select("id", { count: "exact", head: true })
-        .in("ng1", ng1List as number[]);
+        .in("ng1", ng1List as number[])
+        .or(NISCH_JURFORM_VILLKOR);
       cq = applyGeoFilter(cq, opts);
       cq = applyAeantFilter(cq, opts);
       const { count, error } = await cq;
@@ -516,7 +526,11 @@ async function runBranschSearch(
   total?: number;
 }> {
   const supa = getSupabaseAnon();
-  let qA = supa.from(VIEW).select(COLUMNS_LIST).in("ng1", branschInfo.ids);
+  let qA = supa
+    .from(VIEW)
+    .select(COLUMNS_LIST)
+    .in("ng1", branschInfo.ids)
+    .or(NISCH_JURFORM_VILLKOR);
   qA = applyGeoFilter(qA, opts);
   qA = applyAeantFilter(qA, opts);
   const branschQuery = qA
@@ -531,7 +545,8 @@ async function runBranschSearch(
       let cq = supa
         .from(VIEW)
         .select("id", { count: "exact", head: true })
-        .in("ng1", branschInfo.ids);
+        .in("ng1", branschInfo.ids)
+        .or(NISCH_JURFORM_VILLKOR);
       cq = applyGeoFilter(cq, opts);
       cq = applyAeantFilter(cq, opts);
       const { count, error } = await cq;
@@ -552,7 +567,8 @@ async function runBranschSearch(
             type: "websearch",
             config: "swedish_unaccent",
           })
-          .in("ng1", HANTVERK_BRANSCHER);
+          .in("ng1", HANTVERK_BRANSCHER)
+          .or(NISCH_JURFORM_VILLKOR);
         qB = applyGeoFilter(qB, opts);
         qB = applyAeantFilter(qB, opts);
         return qB
@@ -640,7 +656,8 @@ async function runTextSearch(
       type: "websearch",
       config: "swedish_unaccent",
     })
-    .in("ng1", HANTVERK_BRANSCHER);
+    .in("ng1", HANTVERK_BRANSCHER)
+    .or(NISCH_JURFORM_VILLKOR);
   q = applyGeoFilter(q, opts);
   if (opts.ng1 && HANTVERK_BRANSCHER_SET.has(opts.ng1)) q = q.eq("ng1", opts.ng1);
   q = applyAeantFilter(q, opts);
@@ -708,6 +725,7 @@ export async function listRelatedForetag(
     .select(COLUMNS_LIST)
     .eq("kommun", kommunCode)
     .eq("ng1", ng1)
+    .or(NISCH_JURFORM_VILLKOR)
     .neq("cfarnr", excludeCfarnr)
     .order("poang", { ascending: false, nullsFirst: false })
     .order("aeant", { ascending: false, nullsFirst: false })
@@ -731,6 +749,7 @@ export async function getForetagByCfarnr(cfarnr: number): Promise<Foretag | null
     .select(COLUMNS)
     .eq("cfarnr", cfarnr)
     .in("ng1", HANTVERK_BRANSCHER)
+    .or(NISCH_JURFORM_VILLKOR)
     .limit(1)
     .maybeSingle();
   if (error || !data) {
@@ -803,7 +822,8 @@ async function fetchByCfarnrs(
     .from(VIEW)
     .select(COLUMNS_LIST)
     .in("cfarnr", cfarnrs)
-    .in("ng1", HANTVERK_BRANSCHER);
+    .in("ng1", HANTVERK_BRANSCHER)
+    .or(NISCH_JURFORM_VILLKOR);
   q = applyGeoFilter(q, opts);
   q = applyAeantFilter(q, opts);
   const { data, error } = await q
@@ -842,6 +862,7 @@ export async function listIndexableForetag(): Promise<
       .from(VIEW)
       .select("cfarnr,firma,namn,webb,epostadress,poang,infotext")
       .in("ng1", HANTVERK_BRANSCHER)
+      .or(NISCH_JURFORM_VILLKOR)
       .or("infotext.not.is.null,webb.not.is.null,epostadress.not.is.null,poang.gt.0")
       .order("cfarnr", { ascending: true })
       .range(offset, offset + PAGE - 1);
