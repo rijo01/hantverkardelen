@@ -5,6 +5,7 @@ import { visatTelefon } from "@/lib/visat-telefon";
 import { safeLogotypUrl } from "@/lib/sanitize-html";
 import { KONTAKT_NOTIS, REGISTER_AR } from "@/lib/dataprovenans";
 import { yrkesnamn } from "@/lib/yrkesnamn";
+import { yrkeFor } from "@/lib/klassning";
 import { anstallda } from "@/lib/storleksklass";
 import {
   displayName,
@@ -58,7 +59,7 @@ export function CompanyCard({
   const betald = markning === "betald";
   const logo = sidhuvudetsLogotyp(overlay, safeLogotypUrl(foretag.logotyp))?.url ?? null;
   const href = `/foretag/${foretagSlug(foretag)}`;
-  const yrke = branschName ?? (foretag.ng1 ? yrkesnamn(foretag.ng1) : null);
+  const yrke = yrkeFor(foretag) ?? branschName ?? (foretag.ng1 ? yrkesnamn(foretag.ng1) : null);
   const ort = showOrt ? kommunName || ortnamn(foretag.postort) : null;
   const fakta = [yrke, ort, size?.label].filter(Boolean);
   const beskrivning = betald ? forstaRaden(overlay?.info_html) : null;

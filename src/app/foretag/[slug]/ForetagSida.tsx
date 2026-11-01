@@ -20,6 +20,7 @@ import { Breadcrumb } from "@/components/breadcrumb";
 import { KomplettEtikett, RingKnapp } from "@/components/company-card";
 import { MobilRingrad } from "@/components/mobil-ringrad";
 import { yrkesnamn } from "@/lib/yrkesnamn";
+import { yrkeFor } from "@/lib/klassning";
 import {
   displayName,
   googleMapsUrl,
@@ -281,7 +282,7 @@ export default async function ForetagSida({
   // med registrets gamla poang som en neutral "Komplett profil".
   const profil = overlay ? betaldProfil(overlay) : null;
   const lan = kommun ? lanByCode(kommun.lan) : null;
-  const yrke = f.ng1 ? yrkesnamn(f.ng1, branschName) : branschName;
+  const yrke = yrkeFor(f) ?? (f.ng1 ? yrkesnamn(f.ng1, branschName) : branschName);
   const yrkeHref =
     kommun && branschName && f.ng1
       ? `/kommun/${kommun.slug}/${branschPageSlug(branschName, f.ng1)}`
