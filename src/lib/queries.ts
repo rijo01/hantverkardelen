@@ -9,6 +9,7 @@ import { kommunCodesForLan } from "./lan";
 import { filtreraSokord, kontaktsparrFilter } from "./kontaktsparr";
 import type { KontaktsparrFilter } from "./overlay-contract";
 import { foretagIsIndexable } from "./seo";
+import { arPersonnamn, harPrivatKontakt, publiktNamn, rensaRegisterrad, rensaSokord } from "./personuppgifter";
 
 type GeoFilter = { kommun?: string; postort?: string; lan?: string };
 
@@ -114,8 +115,17 @@ export type Foretag = {
   infotext: string | null;
   /** Logotyp-URL (kan vara relativ till gamla servern → validera innan visning). */
   logotyp: string | null;
-  /** Kontaktperson — publikt namn, OK att visa. */
+  /**
+   * Kontaktperson. Visas bara för kunder (poang > 0) — för övriga är det ett
+   * namngivet personnamn från 2011 och nollas av lib/personuppgifter.ts.
+   */
   kontaktperson: string | null;
+  /**
+   * Sant när registrets namn är en privatpersons (enskild firma utan
+   * firmanamn) och har ersatts med "Enskild firma i <ort>". Namnet självt
+   * lämnar aldrig mapRow.
+   */
+  namnDolt?: boolean;
 };
 
 type PublikRow = {
@@ -153,12 +163,19 @@ const COLUMNS_LIST =
 /**
  * Registerraden som sajten ser den.
  *
- * KONTAKTSPÄRREN TILLÄMPAS HÄR, och bara här: varje läsning av registret går
- * genom mapRow, så profilsidan, korten i listorna, FAQ:n och JSON-LD får alla
+ * KONTAKTSPÄRREN OCH PERSONUPPGIFTSREGELN TILLÄMPAS HÄR, och bara här: varje
+ * läsning av registret går genom mapRow, så profilsidan, korten i listorna, FAQ:n och JSON-LD får alla
  * redan filtrerade värden. Ett spärrat nummer i `tel` blir null; i `infotext`
  * och `kontaktperson` skrubbas det bort. Se lib/kontaktsparr.ts.
  */
 function mapRow(row: Partial<PublikRow>, kf: KontaktsparrFilter): Foretag {
+  // Personuppgiftsregeln (lib/personuppgifter.ts) läggs EFTER kontaktspärren:
+  // spärren nollar det någon begärt bort, regeln det som är en privatpersons.
+  const rad = mapRad(row, kf);
+  return { ...rensaRegisterrad(rad), namnDolt: arPersonnamn(rad) };
+}
+
+function mapRad(row: Partial<PublikRow>, kf: KontaktsparrFilter): Foretag {
   return {
     id: row.id ?? 0,
     cfarnr: row.cfarnr ?? 0,
@@ -762,6 +779,9 @@ export async function getForetagByCfarnr(cfarnr: number): Promise<Foretag | null
 async function searchSokordCfarnrs(query: string): Promise<number[]> {
   const cleaned = query.trim();
   if (cleaned.length < 3) return [];
+  // Ett sökt mobilnummer eller en privat adress ska inte koppla ihop uppgiften
+  // med ett bolag via sökorden, när sidan själv inte visar den.
+  if (harPrivatKontakt(cleaned)) return [];
   const safe = cleaned.replace(/[%_]/g, " ").trim();
 
   const supa = getSupabaseAnon();
@@ -786,7 +806,11 @@ async function searchSokordCfarnrs(query: string): Promise<number[]> {
   return Array.from(ids);
 }
 
-export async function listSokordForCfarnr(cfarnr: number): Promise<string[]> {
+export async function listSokordForCfarnr(
+  cfarnr: number,
+  /** Är bolaget en kund (poang > 0)? Annars faller ord med privata uppgifter bort. */
+  kund: boolean,
+): Promise<string[]> {
   const supa = getSupabaseAnon();
   const { data, error } = await supa
     .from("sokordtable")
@@ -809,7 +833,7 @@ export async function listSokordForCfarnr(cfarnr: number): Promise<string[]> {
     out.push(s);
     if (out.length >= 50) break;
   }
-  return filtreraSokord(out, await kontaktsparrFilter());
+  return rensaSokord(filtreraSokord(out, await kontaktsparrFilter()), kund);
 }
 
 async function fetchByCfarnrs(
@@ -849,18 +873,19 @@ async function fetchByCfarnrs(
  * Pagineras eftersom PostgREST kapar varje svar vid max_rows (1000) och tyst
  * skulle tappa resten.
  */
-export async function listIndexableForetag(): Promise<
-  Array<Pick<Foretag, "cfarnr" | "firma" | "namn" | "infotext" | "webb" | "epostadress" | "poang">>
-> {
+type IndexerbarRad = Pick<
+  Foretag,
+  "cfarnr" | "firma" | "namn" | "postort" | "jurform" | "infotext" | "webb" | "epostadress" | "poang"
+>;
+
+export async function listIndexableForetag(): Promise<IndexerbarRad[]> {
   const supa = getSupabaseAnon();
   const PAGE = 1000;
-  const out: Array<
-    Pick<Foretag, "cfarnr" | "firma" | "namn" | "infotext" | "webb" | "epostadress" | "poang">
-  > = [];
+  const out: IndexerbarRad[] = [];
   for (let offset = 0; ; offset += PAGE) {
     const { data, error } = await supa
       .from(VIEW)
-      .select("cfarnr,firma,namn,webb,epostadress,poang,infotext")
+      .select("cfarnr,firma,namn,postort,jurform,tel,webb,epostadress,poang,infotext")
       .in("ng1", HANTVERK_BRANSCHER)
       .or(NISCH_JURFORM_VILLKOR)
       .or("infotext.not.is.null,webb.not.is.null,epostadress.not.is.null,poang.gt.0")
@@ -872,24 +897,40 @@ export async function listIndexableForetag(): Promise<
     }
     const rows = (data ?? []) as Array<Partial<PublikRow>>;
     for (const r of rows) {
-      const kandidat = {
+      // Samma personuppgiftsregel som sidan: en privat e-postadress som sidan
+      // inte visar kan inte heller vara det som gör sidan indexerbar.
+      const rensad = rensaRegisterrad({
         cfarnr: r.cfarnr ?? 0,
         firma: r.firma ?? null,
         namn: r.namn ?? null,
+        postort: r.postort ?? null,
+        jurform: r.jurform ?? null,
+        tel: r.tel ?? null,
         infotext: r.infotext ?? null,
         webb: r.webb ?? null,
         epostadress: r.epostadress ?? null,
         poang: r.poang ?? null,
-      };
-      if (foretagIsIndexable(kandidat)) out.push(kandidat);
+      });
+      if (foretagIsIndexable(rensad)) out.push(rensad);
     }
     if (rows.length < PAGE) break;
   }
   return out;
 }
 
-export function foretagSlug(f: Pick<Foretag, "firma" | "namn" | "cfarnr">): string {
-  const name = f.firma || f.namn || "foretag";
+/**
+ * Kanonisk slug. Namnet går genom personuppgiftsregeln först, så en enskild
+ * firma utan firmanamn får "enskild-firma-i-<ort>-<cfarnr>" och aldrig
+ * ägarens namn i en länk. Därför kräver typen jurform, poang och postort:
+ * varje anropsplats — även de som läser registret direkt — måste kunna
+ * tillämpa regeln, annars pekar länkar och canonical på olika adresser.
+ * Regeln är idempotent, så en rad som redan gått genom mapRow ger samma slug.
+ */
+export function foretagSlug(
+  f: Pick<Foretag, "firma" | "namn" | "cfarnr" | "jurform" | "poang" | "postort">,
+): string {
+  const p = publiktNamn(f);
+  const name = p.firma || p.namn || "foretag";
   const base = name
     .toLowerCase()
     .replace(/å/g, "a")

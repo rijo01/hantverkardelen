@@ -31,6 +31,7 @@ import {
   shortWebb,
 } from "@/lib/foretag-format";
 import { isPersonalOrgnr } from "@/lib/jurform";
+import { arKund } from "@/lib/personuppgifter";
 import {
   PERSONUPPGIFT_FORKLARING,
   REGISTER_AR,
@@ -133,7 +134,7 @@ export default async function ForetagSida({
 
   const kommun = f.kommun ? kommunByCode(f.kommun) : null;
   const branschName = f.ng1 ? await getBranschName(f.ng1) : null;
-  const name = displayName(f);
+  let name = displayName(f);
   const legalForm = legalFormFor(f);
   const size = employerSize(f.aeant);
   const mapsUrl = googleMapsUrl(f);
@@ -149,7 +150,7 @@ export default async function ForetagSida({
     kommun && f.ng1
       ? listRelatedForetag(kommun.code, f.ng1, f.cfarnr, 6)
       : Promise.resolve([] as Foretag[]),
-    listSokordForCfarnr(f.cfarnr),
+    listSokordForCfarnr(f.cfarnr, arKund(f)),
     previewToken
       ? getOverlayUtkastForForetag(f, previewToken)
       : getOverlayForForetag(f),
@@ -164,6 +165,11 @@ export default async function ForetagSida({
   // alls i förhandsvisningsläget. Att i stället visa den publika sidan hade
   // gjort förhandsvisningen till en självkanonikaliserande dubblett.
   if (previewToken && !overlay) notFound();
+
+  // En enskild firma utan firmanamn visas som "Enskild firma i <ort>" (se
+  // lib/personuppgifter.ts). Har den köpt en profil gäller namnet kunden själv
+  // valt att publicera.
+  if (f.namnDolt && overlay?.popularnamn?.trim()) name = overlay.popularnamn.trim();
 
   // SIDHUVUDETS LOGOTYP: den köpta före registrets. Regeln är kontraktets
   // sidhuvudetsLogotyp() — samma på alla tre klustersajter. Förut visades bara

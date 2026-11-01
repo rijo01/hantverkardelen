@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAnon } from "@/lib/supabase";
 import { foretagSlug } from "@/lib/queries";
+import { publiktNamn } from "@/lib/personuppgifter";
 import { kontaktsparrFilter } from "@/lib/kontaktsparr";
 import { ALL_KOMMUNER } from "@/lib/kommuner";
 import { TOP_BRANSCHER } from "@/lib/stats";
@@ -126,7 +127,7 @@ export async function GET(req: Request) {
     const supa = getSupabaseAnon();
     const { data, error } = await supa
       .from("foretag_publik")
-      .select("cfarnr,firma,namn,postort,kommun,aeant")
+      .select("cfarnr,firma,namn,postort,kommun,jurform,poang")
       .textSearch("search_vector", raw, {
         type: "websearch",
         config: "swedish_unaccent",
@@ -146,14 +147,19 @@ export async function GET(req: Request) {
           namn: string | null;
           postort: string | null;
           kommun: string | null;
+          jurform: number | null;
+          poang: number | null;
         }>
       ).map((r) => {
-        const name = r.firma || r.namn || "Okänt företag";
+        // Personuppgiftsregeln: en enskild firma utan firmanamn föreslås som
+        // "Enskild firma i <ort>", aldrig med ägarens namn.
+        const p = publiktNamn(r);
+        const name = p.firma || p.namn || "Okänt företag";
         return {
           type: "foretag" as const,
           label: name,
           sub: r.postort || r.kommun || "Sverige",
-          href: `/foretag/${foretagSlug({ firma: r.firma, namn: r.namn, cfarnr: r.cfarnr })}`,
+          href: `/foretag/${foretagSlug(r)}`,
         };
       });
     }

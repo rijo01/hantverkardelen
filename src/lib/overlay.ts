@@ -419,7 +419,7 @@ export async function overlayRevalidatePaths(
   /** Route handlern skickar in sin egen klient (initierad per anrop). */
   klient: SupabaseClient = getSupabaseAnon(),
 ): Promise<string[]> {
-  let q = klient.from(KATALOG_VY).select("cfarnr,firma,namn,kommun,ng1");
+  let q = klient.from(KATALOG_VY).select("cfarnr,firma,namn,postort,jurform,poang,kommun,ng1");
   q =
     rad.entity_type === "arbetsstalle"
       ? q.eq("cfarnr", Number(rad.external_id))
@@ -432,6 +432,9 @@ export async function overlayRevalidatePaths(
     cfarnr: number | null;
     firma: string | null;
     namn: string | null;
+    postort: string | null;
+    jurform: number | null;
+    poang: number | null;
     kommun: string | null;
     ng1: number | null;
   }>;
@@ -453,7 +456,7 @@ export async function overlayRevalidatePaths(
 
   for (const r of rader) {
     if (r.cfarnr == null) continue;
-    paths.add(`/foretag/${foretagSlug({ firma: r.firma, namn: r.namn, cfarnr: r.cfarnr })}`);
+    paths.add(`/foretag/${foretagSlug({ ...r, cfarnr: r.cfarnr })}`);
 
     const kommun = r.kommun ? kommunByCode(r.kommun) : undefined;
     if (!kommun) continue;
@@ -496,12 +499,12 @@ export async function overlayIndexerbaraSokvagar(): Promise<string[]> {
   if (cfarnr.length === 0 && orgnr.length === 0) return [];
 
   const klient = getSupabaseAnon();
-  const träffar: Array<{ cfarnr: number | null; firma: string | null; namn: string | null }> = [];
+  const träffar: Array<{ cfarnr: number | null; firma: string | null; namn: string | null; postort: string | null; jurform: number | null; poang: number | null; }> = [];
 
   if (cfarnr.length > 0) {
     const { data } = await klient
       .from(KATALOG_VY)
-      .select("cfarnr,firma,namn")
+      .select("cfarnr,firma,namn,postort,jurform,poang")
       .in("cfarnr", cfarnr.map(Number))
       .in("ng1", HANTVERK_BRANSCHER);
     träffar.push(...((data ?? []) as typeof träffar));
@@ -511,7 +514,7 @@ export async function overlayIndexerbaraSokvagar(): Promise<string[]> {
     // Båda orgnr-formerna — registret lagrar bindestrecksvarianten.
     const { data } = await klient
       .from(KATALOG_VY)
-      .select("cfarnr,firma,namn")
+      .select("cfarnr,firma,namn,postort,jurform,poang")
       .in("orgnr", orgnr.flatMap(orgnrVarianter))
       .in("ng1", HANTVERK_BRANSCHER)
       .limit(500);
@@ -521,7 +524,7 @@ export async function overlayIndexerbaraSokvagar(): Promise<string[]> {
   const ut = new Set<string>();
   for (const r of träffar) {
     if (r.cfarnr == null) continue;
-    ut.add(`/foretag/${foretagSlug({ firma: r.firma, namn: r.namn, cfarnr: r.cfarnr })}`);
+    ut.add(`/foretag/${foretagSlug({ ...r, cfarnr: r.cfarnr })}`);
   }
   return [...ut];
 }
