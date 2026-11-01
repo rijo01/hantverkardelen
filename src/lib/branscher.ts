@@ -1,5 +1,5 @@
 import { getSupabaseAnon } from "./supabase";
-import { rattatBranschnamn } from "./klassning";
+import { rattatBranschnamn } from "./kluster/klassning";
 
 /**
  * Branschnamn-lookup mot t_bransch via anon-nyckeln.

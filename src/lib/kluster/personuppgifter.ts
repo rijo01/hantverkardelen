@@ -1,5 +1,3 @@
-import { isPersonalOrgnr } from "./jurform";
-
 /**
  * Personuppgifter i registret — EN regel, för varje yta.
  *
@@ -25,8 +23,14 @@ import { isPersonalOrgnr } from "./jurform";
  * kontaktspärren, så en återimport av registret kan inte få tillbaka något.
  *
  * Beroendefri med flit: CompanyCard och /api/suggest ska kunna använda samma
- * regel utan att dra in server-only-moduler.
+ * regel utan att dra in server-only-moduler, och filen ska vara identisk på
+ * alla klustrets sajter (se README.md i den här katalogen).
  */
+
+/** Enskild firma (10), enkelt bolag (21), oskiftat dödsbo (91): orgnr = personnummer. */
+function arPersonligJurform(jurform: number | null | undefined): boolean {
+  return jurform === 10 || jurform === 21 || jurform === 91;
+}
 
 /** En kund ur det gamla betalsystemet. Deras egna uppgifter rörs inte. */
 export function arKund(f: { poang?: number | null }): boolean {
@@ -147,7 +151,7 @@ export function arPersonnamn(f: NamnRad): boolean {
   // Registret skriver en person "EFTERNAMN, FÖRNAMN". Ett namn utan den formen
   // ("MÅLERI JAN LUNDBERG") är ett firmanamn, även när fältet heter namn.
   if (!PERSONNAMNSFORM.test(namn)) return false;
-  if (isPersonalOrgnr(f.jurform)) return true;
+  if (arPersonligJurform(f.jurform)) return true;
   if (f.jurform != null) return false;
   return !BOLAGSORD.test(namn);
 }

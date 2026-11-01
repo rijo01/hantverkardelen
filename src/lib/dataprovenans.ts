@@ -13,8 +13,9 @@
  * så de bär ingen åldersmärkning.
  */
 
-/** Året registret senast kan beläggas ha uppdaterats. */
-export const REGISTER_AR = 2011;
+/** Året registret senast kan beläggas ha uppdaterats. Delas i klustret. */
+import { REGISTER_AR } from "./kluster/register";
+export { REGISTER_AR };
 
 /** Längre förklaring — används i informationsrutor och sidfot. */
 export const REGISTER_FORKLARING =

@@ -10,7 +10,7 @@ import { filtreraSokord, kontaktsparrFilter } from "./kontaktsparr";
 import type { KontaktsparrFilter } from "./overlay-contract";
 import { foretagIsIndexable } from "./seo";
 import { storleksklassFor } from "./storleksklass";
-import { arPersonnamn, harPrivatKontakt, publiktNamn, rensaRegisterrad, rensaSokord } from "./personuppgifter";
+import { arPersonnamn, harPrivatKontakt, rensaRegisterrad, rensaSokord } from "./kluster/personuppgifter";
 
 type GeoFilter = { kommun?: string; postort?: string; lan?: string };
 
@@ -938,30 +938,8 @@ export async function listIndexableForetag(): Promise<IndexerbarRad[]> {
   return out;
 }
 
-/**
- * Kanonisk slug. Namnet går genom personuppgiftsregeln först, så en enskild
- * firma utan firmanamn får "enskild-firma-i-<ort>-<cfarnr>" och aldrig
- * ägarens namn i en länk. Därför kräver typen jurform, poang och postort:
- * varje anropsplats — även de som läser registret direkt — måste kunna
- * tillämpa regeln, annars pekar länkar och canonical på olika adresser.
- * Regeln är idempotent, så en rad som redan gått genom mapRow ger samma slug.
- */
-export function foretagSlug(
-  f: Pick<Foretag, "firma" | "namn" | "cfarnr" | "jurform" | "poang" | "postort">,
-): string {
-  const p = publiktNamn(f);
-  const name = p.firma || p.namn || "foretag";
-  const base = name
-    .toLowerCase()
-    .replace(/å/g, "a")
-    .replace(/ä/g, "a")
-    .replace(/ö/g, "o")
-    .replace(/é/g, "e")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 60);
-  return `${base || "foretag"}-${f.cfarnr}`;
-}
+/** Kanonisk slug — delad i klustret, se kluster/foretag-slug.ts. */
+export { foretagSlug } from "./kluster/foretag-slug";
 
 export function parseCfarnrFromSlug(slug: string): number | null {
   const m = slug.match(/-(\d+)$/);

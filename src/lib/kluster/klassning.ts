@@ -8,7 +8,7 @@
  * Tre slag av fel:
  *
  *  1. Fel NAMN på en branschkod i t_bransch. Rättas i BRANSCHNAMN nedan, som
- *     branscher.ts läser före t_bransch. Namnet styr rubrik, brödsmula och
+ *     sajtens branscher.ts läser före t_bransch. Namnet styr rubrik, brödsmula och
  *     slug, så gamla adresser (/kommun/x/byggmastare-16231) 308:as av sidans
  *     kanoniska omdirigering till den nya.
  *
@@ -18,8 +18,11 @@
  *     verkliga yrke (yrkeFor nedan) men ligger kvar i listan — bland dem finns
  *     betalande kunder, och att flytta dem ur listan hade tagit deras placering.
  *
- *  3. Organisationer som inte är hantverkare (kommuner, Vägverket m.fl.).
- *     Rättas i frågan: NISCH_JURFORM_VILLKOR i hantverk-branscher.ts.
+ *  3. Organisationer som inte hör hemma i en företagskatalog (kommuner,
+ *     Vägverket m.fl.). Rättas i varje sajts fråga: NISCH_JURFORM_VILLKOR.
+ *
+ * Filen är identisk på alla klustrets sajter (se README.md i katalogen). En
+ * kod som en sajt inte visar påverkar den sajten inte.
  */
 
 /**
