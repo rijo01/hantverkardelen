@@ -1,4 +1,5 @@
 import { revalidatePath } from "next/cache";
+import { BRANSCH_SIDA_N } from "@/lib/overlay";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { SAJT, STODD_CONTRACT_VERSION } from "@/lib/overlay";
 import { KONTAKTSPARR_TABLE, hamtaBerorda, kontaktsparrRevalidatePaths } from "@/lib/kontaktsparr";
@@ -117,6 +118,10 @@ export async function hanteraKontaktsparr(
   }
   const revalidated = await kontaktsparrRevalidatePaths(berorda, anon);
   for (const p of revalidated) revalidatePath(p);
+  // Listornas sida 2+ är egna ISR-sidor (…/sida/N, omskrivna från ?page=N).
+  // Vilken sida ett bolag hamnar på går inte att veta här, så alla markeras;
+  // de renderas om först vid nästa besök.
+  revalidatePath(BRANSCH_SIDA_N, "page");
 
   const antalBolag = new Set(berorda.map((b) => b.cfarnr ?? `${b.entity_type}:${b.external_id}`)).size;
 

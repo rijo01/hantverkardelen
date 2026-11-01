@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
+import { BRANSCH_SIDA_N } from "@/lib/overlay";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import {
   LOGO_BUCKET,
@@ -422,6 +423,8 @@ async function revalidera(
     klient,
   );
   for (const p of paths) revalidatePath(p);
+  // Listornas sida 2+ (…/sida/N) — se BRANSCH_SIDA_N.
+  revalidatePath(BRANSCH_SIDA_N, "page");
   return paths;
 }
 
