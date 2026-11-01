@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAnon } from "@/lib/supabase";
 import { foretagSlug } from "@/lib/queries";
-import { publiktNamn } from "@/lib/personuppgifter";
+import { publiktNamn } from "@/lib/kluster/personuppgifter";
 import { kontaktsparrFilter } from "@/lib/kontaktsparr";
 import { ALL_KOMMUNER } from "@/lib/kommuner";
 import { TOP_BRANSCHER } from "@/lib/stats";

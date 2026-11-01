@@ -5,7 +5,7 @@ import { visatTelefon } from "@/lib/visat-telefon";
 import { safeLogotypUrl } from "@/lib/sanitize-html";
 import { REGISTER_AR } from "@/lib/dataprovenans";
 import { yrkesnamn } from "@/lib/yrkesnamn";
-import { yrkeFor } from "@/lib/klassning";
+import { yrkeFor } from "@/lib/kluster/klassning";
 import { anstallda } from "@/lib/storleksklass";
 import {
   displayName,

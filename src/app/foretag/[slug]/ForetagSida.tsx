@@ -20,7 +20,7 @@ import { Breadcrumb } from "@/components/breadcrumb";
 import { KomplettEtikett, RingKnapp } from "@/components/company-card";
 import { MobilRingrad } from "@/components/mobil-ringrad";
 import { yrkesnamn } from "@/lib/yrkesnamn";
-import { yrkeFor } from "@/lib/klassning";
+import { yrkeFor } from "@/lib/kluster/klassning";
 import {
   displayName,
   googleMapsUrl,
@@ -31,7 +31,7 @@ import {
   shortWebb,
 } from "@/lib/foretag-format";
 import { isPersonalOrgnr } from "@/lib/jurform";
-import { arKund } from "@/lib/personuppgifter";
+import { arKund } from "@/lib/kluster/personuppgifter";
 import { anstallda, anstalldaMening, anstalldaSchema } from "@/lib/storleksklass";
 import {
   PERSONUPPGIFT_FORKLARING,
