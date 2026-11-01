@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { KONTAKT_NOTIS } from "@/lib/dataprovenans";
 
 /**
  * Fast ringrad på mobil, ovanför bottenmenyn.
@@ -44,7 +43,7 @@ export function MobilRingrad({
     >
       <a
         href={`tel:${telefon.replace(/[^\d+]/g, "")}`}
-        aria-label={`Ring ${namn}, ${telefon}. ${KONTAKT_NOTIS}.`}
+        aria-label={`Ring ${namn}, ${telefon}`}
         className="sg-btn sg-btn-navy h-12 w-full tabular-nums"
       >
         Ring {telefon}

@@ -7,22 +7,21 @@
  * åldern är känd på beståndsnivå, inte per post. Sajten påstod tidigare
  * "Officiell registerdata" utan årtal, vilket lät som en färsk uppgift.
  *
- * Regel: varje yta som visar ett telefonnummer, en e-postadress eller en
- * webbadress ska bära märkningen nedan. Ta inte bort den utan att först ha
- * en färsk källa att ersätta datan med.
+ * Regel: varje yta som visar registeruppgifter ska säga att de är från
+ * omkring REGISTER_AR. Telefonnummer är undantaget sedan 2026-11-01: ur
+ * registret visas inga (DE.82), och de som visas har företaget självt lämnat,
+ * så de bär ingen åldersmärkning.
  */
 
 /** Året registret senast kan beläggas ha uppdaterats. */
 export const REGISTER_AR = 2011;
 
-/** Kort märkning — används intill enskilda kontaktuppgifter. */
-export const KONTAKT_NOTIS = `Uppgift från register ${REGISTER_AR} — kan vara inaktuell`;
-
 /** Längre förklaring — används i informationsrutor och sidfot. */
 export const REGISTER_FORKLARING =
   `Kontaktuppgifterna kommer från ett näringslivsregister som ` +
-  `senast uppdaterades omkring ${REGISTER_AR}. Telefonnummer, adresser och ` +
-  `e-postadresser kan ha ändrats sedan dess, och företag kan ha upphört. ` +
+  `senast uppdaterades omkring ${REGISTER_AR}. Adresser och e-postadresser ` +
+  `kan ha ändrats sedan dess, och företag kan ha upphört. Telefonnummer visas ` +
+  `bara när företaget självt har lämnat dem. ` +
   `Kontrollera uppgiften innan du förlitar dig på den.`;
 
 /**

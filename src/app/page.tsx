@@ -117,11 +117,11 @@ export default function HomePage() {
 const LOFTEN = [
   {
     rubrik: "Ärligt om åldern",
-    text: `Uppgifterna kommer från ett register från omkring ${REGISTER_AR}. Vid varje nummer står att det kan vara inaktuellt.`,
+    text: `Uppgifterna kommer från ett register från omkring ${REGISTER_AR}, och det står på varje sida.`,
   },
   {
     rubrik: "Ring direkt",
-    text: "Finns ett nummer står det direkt i listan och på företagets sida. Inga formulär, ingen mellanhand.",
+    text: "Har företaget lämnat ett nummer står det direkt i listan och på företagets sida. Inga formulär, ingen mellanhand.",
   },
   {
     rubrik: "Ärligt märkt",

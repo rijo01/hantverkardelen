@@ -3,7 +3,7 @@ import { foretagSlug, type Foretag } from "@/lib/queries";
 import { sidhuvudetsLogotyp, type OverlayProfilRow } from "@/lib/overlay-contract";
 import { visatTelefon } from "@/lib/visat-telefon";
 import { safeLogotypUrl } from "@/lib/sanitize-html";
-import { KONTAKT_NOTIS, REGISTER_AR } from "@/lib/dataprovenans";
+import { REGISTER_AR } from "@/lib/dataprovenans";
 import { yrkesnamn } from "@/lib/yrkesnamn";
 import { yrkeFor } from "@/lib/klassning";
 import { anstallda } from "@/lib/storleksklass";
@@ -18,8 +18,9 @@ import {
  *
  * Besökaren skannar efter tre saker: vem, var och vilket nummer. Raden visar
  * exakt dem. Namnet är radens starkaste element och den enda länken till
- * profilen; numret står i klartext i Ring-knappen så att man kan se
- * riktnumret innan man ringer ett nummer ur ett register från 2011.
+ * profilen; numret står i klartext i Ring-knappen. Ett nummer finns bara
+ * när företaget självt lämnat det (kund eller overlay-profil, se DE.82 i
+ * lib/personuppgifter.ts).
  *
  * Logotypen visas när företaget har en — den köpta före registrets, samma
  * regel som profilsidans huvud (kontraktets sidhuvudetsLogotyp()). Saknas den
@@ -160,8 +161,8 @@ export function KomplettEtikett() {
 /**
  * Ringknappen — samma i alla listor och på företagssidan. Kantad navy som
  * standard, fylld navy för betalda rader och företagssidans huvud. Numret
- * står alltid i klartext; märkningen om registrets ålder ligger i
- * aria-label och title.
+ * står alltid i klartext. Det är alltid lämnat av företaget självt, så
+ * ingen åldersmärkning behövs.
  */
 export function RingKnapp({
   telefon,
@@ -179,8 +180,7 @@ export function RingKnapp({
   return (
     <a
       href={`tel:${telefon.replace(/[^\d+]/g, "")}`}
-      aria-label={`Ring ${name}, ${telefon}. ${KONTAKT_NOTIS}.`}
-      title={KONTAKT_NOTIS}
+      aria-label={`Ring ${name}, ${telefon}`}
       className={`sg-btn whitespace-nowrap tabular-nums ${fylld ? "sg-btn-navy" : "sg-btn-outline"} ${
         stor ? "min-h-[3.25rem] px-5 text-[17px]" : "text-[15px]"
       } ${className || "inline-flex"}`}
@@ -210,7 +210,7 @@ export function CompanyCardList({
         Sorterat: annonser först,{" "}
         {komplettaFinns ? "därefter företag med komplett profil och sedan" : "därefter"} efter
         antal arbetsställen. Antal anställda är registrets storleksklass från ca {REGISTER_AR}.
-        Telefonnummer från registret kan vara inaktuella.
+        Telefonnummer visas när företaget självt har lämnat dem.
       </p>
     </div>
   );

@@ -294,9 +294,6 @@ export default async function ForetagSida({
   const nyckeltal = [legalForm, size?.label].filter(Boolean);
   const hemsida = profil?.hemsida ?? webb;
   const epost = profil?.epost ?? f.epostadress;
-  const egetNummer = Boolean(
-    overlay?.telefon_override && visatTelefon === overlay.telefon_override.trim(),
-  );
   const logoStorlek = profil ? "size-20 sm:size-[112px]" : "size-16 sm:size-[88px]";
   const matt = overlay?.logo_url && logoUrl === overlay.logo_url ? logoMatt(overlay.logo_url) : null;
   const antalIYrket = kommun && f.ng1 ? snapshotKommunBranschCount(kommun.code, f.ng1) : 0;
@@ -401,9 +398,7 @@ export default async function ForetagSida({
             )}
             {visatTelefon && (
               <p className="text-sm leading-snug text-ink-3">
-                {egetNummer
-                  ? "Numret är lämnat av företaget."
-                  : `Numret kommer från registret (ca ${REGISTER_AR}) och kan vara inaktuellt.`}
+                Numret är lämnat av företaget.
               </p>
             )}
           </div>
@@ -723,9 +718,10 @@ function buildFaq({
     if (f.webb) ch.push(`hemsida ${f.webb}`);
     items.push({
       q: `Hur kontaktar jag ${name}?`,
-      a: `Enligt registret når du ${name} via ${ch.join(", ")}. Uppgiften är ` +
-        `hämtad från ett näringslivsregister från omkring ` +
-        `${REGISTER_AR} och kan vara inaktuell.`,
+      a: `Du når ${name} via ${ch.join(", ")}.` +
+        (f.epostadress || f.webb
+          ? ` E-post och hemsida kommer från ett näringslivsregister från omkring ${REGISTER_AR} och kan vara inaktuella.`
+          : ""),
     });
   } else {
     items.push({

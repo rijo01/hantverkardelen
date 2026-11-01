@@ -5,11 +5,11 @@ import { isPersonalOrgnr } from "./jurform";
  *
  * Registret (`aesamtable` via `foretag_publik`) är ett uttag från omkring
  * 2008–2011. Numren i det är enligt DE.82 interna (skiffer-crm README,
- * GDPR-regeln): de får användas i CRM:ets ringläge, och sajten visar dem bara
- * så länge beslutet om resten är öppet. Det här lagret tar bort det som utan
- * tvekan är en privatpersons uppgift:
+ * GDPR-regeln): de får användas i CRM:ets ringläge men visas aldrig publikt
+ * (beslut 2026-11-01, strikt tolkning). Det här lagret tar bort:
  *
- *   - mobilnummer (07x / +46 7x) — för en enskild firma ägarens privata nummer
+ *   - VARJE telefonnummer ur registret, fast som mobilt — telefon visas bara
+ *     från kunder och overlay-profiler
  *   - e-postadresser hos privata leverantörer (hotmail, gmail, telia …)
  *   - kontaktperson — ett namngivet personnamn från 2011
  *   - samma nummer och adresser i fritext (infotext, sökord)
@@ -53,6 +53,14 @@ export function arMobilnummer(tel: string | null | undefined): boolean {
  */
 const MOBIL_I_TEXT = /(?<![\d+])(?:(?:\+46|0046)[\s-]*\(?0?\)?\s*|0)7[02369](?:[\s\-/.]*\d){7}(?!\d)/g;
 
+/**
+ * Vilket svenskt telefonnummer som helst i löptext, fast eller mobilt:
+ * "08-123 45 67", "031 - 12 34 56", "0480-123 45", "+46 8 123 456". Kräver
+ * inledande 0 eller landsnummer och 7–10 siffror totalt efter nollan, så att
+ * postnummer ("123 45") och organisationsnummer ("556948-3141") inte fångas.
+ */
+const TELEFON_I_TEXT = /(?<![\d+])(?:(?:\+46|0046)[\s-]*\(?0?\)?\s*|0)[1-9](?:[\s\-/.()]*\d){6,9}(?![\d-])/g;
+
 // ---- E-post ----------------------------------------------------------------
 
 /**
@@ -83,22 +91,28 @@ const EPOST_I_TEXT = /[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g;
 // ---- Fritext ---------------------------------------------------------------
 
 /**
- * Tar bort mobilnummer och privata e-postadresser ur fritext. Företagsadresser
- * och fasta nummer står kvar. Returnerar null för en text som blir tom.
+ * Tar bort telefonnummer (alla, DE.82) och privata e-postadresser ur fritext.
+ * Företagets egna e-postadresser står kvar. Returnerar null för en text som
+ * blir tom.
  */
 export function skrubbaFritext(text: string | null | undefined): string | null {
   if (!text) return text ?? null;
   const ut = text
     .replace(MOBIL_I_TEXT, "")
+    .replace(TELEFON_I_TEXT, "")
     .replace(EPOST_I_TEXT, (m) => (arPrivatEpost(m) ? "" : m));
   return ut.trim() ? ut : null;
 }
 
-/** Innehåller texten ett mobilnummer eller en privat e-postadress? */
+/**
+ * Innehåller texten ett telefonnummer eller en privat e-postadress? Används
+ * för sökord och för sökfrågor, så att ett nummer inte kan slås upp baklänges.
+ */
 export function harPrivatKontakt(text: string | null | undefined): boolean {
   if (!text) return false;
   MOBIL_I_TEXT.lastIndex = 0;
-  if (MOBIL_I_TEXT.test(text)) return true;
+  TELEFON_I_TEXT.lastIndex = 0;
+  if (MOBIL_I_TEXT.test(text) || TELEFON_I_TEXT.test(text)) return true;
   return (text.match(EPOST_I_TEXT) ?? []).some(arPrivatEpost);
 }
 
@@ -189,12 +203,13 @@ type KontaktRad = NamnRad & {
 
 /**
  * Registerraden som den får visas. Kunder (`poang > 0`) passerar orörda.
+ * För alla andra visas inget telefonnummer ur registret (DE.82).
  */
 export function rensaRegisterrad<T extends KontaktRad>(f: T): T {
   if (arKund(f)) return f;
   const ut: T = {
     ...publiktNamn(f),
-    tel: arMobilnummer(f.tel) ? null : f.tel,
+    tel: null,
     epostadress: arPrivatEpost(f.epostadress) ? null : f.epostadress,
   };
   if ("infotext" in f) ut.infotext = skrubbaFritext(f.infotext);
