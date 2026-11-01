@@ -34,23 +34,32 @@ export async function generateMetadata({
 }: {
   params: Params;
 }): Promise<Metadata> {
-  const { slug, bransch } = await params;
+  // `sida` finns bara på den interna vägen sida/[sida] (= ?page=N).
+  const { slug, bransch, sida } = (await params) as Awaited<Params> & { sida?: string };
   const kommun = kommunBySlug(slug);
   const ng1 = parseBranschSlug(bransch);
   if (!kommun || !ng1) return { title: "Sida hittades inte" };
+  const n = sida && /^\d{1,4}$/.test(sida) ? Number(sida) : 1;
   const name = (await getBranschName(ng1)) ?? `SNI ${ng1}`;
-  const title = `${name} i ${kommun.name}`;
+  const title = n > 1 ? `${name} i ${kommun.name} – sida ${n}` : `${name} i ${kommun.name}`;
   const description = `Hantverksföretag inom ${name.toLowerCase()} i ${kommun.name} kommun. Hitta lokala bygg-, el-, VVS- och hantverksföretag, kontaktuppgifter och adresser.`;
   // Kanonisk URL byggs ur branschnamnet, inte ur inkommande slug. Routen
   // matchar på det avslutande id:t, så /kommun/x/vadsomhelst-43210 svarade
   // 200 och pekade canonical på sig själv — obegränsat med dubbletter av
   // samma sida. Nu pekar alla varianter på en och samma adress.
+  //
+  // Sida 2 och framåt är SJÄLVREFERERANDE: canonical är sidans egen publika
+  // adress, ?page=N (beslut 2026-11-01). Förut pekade de på sida 1, vilket
+  // säger åt Google att sidorna är dubbletter och att företagen längre ner i
+  // listan inte behöver hittas via dem. Den interna vägen /sida/N pekar också
+  // hit, så den kan aldrig bli en egen indexerad adress.
   const canonicalSlug = branschPageSlug(name, ng1);
+  const sidaQuery = n > 1 ? `?page=${n}` : "";
   return {
     title,
     description,
     alternates: {
-      canonical: `${SITE_URL}/kommun/${kommun.slug}/${canonicalSlug}`,
+      canonical: `${SITE_URL}/kommun/${kommun.slug}/${canonicalSlug}${sidaQuery}`,
     },
     openGraph: { title, description, type: "website", locale: "sv_SE" },
     // Grind 1, se lib/seo.ts.
@@ -111,6 +120,9 @@ export default async function BranschSida({
     loadAktivaOverlays(),
   ]);
   const rows = ordnaBoostade(oboostade, overlays);
+  // En sida bortom listans slut är tom. Med självrefererande canonical hade
+  // den blivit en egen indexerbar tom sida (soft 404) — svara 404.
+  if (page > 1 && rows.length === 0) notFound();
 
   const antal = snapshotKommunBranschCount(kommun.code, ng1);
   const yrke = yrkesnamn(ng1, branschName);

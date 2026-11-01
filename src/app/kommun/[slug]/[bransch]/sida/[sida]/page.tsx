@@ -6,9 +6,8 @@ import BranschSida from "../../BranschSida";
  * /kommun/x/y?page=N; next.config.ts skriver om den hit så att sidan kan vara
  * ISR utan att läsa searchParams.
  *
- * Metadata är densamma som sida 1 (canonical → sida 1, samma robots) — precis
- * som ?page=N betedde sig före omskrivningen. Pagineringens SEO ska samordnas
- * över klustret och ändras inte här.
+ * Metadata kommer från BranschSida: samma robots som sida 1, men canonical är
+ * sidans egen publika adress (?page=N) och titeln säger vilken sida det är.
  */
 export const revalidate = 86400;
 
