@@ -24,7 +24,8 @@ export const metadata: Metadata = {
  *                               personnamn för enskild firma visas inte
  *   - lib/kontaktsparr.ts     — spärren som tar bort en uppgift på begäran
  *   - lib/dataprovenans.ts    — registrets ålder
- *   - app/layout.tsx          — Google Analytics
+ *   - app/layout.tsx          — Vercel Analytics (cookiefri)
+ *   - skiffer-crm, DE.82      — registret används för säljsamtal
  * Ändras koden ska texten ändras med den.
  */
 export default function IntegritetspolicyPage() {
@@ -60,16 +61,16 @@ export default function IntegritetspolicyPage() {
             Katalogen bygger på ett näringslivsregister som samlades in omkring 2008–{REGISTER_AR}. Det
             innehåller företagsnamn, adress, bransch, juridisk form och i många fall ett telefonnummer.
             Registret har inte uppdaterats sedan dess, så uppgifter kan vara inaktuella och företag kan ha
-            upphört. Det står vid varje telefonnummer.
+            upphört.
           </p>
           <p>
             De flesta uppgifterna gäller aktiebolag och andra juridiska personer och är inte personuppgifter.
             För en enskild firma är däremot firmans uppgifter också ägarens. Därför visar vi aldrig:
           </p>
           <ul className="list-disc space-y-1 pl-6">
+            <li>telefonnummer ur registret — ett nummer visas bara när företaget självt har lämnat det</li>
             <li>personnummer — för en enskild firma visas inget organisationsnummer alls</li>
             <li>ägarens namn när firman saknar ett eget firmanamn — den visas som ”Enskild firma i” orten</li>
-            <li>mobilnummer</li>
             <li>e-postadresser hos privata e-posttjänster, till exempel Hotmail, Gmail och Telia</li>
             <li>namngivna kontaktpersoner ur registret</li>
           </ul>
@@ -81,6 +82,22 @@ export default function IntegritetspolicyPage() {
             Vi behandlar katalogens uppgifter med stöd av intresseavvägning (artikel 6.1 f i
             dataskyddsförordningen): intresset av att privatpersoner och företag ska kunna hitta och kontakta
             lokala hantverksföretag. Uppgifterna finns kvar så länge katalogen visar företaget.
+          </p>
+        </Avsnitt>
+
+        <Avsnitt rubrik="Säljkontakt per telefon">
+          <p>
+            QS Group AB använder registrets telefonnummer för att ringa företag och erbjuda annonsering i
+            katalogen och i våra systerkataloger. Numren publiceras inte. Den lagliga grunden är berättigat
+            intresse (artikel 6.1 f i dataskyddsförordningen): vårt intresse av att erbjuda företag en tjänst
+            som rör deras verksamhet.
+          </p>
+          <p>
+            Du har rätt att när som helst invända mot att bli kontaktad. Säg det i samtalet eller skriv till{" "}
+            <a href={`mailto:${EMAIL}`} className="sg-link">
+              {EMAIL}
+            </a>
+            , så spärrar vi numret. Spärren gäller också för säljsamtal och för våra systerkataloger.
           </p>
         </Avsnitt>
 
@@ -108,9 +125,10 @@ export default function IntegritetspolicyPage() {
 
         <Avsnitt rubrik="Besöksstatistik">
           <p>
-            Vi använder Google Analytics för att se hur sajten används, till exempel vilka sidor som besöks.
-            Google Analytics sätter kakor i din webbläsare och behandlar uppgifter om ditt besök hos Google. Vi
-            använder inte uppgifterna för annonsering. Du kan blockera kakorna i webbläsarens inställningar.
+            Vi mäter hur sajten används, till exempel vilka sidor som besöks, med Vercel Web Analytics. Mätningen
+            sätter inga kakor och sparar ingenting i din webbläsare. Besök räknas utan att du kan identifieras:
+            ingen IP-adress sparas, och samma besökare känns inte igen från en dag till nästa. Uppgifterna
+            används inte för annonsering.
           </p>
         </Avsnitt>
 

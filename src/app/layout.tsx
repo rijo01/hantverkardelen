@@ -8,8 +8,7 @@ import {
   REGISTER_AR,
   REGISTER_FORKLARING,
 } from "@/lib/dataprovenans";
-import { GoogleAnalytics } from "@next/third-parties/google";
-import { GA_ID } from "@/lib/site";
+import { Analytics } from "@vercel/analytics/next";
 
 // Archivo är en variabel font: en fil täcker 400–800, i stället för fem.
 const archivo = Archivo({
@@ -118,7 +117,8 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
         />
-        <GoogleAnalytics gaId={GA_ID} />
+        {/* Cookiefri besöksmätning, se /integritetspolicy. Ingen banner behövs. */}
+        <Analytics />
       </body>
     </html>
   );
