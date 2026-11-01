@@ -1,3 +1,4 @@
+import { bolagJsonLd } from "@/lib/kluster/bolag";
 import type { Metadata, Viewport } from "next";
 import { Archivo } from "next/font/google";
 import "./globals.css";
@@ -47,6 +48,7 @@ export default function RootLayout({
     "@type": "Organization",
     name: "Hantverkardelen",
     url: SITE_URL,
+    ...bolagJsonLd("hantverkardelen.se"),
     description:
       "Sveriges katalog för hem & hantverk — bygg, el, VVS, måleri, tak, snickeri, golv och städ i alla 290 kommuner.",
   };

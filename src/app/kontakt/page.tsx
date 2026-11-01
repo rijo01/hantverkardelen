@@ -1,3 +1,4 @@
+import { bolagJsonLd } from "@/lib/kluster/bolag";
 import type { Metadata } from "next";
 import { JsonLd, buildBreadcrumb } from "@/components/json-ld";
 import { Breadcrumb } from "@/components/breadcrumb";
@@ -39,15 +40,7 @@ export default function KontaktPage() {
     url: SITE_URL,
     email: EMAIL,
     telephone: PHONE_TEL,
-    identifier: ORG_NUMBER,
-    vatID: ORG_NUMBER,
-    address: {
-      "@type": "PostalAddress",
-      streetAddress: "c/o QS Group AB, Kivra: 556948-3141",
-      postalCode: "106 31",
-      addressLocality: "Stockholm",
-      addressCountry: "SE",
-    },
+    ...bolagJsonLd("hantverkardelen.se"),
     contactPoint: [
       {
         "@type": "ContactPoint",
