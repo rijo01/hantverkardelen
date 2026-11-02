@@ -17,8 +17,23 @@ import { yrkesnamn } from "@/lib/yrkesnamn";
  * sidan visar — på /sok ur adressens parametrar, på kommun- och yrkessidorna
  * ur sökvägen. Där finns ingen egen stor sökruta längre; den här är den.
  */
+/**
+ * Sökvägen, med startsidans interna namn rättat.
+ *
+ * När Vercel genererar om startsidan i bakgrunden (ISR) renderas den under sitt
+ * interna namn `/index`, och då ger usePathname() "/index" på servern — inte
+ * "/". Sidhuvudet renderades därför som på en undersida, den kopian cachades
+ * för `/`, och webbläsaren (som ser "/") fick ett hydreringsfel (React #418).
+ * Byggets egen kopia var rätt; felet kom först vid första omgenereringen.
+ * Uppmätt 2026-11-02 på en preview: "/index" vid x-prerender-revalidate.
+ */
+function useSokvag(): string {
+  const p = usePathname();
+  return p === "/index" ? "/" : p;
+}
+
 export function SiteNav() {
-  const pathname = usePathname();
+  const pathname = useSokvag();
 
   if (pathname === "/") {
     return (
@@ -143,7 +158,7 @@ function NavLink({
  * 1px linje, den aktiva sidan markeras med en orange linje överst.
  */
 export function MobileBottomNav() {
-  const pathname = usePathname();
+  const pathname = useSokvag();
 
   const items = [
     { href: "/", label: "Hem", icon: Home, match: (p: string) => p === "/" },
