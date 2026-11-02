@@ -7,6 +7,7 @@ import {
 } from "./hantverk-branscher";
 import { kommunCodesForLan } from "./lan";
 import { filtreraSokord, kontaktsparrFilter } from "./kontaktsparr";
+import { arSparrad, sparradeNycklar, utanSparrade } from "./foretag-sparr";
 import type { KontaktsparrFilter } from "./overlay-contract";
 import { foretagIsIndexable } from "./seo";
 import { storleksklassFor } from "./storleksklass";
@@ -221,10 +222,17 @@ function mapRad(row: Partial<PublikRow>, kf: KontaktsparrFilter): Foretag {
   };
 }
 
-/** mapRow med request-filtret bundet, för `.map()`. */
-async function mapper(): Promise<(row: Partial<PublikRow>) => Foretag> {
-  const kf = await kontaktsparrFilter();
-  return (row) => mapRow(row, kf);
+/**
+ * Råa vyrader → Foretag, utan de raderade (kontrakt 1.6, lib/foretag-sparr.ts).
+ *
+ * Varje lista på sajten går hit — kommun, kommun × bransch, sök, liknande
+ * företag — så ett raderat bolag faller bort på ETT ställe. En sida kan därför
+ * bli en rad kortare än pageSize; antalen i rubrikerna räknar registret och
+ * rörs inte.
+ */
+async function mappa(rows: Partial<PublikRow>[]): Promise<Foretag[]> {
+  const [kf, sparrade] = await Promise.all([kontaktsparrFilter(), sparradeNycklar()]);
+  return utanSparrade(rows, sparrade).map((row) => mapRow(row, kf));
 }
 
 /** Antal hantverksföretag i en kommun — exakt count, inom Hantverkardelens nisch. */
@@ -264,7 +272,7 @@ export async function listForetagInKommun(
     console.error("listForetagInKommun", error);
     return [];
   }
-  return (data as Partial<PublikRow>[]).map(await mapper());
+  return mappa(data as Partial<PublikRow>[]);
 }
 
 /**
@@ -348,7 +356,7 @@ export async function listForetagInKommunByBransch(
   const rows = data as Partial<PublikRow>[];
   const hasMore = rows.length > pageSize;
   return {
-    rows: rows.slice(0, pageSize).map(await mapper()),
+    rows: await mappa(rows.slice(0, pageSize)),
     hasMore,
     page,
     pageSize,
@@ -531,7 +539,7 @@ async function runKategoriBrowse(
   const rows = data as Partial<PublikRow>[];
   const hasMore = rows.length > pageSize;
   return {
-    rows: rows.slice(0, pageSize).map(await mapper()),
+    rows: await mappa(rows.slice(0, pageSize)),
     hasMore,
     page,
     pageSize,
@@ -663,7 +671,7 @@ async function runBranschSearch(
   const merged = [...pageBransch, ...extras].slice(0, pageSize);
 
   return {
-    rows: merged.map(await mapper()),
+    rows: await mappa(merged),
     hasMore: hasMoreFromBransch,
     page,
     pageSize,
@@ -751,7 +759,7 @@ async function runTextSearch(
 
   const merged = [...pageRows, ...extras].slice(0, pageSize);
   return {
-    rows: merged.map(await mapper()),
+    rows: await mappa(merged),
     hasMore,
     page,
     pageSize,
@@ -782,7 +790,7 @@ export async function listRelatedForetag(
     .order("cfarnr", { ascending: true })
     .limit(limit);
   if (error || !data) return [];
-  return (data as Partial<PublikRow>[]).map(await mapper());
+  return mappa(data as Partial<PublikRow>[]);
 }
 
 /**
@@ -806,6 +814,8 @@ export async function getForetagByCfarnr(cfarnr: number): Promise<Foretag | null
     if (error && error.code !== "PGRST116") console.error("getForetagByCfarnr", error);
     return null;
   }
+  // Ett raderat bolag (kontrakt 1.6) finns inte: null, och sidan svarar 404.
+  if (arSparrad(data as PublikRow, await sparradeNycklar())) return null;
   return mapRow(data as PublikRow, await kontaktsparrFilter());
 }
 
@@ -915,10 +925,11 @@ export async function listIndexableForetag(): Promise<IndexerbarRad[]> {
   const supa = getSupabaseAnon();
   const PAGE = 1000;
   const out: IndexerbarRad[] = [];
+  const sparrade = await sparradeNycklar();
   for (let offset = 0; ; offset += PAGE) {
     const { data, error } = await supa
       .from(VIEW)
-      .select("cfarnr,firma,namn,postort,jurform,tel,webb,epostadress,poang,infotext")
+      .select("cfarnr,orgnr,firma,namn,postort,jurform,tel,webb,epostadress,poang,infotext")
       .in("ng1", HANTVERK_BRANSCHER)
       .or(NISCH_JURFORM_VILLKOR)
       .or("infotext.not.is.null,webb.not.is.null,epostadress.not.is.null,poang.gt.0")
@@ -929,7 +940,7 @@ export async function listIndexableForetag(): Promise<IndexerbarRad[]> {
       throw new Error(`listIndexableForetag misslyckades: ${error.message}`);
     }
     const rows = (data ?? []) as Array<Partial<PublikRow>>;
-    for (const r of rows) {
+    for (const r of utanSparrade(rows, sparrade)) {
       // Samma personuppgiftsregel som sidan: en privat e-postadress som sidan
       // inte visar kan inte heller vara det som gör sidan indexerbar.
       const rensad = rensaRegisterrad({

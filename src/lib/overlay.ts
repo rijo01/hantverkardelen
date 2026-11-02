@@ -6,6 +6,7 @@ import { branschPageSlug, foretagSlug } from "./queries";
 import { kommunByCode } from "./kommuner";
 import { getBranschNamesBulk } from "./branscher";
 import { filtreraOverlay, kontaktsparrFilter } from "./kontaktsparr";
+import { sparradeNycklar, utanSparrade } from "./foretag-sparr";
 import { HANTVERK_BRANSCHER } from "./hantverk-branscher";
 import {
   CONTRACT_VERSION,
@@ -156,6 +157,49 @@ export async function identitetFinns(
     .limit(1);
   if (error) throw new Error(`identitetFinns: ${error.message}`);
   return (data ?? []).length > 0;
+}
+
+/**
+ * Arbetsställena en raderingsnyckel omfattar (kontrakt 1.6).
+ *
+ *   orgnr      → varje arbetsställe med det orgnumret, i båda skepnaderna
+ *   cfar-<nr>  → det arbetsstället
+ *   ef-<hex>   → inga; CRM:ets reservnyckel finns aldrig i klustret
+ *
+ * `alla` är utan nischfilter: en overlay-rad på ett arbetsställe utanför
+ * nischen ska också bort. `iNischen` är de som har en sida här, och det är
+ * dem som revalideras. Bara exakta nycklar — aldrig namn.
+ */
+export async function arbetsstallenForRadering(
+  klient: SupabaseClient,
+  nyckel: string,
+): Promise<{ alla: number[]; iNischen: number[] }> {
+  const ut = { alla: [] as number[], iNischen: [] as number[] };
+  const cfar = /^cfar-(\d{1,8})$/.exec(nyckel);
+  if (!cfar && !/^\d{10}$/.test(nyckel)) return ut;
+
+  const PAGE = 1000;
+  for (let offset = 0; ; offset += PAGE) {
+    let q = klient.from(KATALOG_VY).select("cfarnr,ng1");
+    q = cfar ? q.eq("cfarnr", Number(cfar[1])) : q.in("orgnr", orgnrVarianter(nyckel));
+    const { data, error } = await q.order("cfarnr", { ascending: true }).range(offset, offset + PAGE - 1);
+    if (error) throw new Error(`arbetsstallenForRadering: ${error.message}`);
+    const rader = (data ?? []) as Array<{ cfarnr: number | null; ng1: number | null }>;
+    for (const r of rader) {
+      if (r.cfarnr == null) continue;
+      ut.alla.push(r.cfarnr);
+      if (r.ng1 != null && (HANTVERK_BRANSCHER as readonly number[]).includes(r.ng1)) {
+        ut.iNischen.push(r.cfarnr);
+      }
+    }
+    if (rader.length < PAGE) break;
+  }
+  // Ett cfar-handtag gäller arbetsstället även om det inte (längre) står i
+  // klustret: overlay-raden på det ska bort ändå.
+  if (cfar && ut.alla.length === 0) ut.alla.push(Number(cfar[1]));
+  ut.alla = [...new Set(ut.alla)];
+  ut.iNischen = [...new Set(ut.iNischen)];
+  return ut;
 }
 
 export function orgnrVarianter(externalId: string): string[] {
@@ -507,12 +551,12 @@ export async function overlayIndexerbaraSokvagar(): Promise<string[]> {
   if (cfarnr.length === 0 && orgnr.length === 0) return [];
 
   const klient = getSupabaseAnon();
-  const träffar: Array<{ cfarnr: number | null; firma: string | null; namn: string | null; postort: string | null; jurform: number | null; poang: number | null; }> = [];
+  const träffar: Array<{ cfarnr: number | null; orgnr: string | null; firma: string | null; namn: string | null; postort: string | null; jurform: number | null; poang: number | null; }> = [];
 
   if (cfarnr.length > 0) {
     const { data } = await klient
       .from(KATALOG_VY)
-      .select("cfarnr,firma,namn,postort,jurform,poang")
+      .select("cfarnr,orgnr,firma,namn,postort,jurform,poang")
       .in("cfarnr", cfarnr.map(Number))
       .in("ng1", HANTVERK_BRANSCHER);
     träffar.push(...((data ?? []) as typeof träffar));
@@ -522,15 +566,17 @@ export async function overlayIndexerbaraSokvagar(): Promise<string[]> {
     // Båda orgnr-formerna — registret lagrar bindestrecksvarianten.
     const { data } = await klient
       .from(KATALOG_VY)
-      .select("cfarnr,firma,namn,postort,jurform,poang")
+      .select("cfarnr,orgnr,firma,namn,postort,jurform,poang")
       .in("orgnr", orgnr.flatMap(orgnrVarianter))
       .in("ng1", HANTVERK_BRANSCHER)
       .limit(500);
     träffar.push(...((data ?? []) as typeof träffar));
   }
 
+  // Ett raderat bolag (kontrakt 1.6) ska inte annonseras, även om dess
+  // overlay-rad skulle ligga kvar efter en avbruten radering.
   const ut = new Set<string>();
-  for (const r of träffar) {
+  for (const r of utanSparrade(träffar, await sparradeNycklar())) {
     if (r.cfarnr == null) continue;
     ut.add(`/foretag/${foretagSlug({ ...r, cfarnr: r.cfarnr })}`);
   }

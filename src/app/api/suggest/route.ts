@@ -3,6 +3,7 @@ import { getSupabaseAnon } from "@/lib/supabase";
 import { foretagSlug } from "@/lib/queries";
 import { namnsokFarTraffa, publiktNamn } from "@/lib/kluster/personuppgifter";
 import { kontaktsparrFilter } from "@/lib/kontaktsparr";
+import { sparradeNycklar, utanSparrade } from "@/lib/foretag-sparr";
 import { ALL_KOMMUNER } from "@/lib/kommuner";
 import { TOP_BRANSCHER } from "@/lib/stats";
 import { HANTVERK_BRANSCHER, NISCH_JURFORM_VILLKOR } from "@/lib/hantverk-branscher";
@@ -127,7 +128,7 @@ export async function GET(req: Request) {
     const supa = getSupabaseAnon();
     const { data, error } = await supa
       .from("foretag_publik")
-      .select("cfarnr,firma,namn,postort,kommun,jurform,poang")
+      .select("cfarnr,orgnr,firma,namn,postort,kommun,jurform,poang")
       .textSearch("search_vector", raw, {
         type: "websearch",
         config: "swedish_unaccent",
@@ -140,16 +141,20 @@ export async function GET(req: Request) {
       .limit(5);
 
     if (!error && data) {
-      foretagHits = (
+      // Ett raderat bolag (kontrakt 1.6) föreslås aldrig. Se lib/foretag-sparr.ts.
+      const sparrade = await sparradeNycklar();
+      foretagHits = utanSparrade(
         data as Array<{
           cfarnr: number;
+          orgnr: string | null;
           firma: string | null;
           namn: string | null;
           postort: string | null;
           kommun: string | null;
           jurform: number | null;
           poang: number | null;
-        }>
+        }>,
+        sparrade,
       )
         // Ägarens namn i search_vector får aldrig hitta en maskerad firma.
         .filter(namnsokFarTraffa)
