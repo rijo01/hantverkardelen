@@ -2,6 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { getSupabaseAdmin } from "./supabase-admin";
+import { getSupabaseAnon } from "./supabase";
 import { SAJT } from "./overlay";
 import { SPARR_TABELL, arSparradRad } from "./overlay-contract";
 
@@ -85,6 +86,53 @@ export const sparradeNycklar = cache(async (): Promise<ReadonlySet<string>> => {
     return new Set(await lasSparradeNycklar());
   } catch (e) {
     console.error("[sparr] kunde inte läsa spärren — renderar utan:", (e as Error).message);
+    return new Set();
+  }
+});
+
+/**
+ * Arbetsställena spärren omfattar, som cfarnr — för ytor som bara känner
+ * cfarnr, t.ex. ett förberäknat sitemap-urval. En orgnr-nyckel slås upp i
+ * klustret (båda orgnr-skepnaderna); `cfar-<nr>` är sitt eget tal; `ef-…`
+ * finns aldrig i klustret. Samma tagg, så DELETE släpper båda listorna.
+ */
+const lasSparradeCfarnr = unstable_cache(
+  async (): Promise<number[]> => {
+    const nycklar = await lasSparradeNycklar();
+    const ut = new Set<number>();
+    const orgnr: string[] = [];
+    for (const n of nycklar) {
+      const cfar = /^cfar-(\d{1,8})$/.exec(n);
+      if (cfar) ut.add(Number(cfar[1]));
+      else if (/^\d{10}$/.test(n)) orgnr.push(n, `${n.slice(0, 6)}-${n.slice(6)}`);
+    }
+    const klient = getSupabaseAnon();
+    for (let i = 0; i < orgnr.length; i += 200) {
+      for (let offset = 0; ; offset += 1000) {
+        const { data, error } = await klient
+          .from("foretag_publik")
+          .select("cfarnr")
+          .in("orgnr", orgnr.slice(i, i + 200))
+          .order("cfarnr", { ascending: true })
+          .range(offset, offset + 999);
+        if (error) throw new Error(`sparradeCfarnr: ${error.message}`);
+        const rader = (data ?? []) as Array<{ cfarnr: number | null }>;
+        for (const r of rader) if (r.cfarnr != null) ut.add(r.cfarnr);
+        if (rader.length < 1000) break;
+      }
+    }
+    return [...ut];
+  },
+  ["overlay-foretag-sparr-cfarnr"],
+  { tags: [SPARR_TAGG], revalidate: 3600 },
+);
+
+/** Spärrade arbetsställen för den här requesten. Fail-open, som spärren. */
+export const sparradeCfarnr = cache(async (): Promise<ReadonlySet<number>> => {
+  try {
+    return new Set(await lasSparradeCfarnr());
+  } catch (e) {
+    console.error("[sparr] kunde inte läsa spärrade arbetsställen — renderar utan:", (e as Error).message);
     return new Set();
   }
 });
