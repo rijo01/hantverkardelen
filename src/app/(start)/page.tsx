@@ -57,7 +57,7 @@ export default function HomePage() {
           </h1>
           <p className="mt-2 max-w-2xl text-[15px] leading-snug text-[var(--sg-on-navy-muted)] sm:mt-5 sm:text-xl sm:leading-relaxed">
             Elektriker, VVS, snickare och fler i {TOTAL_KOMMUNER} kommuner. {PAFYLLNING ? "Ur SCB:s företagsregister och ett äldre register från omkring" : "Register från omkring"} {REGISTER_AR}
-            <span className="hidden sm:inline">; inga offertformulär, inga köpta betyg</span>.
+            <span className="hidden sm:inline">; inga offertformulär</span>.
           </p>
           <div className="mt-4 max-w-5xl sm:mt-8">
             <SearchBar variant="dual" snabbval />
