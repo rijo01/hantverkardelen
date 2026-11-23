@@ -40,7 +40,11 @@ const SITEMAP_LISTAR_FORETAG = true;
 
 const TABELL = "overlay_profil";
 const BUCKET = "overlay-logos";
-const REGISTER = "foretag_publik";
+/**
+ * Vyn sajten läser. Med påfyllningsflaggan är det hantverk_foretag_publik
+ * (lib/foretagsvy.ts): --register hantverk_foretag_publik.
+ */
+const REGISTER_STANDARD = "foretag_publik";
 
 // ── Argument och miljö ──────────────────────────────────────────────────────
 
@@ -54,6 +58,7 @@ const flagga = (n) => argv.includes(`--${n}`);
 const CFARNR = arg("cfarnr");
 const BAS = (arg("url") ?? "").replace(/\/$/, "");
 const SECRET = arg("secret", process.env.OVERLAY_PUBLISH_SECRET);
+const REGISTER = arg("register", REGISTER_STANDARD);
 
 /**
  * Vercels Deployment Protection släpper igenom ett anrop som bär den här
@@ -194,7 +199,15 @@ function byggPayload({
  * värd, och dit får en Vercel-hemlighet aldrig gå.
  */
 function deployHeaders(extra = {}) {
-  return { ...extra, ...(BYPASS ? { "x-vercel-protection-bypass": BYPASS } : {}) };
+  return {
+    ...extra,
+    ...(BYPASS ? { "x-vercel-protection-bypass": BYPASS } : {}),
+    // Previews bakom Vercel-inloggning: kör med `vc env run --` så finns en
+    // kortlivad OIDC-token för det länkade projektet (--oidc).
+    ...(flagga("oidc") && process.env.VERCEL_OIDC_TOKEN
+      ? { "x-vercel-trusted-oidc-idp-token": process.env.VERCEL_OIDC_TOKEN }
+      : {}),
+  };
 }
 
 async function skicka(payload, { signeraMed = null } = {}) {
