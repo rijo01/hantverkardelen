@@ -131,14 +131,13 @@ export function orgnrDisplay(
 
 /**
  * Märkningen en rad eller en profil får — och bara den här funktionen avgör den.
- * Vårddelen märker poang neutralt; hantverkardelen märker det som annons sedan 2026-11-23.
+ * Hantverkardelen visar ingen etikett för någon av dem (beslut 2026-11-23, andra
+ * gången): kunden får logotyp och fylligare profil men ingen märkning.
  *
  *   "betald"   — overlay-raden har `featured`, alltså ett aktuellt CRM-köp av
- *                framhävning. Visas som "Annons" med orange ram.
- *   "komplett" — registrets `poang > 0`. Placeringen styr sorteringen (poang
- *                sorteras först), och en placering som köpts och lyfter raden
- *                är en annons: visas också som "Annons" (beslut 2026-11-23).
- *                Skillnaden mot "betald" är bara ramen.
+ *                framhävning. Orange ram på kortet.
+ *   "komplett" — registrets `poang > 0`. Sorteras först, logotyp och
+ *                sökord visas, ingen etikett.
  *
  * Tidigare hette detta isFeatured() och gav "Utvald" för båda fallen.
  * Sorteringen påverkas INTE: poang och overlay-vikten styr ordningen som förut

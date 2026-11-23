@@ -17,7 +17,7 @@ import {
 import { getBranschName } from "@/lib/branscher";
 import { JsonLd, buildBreadcrumb } from "@/components/json-ld";
 import { Breadcrumb } from "@/components/breadcrumb";
-import { KomplettEtikett, RingKnapp } from "@/components/company-card";
+import { RingKnapp } from "@/components/company-card";
 import { MobilRingrad } from "@/components/mobil-ringrad";
 import { yrkesnamn } from "@/lib/yrkesnamn";
 import { yrkeFor } from "@/lib/kluster/klassning";
@@ -178,8 +178,8 @@ export default async function ForetagSida({
   // kortet längre ner. `overlay` är utkastet bakom en förhandsvisning.
   const logoUrl = sidhuvudetsLogotyp(overlay, safeLogotypUrl(f.logotyp))?.url ?? null;
 
-  // "Utvald · annons" bara för ett aktuellt overlay-köp (featured); registrets
-  // poang (som styr sorteringen) märks också "Annons". Se profilMarkning().
+  // Bara ett aktuellt overlay-köp (featured) styr något här; registrets poang
+  // sorterar men märks inte (beslut 2026-11-23). Se profilMarkning().
   const markning = profilMarkning(f, overlay);
 
   /**
@@ -260,8 +260,8 @@ export default async function ForetagSida({
 
   // ── Visningsläge ──
   // BETALT när det finns en aktiv overlay-rad (eller, i förhandsvisning, ett
-  // utkast): allt kunden lämnat visas, märkt som betalt. Annars registret —
-  // med registrets poang märkt "Annons" (det styr sorteringen).
+  // utkast): allt kunden lämnat visas, märkt som betalt. Annars registret;
+  // registrets poang sorterar först men får ingen etikett.
   const profil = overlay ? betaldProfil(overlay) : null;
   const lan = kommun ? lanByCode(kommun.lan) : null;
   const yrke = yrkeFor(f) ?? (f.ng1 ? yrkesnamn(f.ng1, branschName) : branschName);
@@ -326,8 +326,6 @@ export default async function ForetagSida({
             <div className="min-w-0 space-y-2">
               {profil ? (
                 <p className="sg-label text-ad">Betald profil · uppgifter från företaget</p>
-              ) : markning === "komplett" ? (
-                <KomplettEtikett />
               ) : null}
               {(yrke || kommun) && (
                 <p className="sg-label">

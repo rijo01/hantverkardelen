@@ -33,7 +33,7 @@ export type Kontaktvag = { telefon: string; kalla: string; datum?: string | null
  *   c) kund eller bekräftad profil (poang > 0 eller overlay): dessutom
  *      logotyp, tjänster och arbetsområde, och numret företaget lämnat.
  *
- * Annonser (aktivt overlay-köp, featured) märks "Annons" och får orange ram.
+ * Aktivt overlay-köp (featured) får orange ram. Kunder får ingen etikett (beslut 2026-11-23).
  * Namnet skrivs som registret skriver det; bara typografin är lättare.
  */
 export function CompanyCard({
@@ -113,7 +113,6 @@ export function CompanyCard({
           />
         )}
         <div className="min-w-0 flex-1">
-          {markning && <AnnonsEtikett />}
           <h3 className="min-w-0 text-[17px] font-semibold leading-snug text-ink">
             <Link href={href} className="underline-offset-4 hover:underline">
               {name}
@@ -165,28 +164,6 @@ export function CompanyCard({
   );
 }
 
-/** Etiketten för profilMarkning(): båda lägena är betalda placeringar och märks "Annons". */
-export function ProfilEtikett({ markning }: { markning: ProfilMarkning }) {
-  return markning ? <AnnonsEtikett /> : null;
-}
-
-/** Betald placering. Texten säger vad det är, inte bara att det syns. */
-export function AnnonsEtikett() {
-  return (
-    <p
-      className="mb-1 inline-block border border-ad px-1.5 py-px text-[12px] font-bold uppercase tracking-[0.06em] text-ad"
-      title="Företaget betalar för att synas före andra. Placeringen säger inget om kvaliteten."
-    >
-      Annons
-    </p>
-  );
-}
-
-/** Registrets poang — en betald placering som styr sorteringen, alltså en annons. */
-export function KomplettEtikett() {
-  return <AnnonsEtikett />;
-}
-
 /**
  * Ringknappen — samma i alla listor och på företagssidan. Kantad navy som
  * standard, fylld navy för betalda rader och företagssidans huvud. Numret
@@ -228,7 +205,7 @@ export function CompanyCardList({
   children,
 }: {
   children: React.ReactNode;
-  /** Kvar för anroparnas skull; alla betalda placeringar heter nu "Annons". */
+  /** Kvar för anroparnas skull; kunderna märks inte längre (beslut 2026-11-23). */
   komplettaFinns?: boolean;
 }) {
   return (
