@@ -44,7 +44,7 @@ export async function generateMetadata({
   const name = (await getBranschName(ng1)) ?? `SNI ${ng1}`;
   const rubrik = rubrikNamn(ng1, name);
   const title = n > 1 ? `${rubrik} i ${kommun.name} – sida ${n}` : `${rubrik} i ${kommun.name}`;
-  const description = `Registrerade företag inom ${rubrik.toLowerCase()} i ${kommun.name} kommun, med yrke och ort och en egen sida för varje företag.`;
+  const description = `Registrerade företag inom ${gemenerUtomForkortningar(rubrik)} i ${kommun.name} kommun, med yrke och ort och en egen sida för varje företag.`;
   // Kanonisk URL byggs ur branschnamnet, inte ur inkommande slug. Routen
   // matchar på det avslutande id:t, så /kommun/x/vadsomhelst-43210 svarade
   // 200 och pekade canonical på sig själv — obegränsat med dubbletter av
@@ -257,4 +257,9 @@ export default async function BranschSida({
       </ResultatVy>
     </div>
   );
+}
+
+/** "VVS & rörmokare" -> "VVS & rörmokare", "Vatten & avlopp (VA)" -> "vatten & avlopp (VA)". */
+function gemenerUtomForkortningar(s: string): string {
+  return s.replace(/[A-Za-zÅÄÖåäöÉé]+/g, (w) => (w.length > 1 && w === w.toUpperCase() ? w : w.toLowerCase()));
 }
