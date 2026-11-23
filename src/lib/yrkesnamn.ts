@@ -6,9 +6,10 @@
  * kommunsida blev det tre likadana rader som ledde till tre olika listor.
  * Här får varje kod ett eget namn som säger vad som skiljer den från de andra.
  *
- * Påverkar INTE vilka branscher som ingår (det är hantverk-branscher.ts), inte
- * sidornas rubriker eller metadata (de läser t_bransch som förut) och inte
- * URL:erna. Saknas en kod här faller anroparen tillbaka på registrets namn.
+ * Påverkar INTE vilka branscher som ingår (det är hantverk-branscher.ts) och
+ * inte URL:erna (de byggs av registrets namn, t_bransch + kluster/klassning).
+ * Rubrikerna tar registrets namn, utom där två koder delar det: se rubrikNamn.
+ * Saknas en kod här faller anroparen tillbaka på registrets namn.
  */
 const YRKESNAMN: Readonly<Record<number, string>> = {
   41200: "Byggföretag",
@@ -48,4 +49,29 @@ const YRKESNAMN: Readonly<Record<number, string>> = {
 
 export function yrkesnamn(ng1: number, registerNamn?: string | null): string {
   return YRKESNAMN[ng1] ?? registerNamn ?? `Bransch ${ng1}`;
+}
+
+/**
+ * Nischkoder vars registernamn (t_bransch, efter rättelserna i
+ * kluster/klassning BRANSCHNAMN) delas med en annan nischkod. Kontrollerat
+ * 2026-11-23:
+ *   "Anläggningsarbeten"                 42110, 42120
+ *   "Betong- & Betongvarutillverkning"   23610, 23630, 23690
+ *   "Dörrar & Fönster"                   16233, 25120
+ *   "Takarbeten"                         43911, 43912
+ * Utan undantaget fick två kommun×yrke-sidor samma H1, title och brödsmula.
+ */
+const DELAT_REGISTERNAMN: ReadonlySet<number> = new Set([
+  42110, 42120, 23610, 23630, 23690, 16233, 25120, 43911, 43912,
+]);
+
+/**
+ * Namnet i rubrik, title, metabeskrivning och brödsmula för en kommun×yrke-sida
+ * och länken dit. Registrets namn, utom för koder som delar det med en annan
+ * kod: där yrkesnamnet ("Dörrar & fönster av trä"). Adressen byggs fortfarande
+ * av registrets namn (branschPageSlug) och ändras inte.
+ */
+export function rubrikNamn(ng1: number, registerNamn?: string | null): string {
+  if (DELAT_REGISTERNAMN.has(ng1)) return yrkesnamn(ng1, registerNamn);
+  return registerNamn ?? `SNI ${ng1}`;
 }

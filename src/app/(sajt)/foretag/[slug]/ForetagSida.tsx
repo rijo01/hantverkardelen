@@ -19,7 +19,7 @@ import { JsonLd, buildBreadcrumb } from "@/components/json-ld";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { RingKnapp } from "@/components/company-card";
 import { MobilRingrad } from "@/components/mobil-ringrad";
-import { yrkesnamn } from "@/lib/yrkesnamn";
+import { rubrikNamn, yrkesnamn } from "@/lib/yrkesnamn";
 import { yrkeFor } from "@/lib/kluster/klassning";
 import {
   displayName,
@@ -223,7 +223,7 @@ export default async function ForetagSida({
     ...(kommun && branschName && f.ng1
       ? [
           {
-            name: branschName,
+            name: rubrikNamn(f.ng1, branschName),
             href: `/kommun/${kommun.slug}/${branschPageSlug(branschName, f.ng1)}`,
           },
         ]
@@ -513,7 +513,7 @@ export default async function ForetagSida({
                 value={
                   branschName ? (
                     <>
-                      {branschName}
+                      {f.ng1 ? rubrikNamn(f.ng1, branschName) : branschName}
                       {f.ng1 ? <span className="tabular-nums text-ink-3"> · SNI {f.ng1}</span> : null}
                     </>
                   ) : null

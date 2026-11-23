@@ -11,7 +11,7 @@ import {
 } from "@/lib/queries";
 import { getBranschName } from "@/lib/branscher";
 import { getKategoriBySlug } from "@/lib/hantverk-kategorier";
-import { yrkesnamn } from "@/lib/yrkesnamn";
+import { rubrikNamn, yrkesnamn } from "@/lib/yrkesnamn";
 import { JsonLd, buildBreadcrumb } from "@/components/json-ld";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { CompanyCard, CompanyCardList } from "@/components/company-card";
@@ -300,7 +300,7 @@ async function ResultsAsync({
             href={`/kommun/${kommun.slug}/${branschPageSlug(landning.namn, landning.ng1)}`}
             className="sg-link"
           >
-            {landning.namn} i {kommun.name}
+            {rubrikNamn(landning.ng1, landning.namn)} i {kommun.name}
           </Link>{" "}
           med närliggande kommuner och andra yrken i orten.
         </p>

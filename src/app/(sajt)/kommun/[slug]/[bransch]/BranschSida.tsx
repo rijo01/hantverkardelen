@@ -4,7 +4,7 @@ import { notFound, permanentRedirect } from "next/navigation";
 import { ALL_KOMMUNER, kommunBySlug } from "@/lib/kommuner";
 import { lanByCode } from "@/lib/lan";
 import { getBranschName, getBranschNamesBulk } from "@/lib/branscher";
-import { yrkesnamn } from "@/lib/yrkesnamn";
+import { rubrikNamn, yrkesnamn } from "@/lib/yrkesnamn";
 import { KOMMUN_BRANSCH_FORETAG } from "@/lib/seo-snapshot";
 import {
   branschPageSlug,
@@ -42,7 +42,8 @@ export async function generateMetadata({
   if (!kommun || !ng1) return { title: "Sida hittades inte" };
   const n = sida && /^\d{1,4}$/.test(sida) ? Number(sida) : 1;
   const name = (await getBranschName(ng1)) ?? `SNI ${ng1}`;
-  const title = n > 1 ? `${name} i ${kommun.name} – sida ${n}` : `${name} i ${kommun.name}`;
+  const rubrik = rubrikNamn(ng1, name);
+  const title = n > 1 ? `${rubrik} i ${kommun.name} – sida ${n}` : `${rubrik} i ${kommun.name}`;
   const description = `Registrerade företag inom ${yrkesnamn(ng1, name).toLowerCase()} i ${kommun.name} kommun, med yrke och ort och en egen sida för varje företag.`;
   // Kanonisk URL byggs ur branschnamnet, inte ur inkommande slug. Routen
   // matchar på det avslutande id:t, så /kommun/x/vadsomhelst-43210 svarade
@@ -151,14 +152,14 @@ export default async function BranschSida({
   const breadcrumbItems = [
     { name: "Hantverkardelen", href: "/" },
     { name: kommun.name, href: `/kommun/${kommun.slug}` },
-    { name: branschName, href: `/kommun/${kommun.slug}/${bransch}` },
+    { name: rubrikNamn(ng1, branschName), href: `/kommun/${kommun.slug}/${bransch}` },
   ];
 
   const breadcrumbJsonLd = buildBreadcrumb([
     { name: "Hantverkardelen", url: SITE_URL },
     { name: kommun.name, url: `${SITE_URL}/kommun/${kommun.slug}` },
     {
-      name: branschName,
+      name: rubrikNamn(ng1, branschName),
       url: `${SITE_URL}/kommun/${kommun.slug}/${bransch}`,
     },
   ]);
@@ -185,7 +186,7 @@ export default async function BranschSida({
       <Breadcrumb items={breadcrumbItems} />
 
       <ResultatVy
-        rubrik={`${branschName} i ${kommun.name}`}
+        rubrik={`${rubrikNamn(ng1, branschName)} i ${kommun.name}`}
         antal={antal > 0 ? `${fmt(antal)} företag` : ""}
         ingress={
           <p>
