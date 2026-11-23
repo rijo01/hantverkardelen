@@ -66,12 +66,30 @@ const DELAT_REGISTERNAMN: ReadonlySet<number> = new Set([
 ]);
 
 /**
+ * Koder där rubrikerna tar yrkesnamnet fast registrets namn är unikt.
+ * Registrets namn var en firmakategori ("Byggmästare", "Ventilationsfirmor")
+ * eller en ordagrann SNI-text. Beslut 2026-11-23.
+ */
+const YRKESNAMN_I_RUBRIK: ReadonlySet<number> = new Set([41200, 43221, 43222, 43290, 43310, 42210]);
+
+/**
+ * Rubrik som skiljer sig från menyns korta yrkesnamn. Menyn och listorna
+ * behåller "Golv & kakel" och "Trädgård & grönytor". Beslut 2026-11-23.
+ */
+const RUBRIKNAMN: Readonly<Record<number, string>> = {
+  43330: "Golvläggare & plattsättare",
+  81300: "Trädgårdsskötsel",
+};
+
+/**
  * Namnet i rubrik, title, metabeskrivning och brödsmula för en kommun×yrke-sida
- * och länken dit. Registrets namn, utom för koder som delar det med en annan
- * kod: där yrkesnamnet ("Dörrar & fönster av trä"). Adressen byggs fortfarande
- * av registrets namn (branschPageSlug) och ändras inte.
+ * och länken dit. I första hand RUBRIKNAMN, sedan yrkesnamnet för koder som
+ * delar registernamn med en annan kod eller står i YRKESNAMN_I_RUBRIK, annars
+ * registrets namn. Adressen byggs fortfarande av registrets namn
+ * (branschPageSlug) och ändras inte.
  */
 export function rubrikNamn(ng1: number, registerNamn?: string | null): string {
-  if (DELAT_REGISTERNAMN.has(ng1)) return yrkesnamn(ng1, registerNamn);
+  if (RUBRIKNAMN[ng1]) return RUBRIKNAMN[ng1];
+  if (DELAT_REGISTERNAMN.has(ng1) || YRKESNAMN_I_RUBRIK.has(ng1)) return yrkesnamn(ng1, registerNamn);
   return registerNamn ?? `SNI ${ng1}`;
 }
