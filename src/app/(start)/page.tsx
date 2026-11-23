@@ -127,6 +127,6 @@ const LOFTEN = [
   },
   {
     rubrik: "Öppen ordning",
-    text: "Inga köpta betyg. Företag med betald profil visas först, och under varje lista står hur den är sorterad.",
+    text: "Företag med betald profil visas först, och under varje lista står hur den är sorterad.",
   },
 ];
