@@ -131,13 +131,14 @@ export function orgnrDisplay(
 
 /**
  * Märkningen en rad eller en profil får — och bara den här funktionen avgör den.
- * Samma regel som vårddelen.
+ * Vårddelen märker poang neutralt; hantverkardelen märker det som annons sedan 2026-11-23.
  *
  *   "betald"   — overlay-raden har `featured`, alltså ett aktuellt CRM-köp av
- *                framhävning. Visas som "Utvald · annons".
- *   "komplett" — registrets `poang > 0` utan aktuellt köp. `poang` är ett
- *                gammalt betallager som ingen betalar för i dag, så det får
- *                aldrig se ut som en annons. Visas som "Komplett profil".
+ *                framhävning. Visas som "Annons" med orange ram.
+ *   "komplett" — registrets `poang > 0`. Placeringen styr sorteringen (poang
+ *                sorteras först), och en placering som köpts och lyfter raden
+ *                är en annons: visas också som "Annons" (beslut 2026-11-23).
+ *                Skillnaden mot "betald" är bara ramen.
  *
  * Tidigare hette detta isFeatured() och gav "Utvald" för båda fallen.
  * Sorteringen påverkas INTE: poang och overlay-vikten styr ordningen som förut

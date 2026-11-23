@@ -480,6 +480,62 @@ export async function searchForetag(
   return runTextSearch(cleaned, opts, page, pageSize, from, to);
 }
 
+/**
+ * VVS-kategorin rymmer 43290 "Annan bygginstallation", och där ligger i
+ * registret låssmeder, säkerhetsfirmor, hissfirmor och isolerare (se YRKE_I_KOD
+ * i kluster/klassning.ts — samma mönster här, som Postgres-regex). De hör inte
+ * hemma under VVS. Undantag: en kund (poang > 0) vars köpta sökord gäller VVS —
+ * den står kvar, och märks som annons som alla kunder.
+ *
+ * Gäller bara kategorier med flera koder (kategorin vvs). Listan för 43290
+ * själv ("Övriga bygginstallationer") visar alla.
+ */
+const ANNAT_YRKE_43290 =
+  "(HISS|ELEVATOR|\\mLIFT|RULLTRAPP|\\mKONE\\M|SCHINDLER|\\mOTIS\\M|LÅS|\\mLOCK|NYCKEL|SÄKERHET|SECURITY|\\mLARM|ASSA\\M|ISOLER|AKUSTIK|LJUDDÄMP|LJUDISOL)";
+const VVS_SOKORD = /(vvs|rör|värme|ventil|kyl|avlopp|sanitet|badrum|vatten)/i;
+
+let vvsUndantag: { cfarnr: number[]; hamtad: number } | null = null;
+
+/** Kunder i 43290 med annat yrke men köpta VVS-sökord. Cachas en timme. */
+async function vvsUndantagCfarnr(): Promise<number[]> {
+  if (vvsUndantag && Date.now() - vvsUndantag.hamtad < 3_600_000) return vvsUndantag.cfarnr;
+  const supa = getSupabaseAnon();
+  const { data: kunder, error } = await supa
+    .from(VIEW)
+    .select("cfarnr")
+    .eq("ng1", 43290)
+    .gt("poang", 0)
+    .or(`firma.imatch."${ANNAT_YRKE_43290}",namn.imatch."${ANNAT_YRKE_43290}"`)
+    .limit(500);
+  if (error || !kunder) return vvsUndantag?.cfarnr ?? [];
+  const ids = (kunder as Array<{ cfarnr: number }>).map((k) => k.cfarnr);
+  let undantag: number[] = [];
+  if (ids.length > 0) {
+    const { data: ord } = await supa.from("sokordtable").select("cfarnr,sokord").in("cfarnr", ids).limit(5000);
+    undantag = [
+      ...new Set(
+        ((ord ?? []) as Array<{ cfarnr: number; sokord: string | null }>)
+          .filter((r) => r.sokord && VVS_SOKORD.test(r.sokord))
+          .map((r) => r.cfarnr),
+      ),
+    ];
+  }
+  vvsUndantag = { cfarnr: undantag, hamtad: Date.now() };
+  return undantag;
+}
+
+/** PostgREST-villkoret som håller 43290:s låssmeder m.fl. utanför en kategori. */
+async function utanAnnatYrke43290(ng1List: readonly number[]): Promise<string | null> {
+  if (!ng1List.includes(43290) || ng1List.length < 2) return null;
+  const undantag = await vvsUndantagCfarnr();
+  const re = ANNAT_YRKE_43290;
+  return [
+    "ng1.neq.43290",
+    `and(or(firma.is.null,firma.not.imatch."${re}"),or(namn.is.null,namn.not.imatch."${re}"))`,
+    ...(undantag.length ? [`cfarnr.in.(${undantag.join(",")})`] : []),
+  ].join(",");
+}
+
 async function runKategoriBrowse(
   ng1List: readonly number[],
   opts: { kommun?: string; lan?: string; postort?: string; aeantMin?: number; aeantMax?: number },
@@ -501,6 +557,8 @@ async function runKategoriBrowse(
     .select(COLUMNS_LIST)
     .in("ng1", ng1List as number[])
     .or(NISCH_JURFORM_VILLKOR);
+  const yrkesfilter = await utanAnnatYrke43290(ng1List);
+  if (yrkesfilter) q = q.or(yrkesfilter);
   q = applyGeoFilter(q, opts);
   q = applyAeantFilter(q, opts);
 
@@ -520,6 +578,7 @@ async function runKategoriBrowse(
         .select("id", { count: "exact", head: true })
         .in("ng1", ng1List as number[])
         .or(NISCH_JURFORM_VILLKOR);
+      if (yrkesfilter) cq = cq.or(yrkesfilter);
       cq = applyGeoFilter(cq, opts);
       cq = applyAeantFilter(cq, opts);
       const { count, error } = await cq;

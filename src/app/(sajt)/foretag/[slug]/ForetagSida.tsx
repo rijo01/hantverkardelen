@@ -179,7 +179,7 @@ export default async function ForetagSida({
   const logoUrl = sidhuvudetsLogotyp(overlay, safeLogotypUrl(f.logotyp))?.url ?? null;
 
   // "Utvald · annons" bara för ett aktuellt overlay-köp (featured); registrets
-  // gamla poang får "Komplett profil". Se profilMarkning().
+  // poang (som styr sorteringen) märks också "Annons". Se profilMarkning().
   const markning = profilMarkning(f, overlay);
 
   /**
@@ -261,7 +261,7 @@ export default async function ForetagSida({
   // ── Visningsläge ──
   // BETALT när det finns en aktiv overlay-rad (eller, i förhandsvisning, ett
   // utkast): allt kunden lämnat visas, märkt som betalt. Annars registret —
-  // med registrets gamla poang som en neutral "Komplett profil".
+  // med registrets poang märkt "Annons" (det styr sorteringen).
   const profil = overlay ? betaldProfil(overlay) : null;
   const lan = kommun ? lanByCode(kommun.lan) : null;
   const yrke = yrkeFor(f) ?? (f.ng1 ? yrkesnamn(f.ng1, branschName) : branschName);

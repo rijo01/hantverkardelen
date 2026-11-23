@@ -6,6 +6,7 @@ import { safeLogotypUrl } from "@/lib/sanitize-html";
 import { REGISTER_AR } from "@/lib/dataprovenans";
 import { yrkesnamn } from "@/lib/yrkesnamn";
 import { yrkeFor } from "@/lib/kluster/klassning";
+import { VISA_REGISTERTELEFON } from "@/lib/flaggor";
 import { anstallda } from "@/lib/storleksklass";
 import {
   displayName,
@@ -28,6 +29,7 @@ export type Kontaktvag = { telefon: string; kalla: string; datum?: string | null
  *
  *   a) registerrad: namn, yrke, ort — och hemsidelänk när registret har en.
  *   b) med kontaktväg: dessutom Ring-knapp och källa/datum för numret.
+ *      Avstängt bakom VISA_REGISTERTELEFON (lib/flaggor.ts) tills vidare.
  *   c) kund eller bekräftad profil (poang > 0 eller overlay): dessutom
  *      logotyp, tjänster och arbetsområde, och numret företaget lämnat.
  *
@@ -69,11 +71,13 @@ export function CompanyCard({
   const kund = markning != null || overlay != null;
   // Kundens eget nummer (overlay eller poang) går före; annars läge b:s nummer.
   const kundensTelefon = visatTelefon(foretag.tel, overlay);
-  const telefon = kundensTelefon ?? kontaktvag?.telefon ?? null;
+  // Läge b är avstängt bakom flaggan tills SCB:s villkor är lästa (lib/flaggor.ts).
+  const registernummer = VISA_REGISTERTELEFON ? kontaktvag : null;
+  const telefon = kundensTelefon ?? registernummer?.telefon ?? null;
   const nummerKalla = kundensTelefon
     ? "Lämnat av företaget"
-    : kontaktvag
-      ? [`Källa: ${kontaktvag.kalla}`, kontaktvag.datum].filter(Boolean).join(", ")
+    : registernummer
+      ? [`Källa: ${registernummer.kalla}`, registernummer.datum].filter(Boolean).join(", ")
       : null;
   const size = anstallda(foretag.storleksklass);
   const logo = kund ? (sidhuvudetsLogotyp(overlay, safeLogotypUrl(foretag.logotyp))?.url ?? null) : null;
@@ -109,15 +113,12 @@ export function CompanyCard({
           />
         )}
         <div className="min-w-0 flex-1">
-          {betald && <AnnonsEtikett />}
-          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
-            <h3 className="min-w-0 text-[17px] font-semibold leading-snug text-ink">
-              <Link href={href} className="underline-offset-4 hover:underline">
-                {name}
-              </Link>
-            </h3>
-            {markning === "komplett" && <KomplettEtikett />}
-          </div>
+          {markning && <AnnonsEtikett />}
+          <h3 className="min-w-0 text-[17px] font-semibold leading-snug text-ink">
+            <Link href={href} className="underline-offset-4 hover:underline">
+              {name}
+            </Link>
+          </h3>
           {fakta.length > 0 && (
             <p className="mt-0.5 text-[15px] leading-snug text-ink-2">{fakta.join(" · ")}</p>
           )}
@@ -164,11 +165,9 @@ export function CompanyCard({
   );
 }
 
-/** Etiketten för profilMarkning(): annons för köp, neutral för registrets poang. */
+/** Etiketten för profilMarkning(): båda lägena är betalda placeringar och märks "Annons". */
 export function ProfilEtikett({ markning }: { markning: ProfilMarkning }) {
-  if (markning === "betald") return <AnnonsEtikett />;
-  if (markning === "komplett") return <KomplettEtikett />;
-  return null;
+  return markning ? <AnnonsEtikett /> : null;
 }
 
 /** Betald placering. Texten säger vad det är, inte bara att det syns. */
@@ -176,23 +175,16 @@ export function AnnonsEtikett() {
   return (
     <p
       className="mb-1 inline-block border border-ad px-1.5 py-px text-[12px] font-bold uppercase tracking-[0.06em] text-ad"
-      title="Företaget betalar för att synas först. Placeringen säger inget om kvaliteten."
+      title="Företaget betalar för att synas före andra. Placeringen säger inget om kvaliteten."
     >
       Annons
     </p>
   );
 }
 
-/** Registrets gamla poang. Neutral — det är inte en annons och inget betyg. */
+/** Registrets poang — en betald placering som styr sorteringen, alltså en annons. */
 export function KomplettEtikett() {
-  return (
-    <span
-      className="inline-flex items-center border border-line px-1.5 py-0.5 text-xs font-semibold text-ink-2"
-      title="Företagets registeruppgifter är kompletta. Inte en annons."
-    >
-      Komplett profil
-    </span>
-  );
+  return <AnnonsEtikett />;
 }
 
 /**
@@ -234,19 +226,16 @@ export function RingKnapp({
  */
 export function CompanyCardList({
   children,
-  komplettaFinns = false,
 }: {
   children: React.ReactNode;
-  /** Finns rader med registrets poang ("Komplett profil")? Då nämns de i sorteringen. */
+  /** Kvar för anroparnas skull; alla betalda placeringar heter nu "Annons". */
   komplettaFinns?: boolean;
 }) {
   return (
     <div>
       <ol className="space-y-2">{children}</ol>
       <p className="mt-4 text-sm leading-relaxed text-ink-3">
-        Sorterat: annonser först,{" "}
-        {komplettaFinns ? "därefter företag med komplett profil och sedan" : "därefter"} efter
-        antal arbetsställen. Antal anställda är registrets storleksklass från ca {REGISTER_AR}.
+        Sorterat: annonser först, därefter efter antal arbetsställen. Antal anställda är registrets storleksklass från ca {REGISTER_AR}.
         Telefonnummer visas när företaget självt har lämnat dem. Hemsidor ur registret kan vara
         inaktuella.
       </p>
