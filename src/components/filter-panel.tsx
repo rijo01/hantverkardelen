@@ -2,7 +2,7 @@ import { ALL_KOMMUNER, type Kommun } from "@/lib/kommuner";
 import { HANTVERK_KATEGORIER } from "@/lib/hantverk-kategorier";
 import { KOMMUN_BRANSCH_FORETAG } from "@/lib/seo-snapshot";
 import { kategoriNamn } from "@/lib/sokfraga";
-import { REGISTER_AR } from "@/lib/dataprovenans";
+import { KALLA_KORT } from "@/lib/dataprovenans";
 import { LankLista, SidoRuta } from "@/components/resultat-vy";
 
 export type FilterState = {
@@ -84,8 +84,7 @@ export function sokSidospalt({
         sist={kommun ? { href: `/kommun/${kommun.slug}`, label: `Alla hantverkare i ${kommun.name}` } : undefined}
       />
       <p className="px-1 text-xs leading-relaxed text-ink-3">
-        Uppgifterna kommer från ett näringslivsregister från omkring{" "}
-        {REGISTER_AR}. Personnummer för enskilda firmor visas aldrig.
+        Uppgifterna kommer från {KALLA_KORT}. Personnummer för enskilda firmor visas aldrig.
       </p>
     </>
   );

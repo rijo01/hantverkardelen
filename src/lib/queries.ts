@@ -7,6 +7,7 @@ import {
 } from "./hantverk-branscher";
 import { kommunCodesForLan } from "./lan";
 import { filtreraSokord, kontaktsparrFilter } from "./kontaktsparr";
+import { FORETAG_VY, PAFYLLNING_KOLUMNER } from "./foretagsvy";
 import { arSparrad, sparradeNycklar, utanSparrade } from "./foretag-sparr";
 import type { KontaktsparrFilter } from "./overlay-contract";
 import { foretagIsIndexable } from "./seo";
@@ -70,7 +71,8 @@ export function _aeantFilterArbetsstallen<T>(q: T, opts: AeantFilter): T {
 }
 
 /**
- * Datalager. Alla anrop går mot vyn `foretag_publik` via anon-nyckeln.
+ * Datalager. Alla anrop går mot vyn FORETAG_VY (lib/foretagsvy.ts) via anon-nyckeln:
+ * `foretag_publik`, eller med flaggan PAFYLLNING `hantverk_foretag_publik`.
  *
  * Hantverkardelen-nisch: ALLA företagsqueries filtreras med
  * .in("ng1", HANTVERK_BRANSCHER) så att enbart hem- & hantverksföretag visas.
@@ -146,6 +148,18 @@ export type Foretag = {
    * lämnar aldrig mapRow.
    */
   namnDolt?: boolean;
+  /**
+   * Var raden kommer ifrån. "register2011" är det gamla registret
+   * (aesamtable); "infofinder" är påfyllningen (hantverk_pafyllning), läst ur
+   * SCB:s arbetsställeregister via Infofinder. Avgör källtexten på sidan.
+   */
+  kalla: "register2011" | "infofinder";
+  /** Kommunen är härledd ur postnumret (registret saknade den). */
+  kommunHarledd: boolean;
+  /** Bolagsverkets verksamhetsbeskrivning. Visas, räknas inte i grind 2. */
+  verksamhet: string | null;
+  /** När raden senast lästes ur källan (ISO-datum), bara för påfyllningen. */
+  uppdaterad: string | null;
 };
 
 type PublikRow = {
@@ -170,15 +184,23 @@ type PublikRow = {
   infotext: string | null;
   logotyp: string | null;
   kontaktperson: string | null;
+  // Bara i hantverk_foretag_publik (flaggan PAFYLLNING).
+  storleksklass?: number | null;
+  kalla?: string | null;
+  kommun_harledd?: boolean | null;
+  verksamhet?: string | null;
+  uppdaterad?: string | null;
 };
 
-const VIEW = "foretag_publik";
+const VIEW = FORETAG_VY;
 
 const COLUMNS =
-  "id,cfarnr,firma,namn,gatuadress,postnr,postort,tel,webb,epostadress,ng1,kommun,aeant,orgnr,ar_enskild_firma,orgnr_maskerat,jurform,poang,infotext,logotyp,kontaktperson";
+  "id,cfarnr,firma,namn,gatuadress,postnr,postort,tel,webb,epostadress,ng1,kommun,aeant,orgnr,ar_enskild_firma,orgnr_maskerat,jurform,poang,infotext,logotyp,kontaktperson" +
+  PAFYLLNING_KOLUMNER;
 
 const COLUMNS_LIST =
-  "id,cfarnr,firma,namn,gatuadress,postnr,postort,tel,webb,epostadress,ng1,kommun,aeant,orgnr,ar_enskild_firma,orgnr_maskerat,jurform,poang,logotyp,kontaktperson";
+  "id,cfarnr,firma,namn,gatuadress,postnr,postort,tel,webb,epostadress,ng1,kommun,aeant,orgnr,ar_enskild_firma,orgnr_maskerat,jurform,poang,logotyp,kontaktperson" +
+  PAFYLLNING_KOLUMNER;
 
 /**
  * Registerraden som sajten ser den.
@@ -210,7 +232,8 @@ function mapRad(row: Partial<PublikRow>, kf: KontaktsparrFilter): Foretag {
     ng1: row.ng1 ?? null,
     kommun: row.kommun ?? null,
     aeant: row.aeant ?? null,
-    storleksklass: row.cfarnr != null ? storleksklassFor(row.cfarnr) : null,
+    // De nya raderna bär sin egen storleksklass; de gamla läses ur ögonblicksbilden.
+    storleksklass: row.storleksklass ?? (row.cfarnr != null ? storleksklassFor(row.cfarnr) : null),
     orgnr: row.orgnr ?? null,
     arEnskildFirma: row.ar_enskild_firma ?? false,
     orgnrMaskerat: row.orgnr_maskerat ?? null,
@@ -219,6 +242,10 @@ function mapRad(row: Partial<PublikRow>, kf: KontaktsparrFilter): Foretag {
     infotext: kf.skrubba(row.infotext ?? null),
     logotyp: row.logotyp ?? null,
     kontaktperson: kf.skrubba(row.kontaktperson ?? null),
+    kalla: row.kalla === "infofinder" ? "infofinder" : "register2011",
+    kommunHarledd: row.kommun_harledd ?? false,
+    verksamhet: kf.skrubba(row.verksamhet ?? null),
+    uppdaterad: row.uppdaterad ?? null,
   };
 }
 
@@ -874,8 +901,9 @@ export async function getForetagByCfarnr(cfarnr: number): Promise<Foretag | null
     return null;
   }
   // Ett raderat bolag (kontrakt 1.6) finns inte: null, och sidan svarar 404.
-  if (arSparrad(data as PublikRow, await sparradeNycklar())) return null;
-  return mapRow(data as PublikRow, await kontaktsparrFilter());
+  const rad = data as unknown as PublikRow;
+  if (arSparrad(rad, await sparradeNycklar())) return null;
+  return mapRow(rad, await kontaktsparrFilter());
 }
 
 async function searchSokordCfarnrs(query: string): Promise<number[]> {
@@ -988,7 +1016,7 @@ export async function listIndexableForetag(): Promise<IndexerbarRad[]> {
   for (let offset = 0; ; offset += PAGE) {
     const { data, error } = await supa
       .from(VIEW)
-      .select("cfarnr,orgnr,firma,namn,postort,jurform,tel,webb,epostadress,poang,infotext")
+      .select(`cfarnr,orgnr,firma,namn,postort,jurform,tel,webb,epostadress,poang,infotext${PAFYLLNING_KOLUMNER ? ",kommun,kalla" : ""}`)
       .in("ng1", HANTVERK_BRANSCHER)
       .or(NISCH_JURFORM_VILLKOR)
       .or("infotext.not.is.null,webb.not.is.null,epostadress.not.is.null,poang.gt.0")
@@ -1014,7 +1042,8 @@ export async function listIndexableForetag(): Promise<IndexerbarRad[]> {
         epostadress: r.epostadress ?? null,
         poang: r.poang ?? null,
       });
-      if (foretagIsIndexable(rensad)) out.push(rensad);
+      const kalla = r.kalla === "infofinder" ? "infofinder" : "register2011";
+      if (foretagIsIndexable({ ...rensad, kalla, kommun: r.kommun ?? null })) out.push(rensad);
     }
     if (rows.length < PAGE) break;
   }

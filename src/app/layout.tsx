@@ -7,9 +7,10 @@ import { Ordmarke } from "@/components/ordmarke";
 import {
   PERSONUPPGIFT_FORKLARING,
   REGISTER_AR,
-  REGISTER_FORKLARING,
 } from "@/lib/dataprovenans";
 import { Analytics } from "@vercel/analytics/next";
+import { KALLA_KORT, SIDFOT_FORKLARING } from "@/lib/dataprovenans";
+import { PAFYLLNING } from "@/lib/flaggor";
 
 // Archivo är en variabel font: en fil täcker 400–800, i stället för fem.
 const archivo = Archivo({
@@ -63,7 +64,7 @@ export default function RootLayout({
             <div className="space-y-4">
               <Ordmarke />
               <p className="max-w-sm text-[15px] leading-relaxed">
-                Uppgifter ur ett näringslivsregister från omkring {REGISTER_AR}. Är det här ditt företag?{" "}
+                Uppgifter ur {KALLA_KORT}. Är det här ditt företag?{" "}
                 <a href="/kontakt" className="font-semibold text-white underline underline-offset-4">
                   Uppdatera dina uppgifter
                 </a>
@@ -94,7 +95,7 @@ export default function RootLayout({
             <div className="space-y-3 text-sm leading-relaxed">
               <p className="sg-label text-white">Integritet</p>
               <p>{PERSONUPPGIFT_FORKLARING}</p>
-              <p>{REGISTER_FORKLARING}</p>
+              <p>{SIDFOT_FORKLARING}</p>
               <p>
                 Vill du få en uppgift rättad eller borttagen?{" "}
                 <a href="/kontakt" className="text-white underline underline-offset-4">
@@ -109,8 +110,8 @@ export default function RootLayout({
           </div>
           <div className="border-t border-white/15">
             <p className="sg-wrap py-5 text-sm">
-              © {new Date().getFullYear()} Hantverkardelen · QS Group AB · Data från
-              näringslivsregister, ca {REGISTER_AR}
+              © {new Date().getFullYear()} Hantverkardelen · QS Group AB · Data från{" "}
+              {PAFYLLNING ? `näringslivsregister (ca ${REGISTER_AR}) och SCB` : `näringslivsregister, ca ${REGISTER_AR}`}
             </p>
           </div>
         </footer>

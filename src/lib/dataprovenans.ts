@@ -15,6 +15,7 @@
 
 /** Året registret senast kan beläggas ha uppdaterats. Delas i klustret. */
 import { REGISTER_AR } from "./kluster/register";
+import { PAFYLLNING } from "./flaggor";
 export { REGISTER_AR };
 
 /** Längre förklaring — används i informationsrutor och sidfot. */
@@ -38,3 +39,34 @@ export const PERSONUPPGIFT_FORKLARING =
   "Personnummer publiceras aldrig här — för enskilda firmor visas inget " +
   "nummer alls. Organisationsnummer för aktiebolag och andra juridiska " +
   "personer är offentliga uppgifter och visas i sin helhet.";
+
+/**
+ * Källtexten för en rad ur påfyllningen (kalla = "infofinder"): läst ur SCB:s
+ * företagsregister via Infofinder, med datum. Telefonnummer visas inte för
+ * de raderna alls förrän SCB:s villkor är lästa (lib/flaggor.ts).
+ */
+export function nyKallaForklaring(uppdaterad: string | null): string {
+  const nar = uppdaterad ? ` Uppgifterna lästes ${uppdaterad}.` : "";
+  return (
+    "Namn, adress, bransch och storlek kommer från SCB:s företagsregister." +
+    nar +
+    " Telefonnummer visas bara när företaget självt har lämnat dem. Kontrollera uppgiften innan du förlitar dig på den."
+  );
+}
+
+/**
+ * Källan i en mening, för sidfot, startsida och listor. Med påfyllningen
+ * (flaggan PAFYLLNING) kommer en del av företagen ur SCB:s företagsregister.
+ */
+export const KALLA_KORT = PAFYLLNING
+  ? `ett register från omkring ${REGISTER_AR} och SCB:s företagsregister`
+  : `ett register från omkring ${REGISTER_AR}`;
+
+/** Sidfotens längre förklaring, med påfyllningen när flaggan är på. */
+export const SIDFOT_FORKLARING = PAFYLLNING
+  ? `De flesta uppgifterna kommer från ett näringslivsregister som senast ` +
+    `uppdaterades omkring ${REGISTER_AR}; företag som lagts till senare kommer ` +
+    `från SCB:s företagsregister, och det står på varje företags sida. Adresser ` +
+    `kan ha ändrats och företag kan ha upphört. Telefonnummer visas bara när ` +
+    `företaget självt har lämnat dem. Kontrollera uppgiften innan du förlitar dig på den.`
+  : REGISTER_FORKLARING;

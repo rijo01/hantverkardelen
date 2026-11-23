@@ -7,6 +7,7 @@ import { sparradeNycklar, utanSparrade } from "@/lib/foretag-sparr";
 import { ALL_KOMMUNER } from "@/lib/kommuner";
 import { TOP_BRANSCHER } from "@/lib/stats";
 import { HANTVERK_BRANSCHER, NISCH_JURFORM_VILLKOR } from "@/lib/hantverk-branscher";
+import { FORETAG_VY } from "@/lib/foretagsvy";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -127,7 +128,7 @@ export async function GET(req: Request) {
   try {
     const supa = getSupabaseAnon();
     const { data, error } = await supa
-      .from("foretag_publik")
+      .from(FORETAG_VY)
       .select("cfarnr,orgnr,firma,namn,postort,kommun,jurform,poang")
       .textSearch("search_vector", raw, {
         type: "websearch",

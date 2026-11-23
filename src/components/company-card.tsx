@@ -6,7 +6,7 @@ import { safeLogotypUrl } from "@/lib/sanitize-html";
 import { REGISTER_AR } from "@/lib/dataprovenans";
 import { yrkesnamn } from "@/lib/yrkesnamn";
 import { yrkeFor } from "@/lib/kluster/klassning";
-import { VISA_REGISTERTELEFON } from "@/lib/flaggor";
+import { PAFYLLNING, VISA_REGISTERTELEFON } from "@/lib/flaggor";
 import { anstallda } from "@/lib/storleksklass";
 import {
   displayName,
@@ -212,7 +212,10 @@ export function CompanyCardList({
     <div>
       <ol className="space-y-2">{children}</ol>
       <p className="mt-4 text-sm leading-relaxed text-ink-3">
-        Sorterat: företag med betald profil först, därefter efter antal arbetsställen. Antal anställda är registrets storleksklass från ca {REGISTER_AR}.
+        Sorterat: företag med betald profil först, därefter efter antal arbetsställen.{" "}
+        {PAFYLLNING
+          ? `Antal anställda är storleksklassen i registret: från omkring ${REGISTER_AR}, eller från SCB:s företagsregister för företag som lagts till senare.`
+          : `Antal anställda är registrets storleksklass från ca ${REGISTER_AR}.`}
         Telefonnummer visas när företaget självt har lämnat dem. Hemsidor ur registret kan vara
         inaktuella.
       </p>

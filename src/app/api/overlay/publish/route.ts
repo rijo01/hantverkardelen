@@ -38,6 +38,7 @@ import {
   type OverlayPublishRequest,
   type OverlayPublishResponse,
 } from "@/lib/overlay-contract";
+import { FORETAG_VY } from "@/lib/foretagsvy";
 
 /**
  * POST /api/overlay/publish — CRM:ets enda väg in i sajten.
@@ -456,7 +457,7 @@ async function previewUrl(
     /\/$/,
     "",
   );
-  let q = klient.from("foretag_publik").select("cfarnr,firma,namn,postort,jurform,poang");
+  let q = klient.from(FORETAG_VY).select("cfarnr,firma,namn,postort,jurform,poang");
   q =
     entityType === "arbetsstalle"
       ? q.eq("cfarnr", Number(externalId))

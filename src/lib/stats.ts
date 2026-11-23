@@ -1,6 +1,7 @@
 import { kommunByCode, type Kommun } from "./kommuner";
 import { branschPageSlug } from "./queries";
 import { HANTVERK_BRANSCHER } from "./hantverk-branscher";
+import { nyaIBransch, nyaIKommun } from "./pafyllning-antal";
 
 /**
  * Förberäknad statistik från `foretag_publik` — Hantverkardelen-nisch.
@@ -129,13 +130,13 @@ export type BranschStat = {
 const _TOP_KOMMUNER: KommunStat[] = TOP_KOMMUNER_RAW.map((r) => {
   const k = kommunByCode(r.code);
   if (!k) throw new Error(`Unknown kommun code in stats: ${r.code}`);
-  return { kommun: k, count: r.count, href: `/kommun/${k.slug}` };
+  return { kommun: k, count: r.count + nyaIKommun(r.code), href: `/kommun/${k.slug}` };
 });
 
 const _TOP_BRANSCHER: BranschStat[] = TOP_BRANSCHER_RAW.map((r) => ({
   id: r.id,
   name: r.name,
-  count: r.count,
+  count: r.count + nyaIBransch(r.id),
   slug: branschPageSlug(r.name, r.id),
 }));
 

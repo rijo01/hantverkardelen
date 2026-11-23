@@ -37,6 +37,7 @@ import {
   PERSONUPPGIFT_FORKLARING,
   REGISTER_AR,
   REGISTER_FORKLARING,
+  nyKallaForklaring,
 } from "@/lib/dataprovenans";
 import { sanitizeInfotext, safeLogotypUrl } from "@/lib/sanitize-html";
 import {
@@ -73,7 +74,11 @@ export async function generateMetadata({
   const title = kommun ? `${name} – ${kommun.name}` : name;
   const description = `${name}${
     kommun ? ` i ${kommun.name} kommun` : ""
-  }${f.gatuadress ? `, ${f.gatuadress}` : ""}. Bransch och adress ur ett register från omkring ${REGISTER_AR}.`;
+  }${f.gatuadress ? `, ${f.gatuadress}` : ""}. ${
+    f.kalla === "infofinder"
+      ? "Bransch och adress ur SCB:s företagsregister."
+      : `Bransch och adress ur ett register från omkring ${REGISTER_AR}.`
+  }`;
   return {
     title,
     description,
@@ -142,6 +147,9 @@ export default async function ForetagSida({
   const webb = normalizeWebb(f.webb);
   const orgnrInfo = orgnrDisplay(f);
   const sanitizedInfotext = sanitizeInfotext(f.infotext);
+  // Bolagsverkets verksamhetsbeskrivning, bara för juridiska personer ur
+  // påfyllningen. Visas, men räknas inte i grind 2 (lib/seo.ts).
+  const verksamhet = !f.arEnskildFirma && f.verksamhet?.trim() ? f.verksamhet.trim() : null;
   const personalOrgnr = isPersonalOrgnr(f.jurform);
 
   // Overlay: den betalda profilen. I förhandsvisning läses UTKASTET i stället
@@ -443,9 +451,15 @@ export default async function ForetagSida({
               )}
             </>
           ) : (
-            (sanitizedInfotext || f.kontaktperson || sokord.length > 0) && (
+            (sanitizedInfotext || f.kontaktperson || sokord.length > 0 || verksamhet) && (
             <section className="sg-panel p-5 sm:p-8">
               <h2 className="sg-label">Om företaget</h2>
+              {verksamhet && (
+                <>
+                  <p className="mt-3 max-w-prose text-[16px] leading-relaxed text-ink-2">{verksamhet}</p>
+                  <p className="mt-1 text-sm text-ink-3">Verksamhet enligt Bolagsverket.</p>
+                </>
+              )}
               {sanitizedInfotext && (
                 <div
                   className="rd-rich-text mt-3 max-w-prose text-[16px] leading-relaxed text-ink-2"
@@ -511,7 +525,11 @@ export default async function ForetagSida({
                   size ? (
                     <>
                       <span className="tabular-nums">{size.label}</span>
-                      <span className="text-ink-3"> · storleksklass, ca {REGISTER_AR}</span>
+                      <span className="text-ink-3">
+                        {f.kalla === "infofinder"
+                          ? ` · storleksklass, SCB ${f.uppdaterad?.slice(0, 4) ?? ""}`.trimEnd()
+                          : ` · storleksklass, ca ${REGISTER_AR}`}
+                      </span>
                     </>
                   ) : null
                 }
@@ -537,6 +555,7 @@ export default async function ForetagSida({
                         {kommun.name}
                       </Link>
                       {lan ? ` · ${lan.name}s län` : ""}
+                      {f.kommunHarledd && <span className="text-ink-3"> · härledd ur postnumret</span>}
                     </>
                   ) : null
                 }
@@ -546,7 +565,8 @@ export default async function ForetagSida({
               {personalOrgnr
                 ? "Inget organisationsnummer visas — för en enskild firma är numret ett personnummer, och det hämtas aldrig ut ur databasen. "
                 : ""}
-              {PERSONUPPGIFT_FORKLARING} {REGISTER_FORKLARING}
+              {PERSONUPPGIFT_FORKLARING}{" "}
+              {f.kalla === "infofinder" ? nyKallaForklaring(f.uppdaterad) : REGISTER_FORKLARING}
             </p>
           </section>
 
