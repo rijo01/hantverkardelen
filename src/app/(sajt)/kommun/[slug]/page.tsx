@@ -43,7 +43,7 @@ export async function generateMetadata({
   const kommun = kommunBySlug(slug);
   if (!kommun) return { title: "Kommun hittades inte" };
   const title = `Hantverkare i ${kommun.name} kommun`;
-  const description = `Hem- & hantverkskatalog för ${kommun.name} kommun. Hitta elektriker, VVS, snickare, målare, byggföretag, takläggare och städ i ${kommun.name}.`;
+  const description = `Hantverksföretag i ${kommun.name} kommun: elektriker, VVS, snickare, målare, byggföretag och takläggare, med yrke och ort och en egen sida för varje företag.`;
   return {
     title,
     description,

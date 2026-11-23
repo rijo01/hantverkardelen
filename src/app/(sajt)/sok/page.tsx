@@ -57,7 +57,7 @@ export async function generateMetadata({
   return {
     title,
     description:
-      "Sök bland Sveriges hantverksföretag — elektriker, VVS, snickare, målare, byggföretag, takläggare, golv och städ. Filtrera på kommun, bransch och antal anställda.",
+      "Sök bland Sveriges hantverksföretag — elektriker, VVS, snickare, målare, byggföretag, takläggare och golv. Sök på namn, yrke eller ort.",
     robots: { index: false, follow: true },
   };
 }

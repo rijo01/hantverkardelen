@@ -2,7 +2,7 @@ import { bolagJsonLd } from "@/lib/kluster/bolag";
 import type { Metadata, Viewport } from "next";
 import { Archivo } from "next/font/google";
 import "./globals.css";
-import { SiteNav, MobileBottomNav } from "@/components/site-nav";
+import { MobileBottomNav } from "@/components/site-nav";
 import { Ordmarke } from "@/components/ordmarke";
 import {
   PERSONUPPGIFT_FORKLARING,
@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     template: "%s | Hantverkardelen",
   },
   description:
-    "Sveriges katalog för hem & hantverk. Hitta elektriker, VVS, målare, snickare, byggföretag, takläggare, golvläggare och städ i alla 290 kommuner.",
+    "Katalog över hantverksföretag i hela Sverige. Hitta elektriker, VVS, målare, snickare, byggföretag, takläggare och golvläggare i alla 290 kommuner.",
   alternates: { canonical: SITE_URL },
   openGraph: {
     type: "website",
@@ -50,14 +50,14 @@ export default function RootLayout({
     url: SITE_URL,
     ...bolagJsonLd("hantverkardelen.se"),
     description:
-      "Sveriges katalog för hem & hantverk — bygg, el, VVS, måleri, tak, snickeri, golv och städ i alla 290 kommuner.",
+      "Katalog över hantverksföretag i hela Sverige — bygg, el, VVS, måleri, tak, snickeri och golv i alla 290 kommuner.",
   };
 
   return (
     <html lang="sv" className={`${archivo.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col bg-page text-ink-2">
-        <SiteNav />
-        <main className="w-full flex-1">{children}</main>
+        {/* Huvud och <main> kommer från route-grupperna (start) och (sajt). */}
+        {children}
         <footer className="sg-on-navy bg-navy pb-24 text-[var(--sg-on-navy-muted)] md:pb-0">
           <div className="sg-wrap grid gap-10 py-12 md:grid-cols-[1.4fr_1fr_1.4fr]">
             <div className="space-y-4">

@@ -42,6 +42,10 @@ export const BRANSCHNAMN: Readonly<Record<number, { namn: string; skal: string }
     namn: "El- och teleledningar",
     skal: "SNI 42220 är anläggning av el- och teleledningar. t_bransch kallar den Anläggningsarbeten.",
   },
+  43999: {
+    namn: "Övrig bygg & anläggning",
+    skal: "SNI 43999 är diverse övriga specialiserade bygg- och anläggningsarbeten. t_bransch kallar den Byggmästare, samma namn som 41200.",
+  },
 };
 
 export function rattatBranschnamn(ng1: number): string | null {

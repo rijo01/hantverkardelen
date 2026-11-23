@@ -73,7 +73,7 @@ export async function generateMetadata({
   const title = kommun ? `${name} – ${kommun.name}` : name;
   const description = `${name}${
     kommun ? ` i ${kommun.name} kommun` : ""
-  }${f.gatuadress ? `, ${f.gatuadress}` : ""}. Kontaktuppgifter och bransch ur ett register från omkring ${REGISTER_AR}.`;
+  }${f.gatuadress ? `, ${f.gatuadress}` : ""}. Bransch och adress ur ett register från omkring ${REGISTER_AR}.`;
   return {
     title,
     description,

@@ -10,53 +10,54 @@ import { kommunBySlug } from "@/lib/kommuner";
 import { yrkesnamn } from "@/lib/yrkesnamn";
 
 /**
- * Sidhuvudet — navy på alla sidor.
- *
- * Startsidan: märket och navigeringen, och heron under fortsätter i samma
- * navy. Övriga sidor: kompakt huvud med sökformuläret, ifyllt med den sökning
- * sidan visar — på /sok ur adressens parametrar, på kommun- och yrkessidorna
- * ur sökvägen. Där finns ingen egen stor sökruta längre; den här är den.
- */
-/**
- * Sökvägen, med startsidans interna namn rättat.
+ * Sökvägen för bottenmenyns markering.
  *
  * När Vercel genererar om startsidan i bakgrunden (ISR) renderas den under sitt
- * interna namn `/index`, och då ger usePathname() "/index" på servern — inte
- * "/". Sidhuvudet renderades därför som på en undersida, den kopian cachades
- * för `/`, och webbläsaren (som ser "/") fick ett hydreringsfel (React #418).
- * Byggets egen kopia var rätt; felet kom först vid första omgenereringen.
- * Uppmätt 2026-11-02 på en preview: "/index" vid x-prerender-revalidate.
+ * interna namn `/index`, och usePathname() ger då "/index" på servern.
+ * Sidhuvudet väljer därför INTE längre variant på sökvägen (se StartHuvud och
+ * route-grupperna (start) och (sajt)); bara bottenmenyns aktiva flik läser den.
  */
 function useSokvag(): string {
   const p = usePathname();
   return p === "/index" ? "/" : p;
 }
 
-export function SiteNav() {
-  const pathname = useSokvag();
-
-  if (pathname === "/") {
-    return (
-      <header className="sg-on-navy bg-navy text-white">
-        <div className="sg-wrap flex h-16 items-center gap-4 sm:h-[72px]">
-          <Link href="/" aria-label="Hantverkardelen, till startsidan" className="shrink-0">
-            <Ordmarke stor />
+/**
+ * Startsidans huvud: märket och navigeringen; heron under fortsätter i samma
+ * navy. Renderas av src/app/(start)/layout.tsx — valet görs av routern, inte
+ * av usePathname(), så server och webbläsare kan aldrig välja olika
+ * (hydreringsfel #418, 2 nov 2026).
+ */
+export function StartHuvud() {
+  return (
+    <header className="sg-on-navy bg-navy text-white">
+      <div className="sg-wrap flex h-16 items-center gap-4 sm:h-[72px]">
+        <Link href="/" aria-label="Hantverkardelen, till startsidan" className="shrink-0">
+          <Ordmarke stor />
+        </Link>
+        <nav aria-label="Huvudmeny" className="ml-auto flex items-center gap-1 text-[15px] font-semibold">
+          <NavLink href="/branscher" label="Yrken" />
+          <NavLink href="/kommuner" label="Kommuner" />
+          <NavLink href="/#sa-funkar-det" label="Så funkar det" />
+          <Link
+            href="/kontakt"
+            className="ml-2 inline-flex min-h-10 items-center bg-white px-3.5 font-bold text-navy transition-colors hover:bg-[var(--sg-line-soft)]"
+          >
+            För företag
           </Link>
-          <nav aria-label="Huvudmeny" className="ml-auto flex items-center gap-1 text-[15px] font-semibold">
-            <NavLink href="/branscher" label="Yrken" />
-            <NavLink href="/kommuner" label="Kommuner" />
-            <NavLink href="/#sa-funkar-det" label="Så funkar det" />
-            <Link
-              href="/kontakt"
-              className="ml-2 inline-flex min-h-10 items-center bg-white px-3.5 font-bold text-navy transition-colors hover:bg-[var(--sg-line-soft)]"
-            >
-              För företag
-            </Link>
-          </nav>
-        </div>
-      </header>
-    );
-  }
+        </nav>
+      </div>
+    </header>
+  );
+}
+
+/**
+ * Övriga sidors huvud: kompakt, med sökformuläret ifyllt med den sökning sidan
+ * visar — på /sok ur adressens parametrar, på kommun- och yrkessidorna ur
+ * sökvägen. Renderas av src/app/(sajt)/layout.tsx och 404-sidan.
+ */
+export function SiteNav() {
+  const pathname = usePathname();
 
   return (
     <header className="sg-on-navy z-40 border-b border-white/10 bg-navy text-white md:sticky md:top-0">

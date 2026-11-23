@@ -42,7 +42,7 @@ export async function generateMetadata({
   const n = sida && /^\d{1,4}$/.test(sida) ? Number(sida) : 1;
   const name = (await getBranschName(ng1)) ?? `SNI ${ng1}`;
   const title = n > 1 ? `${name} i ${kommun.name} – sida ${n}` : `${name} i ${kommun.name}`;
-  const description = `Hantverksföretag inom ${name.toLowerCase()} i ${kommun.name} kommun. Hitta lokala bygg-, el-, VVS- och hantverksföretag, kontaktuppgifter och adresser.`;
+  const description = `Registrerade företag inom ${yrkesnamn(ng1, name).toLowerCase()} i ${kommun.name} kommun, med yrke och ort och en egen sida för varje företag.`;
   // Kanonisk URL byggs ur branschnamnet, inte ur inkommande slug. Routen
   // matchar på det avslutande id:t, så /kommun/x/vadsomhelst-43210 svarade
   // 200 och pekade canonical på sig själv — obegränsat med dubbletter av
@@ -188,7 +188,7 @@ export default async function BranschSida({
         ingress={
           <p>
             Registrerade företag inom {yrke.toLowerCase()} i {genitiv} kommun
-            {lan ? <>, {lan.name}s län</> : null}. Telefon och adress står direkt i listan.
+            {lan ? <>, {lan.name}s län</> : null}. Telefonnummer visas när företaget självt har lämnat det.
           </p>
         }
         sidospalt={{
@@ -210,7 +210,7 @@ export default async function BranschSida({
                 sist={{ href: `/kommun/${kommun.slug}`, label: `Alla hantverkare i ${kommun.name}` }}
               />
               <p className="px-1 text-[15px]">
-                <Link href={`/sok?q=${encodeURIComponent(branschName)}`} className="sg-link inline-flex min-h-11 items-center">
+                <Link href={`/sok?bransch=${ng1}`} className="sg-link inline-flex min-h-11 items-center">
                   {yrke} i hela Sverige
                 </Link>
               </p>
