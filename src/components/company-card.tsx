@@ -212,7 +212,7 @@ export function CompanyCardList({
     <div>
       <ol className="space-y-2">{children}</ol>
       <p className="mt-4 text-sm leading-relaxed text-ink-3">
-        Sorterat: annonser först, därefter efter antal arbetsställen. Antal anställda är registrets storleksklass från ca {REGISTER_AR}.
+        Sorterat: företag med betald profil först, därefter efter antal arbetsställen. Antal anställda är registrets storleksklass från ca {REGISTER_AR}.
         Telefonnummer visas när företaget självt har lämnat dem. Hemsidor ur registret kan vara
         inaktuella.
       </p>
