@@ -7,6 +7,7 @@ import { lanBySlug } from "@/lib/lan";
 import {
   branschPageSlug,
   searchForetag,
+  listTjansterForKunder,
 } from "@/lib/queries";
 import { getBranschName } from "@/lib/branscher";
 import { getKategoriBySlug } from "@/lib/hantverk-kategorier";
@@ -22,7 +23,9 @@ import {
   SNABBVAL,
   kategoriNamn,
   parametrarFor,
+  stavningsforslag,
   tolkaSokfraga,
+  tolkningensYrke,
   type Tolkning,
 } from "@/lib/sokfraga";
 
@@ -74,7 +77,7 @@ export default async function SokPage({
   // ett ord i taget som yrke; här översätts hela frågan till parametrar det
   // redan förstår. Bara när varje ord gick att placera — se lib/sokfraga.ts.
   // Sidan är noindex, så omdirigeringen rör inga SEO-grindar.
-  const tolkning: Tolkning | null = query && !sp.kategori ? tolkaSokfraga(query) : null;
+  const tolkning: Tolkning | null = query && !sp.kategori && !sp.bransch ? tolkaSokfraga(query) : null;
   if (tolkning) {
     const tolkat = parametrarFor(tolkning);
     if (tolkat) {
@@ -128,7 +131,7 @@ export default async function SokPage({
   ]);
 
   // Visa resultaten även när det inte finns query, så länge en kategori valts.
-  const showResults = Boolean(query) || Boolean(kategori);
+  const showResults = Boolean(query) || Boolean(kategori) || ng1 != null;
   const rubrik = sokRubrik({ query, kommun, postort, lan, kategoriSlug: kategori?.slug, ng1 });
   // Sidospalten beror bara på adressen — samma i skelettet och i svaret.
   const sidospalt = sokSidospalt({ state: filterState, pathname: "/sok", kommun });
@@ -223,7 +226,8 @@ async function ResultsAsync({
       lan: lan?.code,
       postort,
       ng1,
-      ng1List: kategori?.ng1,
+      // Bara en branschkod och ingen fritext ("rörmokare" → bransch=43221): bläddra i koden.
+      ng1List: kategori?.ng1 ?? (ng1 != null && !query ? [ng1] : undefined),
       aeantMin,
       aeantMax,
       page,
@@ -234,6 +238,7 @@ async function ResultsAsync({
     ng1 ? getBranschName(ng1) : Promise.resolve(null),
   ]);
   const rows = ordnaBoostade(oboostade, overlays);
+  const tjanster = await listTjansterForKunder(rows);
 
   const offset = (page - 1) * PAGE_SIZE;
   const komplettaFinns = rows.some((f) => (f.poang ?? 0) > 0);
@@ -262,7 +267,7 @@ async function ResultsAsync({
       )}
 
       {rows.length === 0 ? (
-        <TomtResultat query={query} tolkning={tolkning} kommunSlug={kommun?.slug} kommunNamn={kommun?.name} />
+        <TomtResultat query={query} tolkning={tolkning} forslag={query ? stavningsforslag(query) : null} kommunSlug={kommun?.slug} kommunNamn={kommun?.name} />
       ) : (
         <CompanyCardList komplettaFinns={komplettaFinns}>
           {rows.map((f) => {
@@ -272,6 +277,7 @@ async function ResultsAsync({
                 <CompanyCard
                   foretag={f}
                   overlay={overlayFor(f, overlays)}
+                  tjanster={tjanster.get(f.cfarnr)}
                   branschName={f.ng1 ? yrkesnamn(f.ng1, matchedBransch ?? branschName) : (matchedBransch ?? branschName)}
                   kommunName={k?.name}
                 />
@@ -310,18 +316,35 @@ async function ResultsAsync({
 function TomtResultat({
   query,
   tolkning,
+  forslag,
   kommunSlug,
   kommunNamn,
 }: {
   query: string;
   tolkning: Tolkning | null;
+  /** Stavningsförslag, t.ex. "elektriker" för "elektrikker". */
+  forslag: string | null;
   kommunSlug?: string;
   kommunNamn?: string;
 }) {
+  const tolkatYrke = tolkning ? tolkningensYrke(tolkning) : null;
+  const yrkesParam = tolkning?.ng1 != null ? `bransch=${tolkning.ng1}` : `kategori=${tolkning?.kategori}`;
   const ortParam = kommunSlug ? `&kommun=${kommunSlug}` : "";
   const ortText = kommunNamn ? ` i ${kommunNamn}` : "";
   return (
     <div className="sg-panel p-6 sm:p-8">
+      {forslag && (
+        <p className="mb-5 text-[17px] text-ink">
+          Menade du{" "}
+          <Link
+            href={`/sok?q=${encodeURIComponent(forslag)}${kommunSlug && !tolkning?.ort ? `&kommun=${kommunSlug}` : ""}`}
+            className="sg-link font-bold"
+          >
+            {forslag}
+          </Link>
+          ?
+        </p>
+      )}
       {tolkning?.saknatYrke ? (
         <>
           <p className="text-xl font-extrabold tracking-[-0.02em] text-ink">
@@ -332,7 +355,7 @@ function TomtResultat({
             hantverksföretag. {tolkning.saknatYrke} ingår inte.
           </p>
         </>
-      ) : tolkning?.kategori ? (
+      ) : tolkning && tolkatYrke ? (
         <>
           <p className="text-xl font-extrabold tracking-[-0.02em] text-ink">
             Vi förstod yrket men inte resten av sökningen
@@ -342,10 +365,10 @@ function TomtResultat({
             känner till. Skriv orten i fältet Var?, eller visa alla:
           </p>
           <Link
-            href={`/sok?kategori=${tolkning.kategori}${ortParam}`}
+            href={`/sok?${yrkesParam}${ortParam}`}
             className="sg-btn sg-btn-outline mt-4"
           >
-            {kategoriNamn(tolkning.kategori)}
+            {tolkatYrke}
             {ortText}
           </Link>
         </>

@@ -53,6 +53,53 @@ export function rattatBranschnamn(ng1: number): string | null {
 }
 
 /**
+ * Sökordens synonymer per branschkod — vad besökaren skriver för det registret
+ * kallar koden. "rörmokare" är 43221 VVS-arbeten, inte hela VVS-kategorin med
+ * låssmeder och hissfirmor från 43290.
+ *
+ * Bara ord som betyder just den koden hör hemma här, i gemener. Ett ord som
+ * spänner över flera koder ("bygg", "tak") är en kategori och ligger i sajtens
+ * egen söktolkning. Samma tabell som namnrättelserna ovan, så att namn och
+ * sökord för en kod står på ett ställe. En kod som en sajt inte visar
+ * påverkar den sajten inte.
+ */
+export const SOKORD: Readonly<Record<number, readonly string[]>> = {
+  43210: [
+    "elektriker", "elektrikern", "elektrikerna", "elfirma", "elfirmor", "elinstallatör",
+    "elinstallatörer", "elinstallation", "elinstallationer", "laddbox", "laddboxar",
+    "laddstolpe", "laddstolpar", "elcentral", "elbesiktning",
+  ],
+  43221: [
+    "rörmokare", "rörmokaren", "rörmokarna", "rörmokeri", "rörläggare", "rörläggeri",
+    "rörfirma", "rör", "avlopp", "vattenläcka", "vvsare",
+  ],
+  43222: ["ventilation", "ventilationsfirma", "ventilationsfirmor", "ovk", "imkanal"],
+  43223: ["värmepump", "värmepumpar", "luftvärmepump", "bergvärme", "kylfirma", "kyltekniker"],
+  43341: ["målare", "målaren", "måleri", "målerifirma", "målning", "tapetsering", "tapetserare"],
+  43320: ["snickare", "snickaren", "snickeri", "byggnadssnickare", "köksmontering", "altan", "altanbygge"],
+  43330: ["golvläggare", "golvläggning", "parkett", "kakel", "klinker", "plattsättare", "kakelsättare"],
+  43342: ["glasmästare", "glasmästeri", "fönsterbyte"],
+  43911: ["plåtslagare", "plåtslageri", "plåttak"],
+  43310: ["putsning", "puts", "fasadputs", "stuckatör"],
+  43110: ["rivning", "rivningsfirma"],
+  81300: ["trädgårdsmästare", "trädgårdsskötsel", "gräsklippning", "häckklippning"],
+};
+
+const SOKORD_KOD: ReadonlyMap<string, number> = new Map(
+  Object.entries(SOKORD).flatMap(([kod, ord]) => ord.map((o) => [o, Number(kod)] as const)),
+);
+
+/** Branschkoden ett sökord betyder, eller null. Ordet i gemener. */
+export function kodForSokord(ord: string): number | null {
+  return SOKORD_KOD.get(ord) ?? null;
+}
+
+/** Alla synonymord, för stavningsförslag. */
+export function allaSokord(): string[] {
+  return [...SOKORD_KOD.keys()];
+}
+
+/**
  * Yrke per företag inom koder som samlar flera yrken. Regeln läser
  * företagsnamnet; första träff vinner.
  */

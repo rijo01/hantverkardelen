@@ -32,7 +32,7 @@ import {
 } from "@/lib/foretag-format";
 import { isPersonalOrgnr } from "@/lib/jurform";
 import { arKund } from "@/lib/kluster/personuppgifter";
-import { anstallda, anstalldaMening, anstalldaSchema } from "@/lib/storleksklass";
+import { anstallda, anstalldaSchema } from "@/lib/storleksklass";
 import {
   PERSONUPPGIFT_FORKLARING,
   REGISTER_AR,
@@ -257,24 +257,6 @@ export default async function ForetagSida({
       : {}),
   };
 
-  const faqItems = buildFaq({ name, branschName, kommun: kommun?.name ?? null, f, telefon: visatTelefon });
-  const faqJsonLd = {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    mainEntity: faqItems.map((it) => ({
-      "@type": "Question",
-      name: it.q,
-      acceptedAnswer: { "@type": "Answer", text: it.a },
-    })),
-  };
-
-  const description = buildDescription({
-    name,
-    branschName,
-    kommun: kommun?.name ?? null,
-    f,
-    legalForm,
-  });
 
   // ── Visningsläge ──
   // BETALT när det finns en aktiv overlay-rad (eller, i förhandsvisning, ett
@@ -294,6 +276,11 @@ export default async function ForetagSida({
   const nyckeltal = [legalForm, size?.label].filter(Boolean);
   const hemsida = profil?.hemsida ?? webb;
   const epost = profil?.epost ?? f.epostadress;
+  // Kunden med profil har sina egna adresser i KontaktRuta; registrets står inte bredvid.
+  const adressText = profil
+    ? null
+    : [f.gatuadress, [f.postnr, f.postort].filter(Boolean).join(" ")].filter(Boolean).join(", ") || null;
+  const harKontaktvag = Boolean(visatTelefon || epost);
   const logoStorlek = profil ? "size-20 sm:size-[112px]" : "size-16 sm:size-[88px]";
   const matt = overlay?.logo_url && logoUrl === overlay.logo_url ? logoMatt(overlay.logo_url) : null;
   const antalIYrket = kommun && f.ng1 ? snapshotKommunBranschCount(kommun.code, f.ng1) : 0;
@@ -305,7 +292,6 @@ export default async function ForetagSida({
     <div className="sg-wrap pb-16">
       <JsonLd data={breadcrumbJsonLd} />
       <JsonLd data={localBusinessJsonLd} />
-      <JsonLd data={faqJsonLd} />
       {/* Ort / Yrke / Namn — startsidan finns i märket. JSON-LD:n ovan har
           hela kedjan. */}
       <Breadcrumb items={breadcrumbItems.slice(1)} />
@@ -360,7 +346,7 @@ export default async function ForetagSida({
                   )}
                 </p>
               )}
-              <h1 className="sg-display text-balance break-words text-[2.25rem] sm:text-[3rem]">
+              <h1 className="text-balance break-words text-[1.75rem] font-bold leading-[1.15] tracking-[-0.01em] text-ink sm:text-[2.25rem]">
                 {name}
               </h1>
               {undertitel && <p className="text-lg font-medium text-ink-2">{undertitel}</p>}
@@ -370,36 +356,60 @@ export default async function ForetagSida({
             </div>
           </div>
 
+          {/* ===== KONTAKT — ett block, allt som går att använda för att nå företaget.
+              Utan telefon och e-post är kartan ingen huvudhandling: hemsidan,
+              adressen och vägen in för företaget självt står i stället. */}
           <div className="flex shrink-0 flex-col gap-2 lg:w-[20rem]">
-            {visatTelefon ? (
-              <RingKnapp telefon={visatTelefon} name={name} stor fylld className="flex w-full" />
-            ) : (
-              <p className="text-[15px] text-ink-2">Registret har inget telefonnummer till {name}.</p>
-            )}
-            {profil ? (
-              <>
-                {hemsida && (
-                  <a href={hemsida} target="_blank" rel="nofollow noopener" className="sg-btn sg-btn-outline w-full">
-                    Besök hemsida
-                  </a>
-                )}
-                {epost && (
-                  <a href={`mailto:${epost}`} className="sg-btn sg-btn-outline w-full">
-                    Skicka e-post
-                  </a>
-                )}
-              </>
-            ) : (
-              mapsUrl && (
-                <a href={mapsUrl} target="_blank" rel="nofollow noopener" className="sg-btn sg-btn-outline w-full">
-                  Visa på karta
-                </a>
-              )
-            )}
+            <h2 className="sg-label">Kontakt</h2>
             {visatTelefon && (
-              <p className="text-sm leading-snug text-ink-3">
-                Numret är lämnat av företaget.
+              <>
+                <RingKnapp telefon={visatTelefon} name={name} stor fylld className="flex w-full" />
+                <p className="text-sm leading-snug text-ink-3">Numret är lämnat av företaget.</p>
+              </>
+            )}
+            {hemsida && (
+              <a
+                href={hemsida}
+                target="_blank"
+                rel={arKund(f) || profil ? "sponsored noopener" : "nofollow noopener"}
+                className="sg-btn sg-btn-outline w-full"
+              >
+                Besök hemsida
+                <span className="sr-only"> (öppnas i ny flik)</span>
+              </a>
+            )}
+            {epost && (
+              <a href={`mailto:${epost}`} className="sg-btn sg-btn-outline w-full">
+                Skicka e-post
+              </a>
+            )}
+            {adressText && (
+              <p className="text-[15px] leading-snug text-ink-2">
+                <address className="inline not-italic">{adressText}</address>
+                {mapsUrl && (
+                  <>
+                    {" · "}
+                    <a href={mapsUrl} target="_blank" rel="nofollow noopener" className="sg-link">
+                      Karta
+                    </a>
+                  </>
+                )}
               </p>
+            )}
+            {!harKontaktvag && (
+              <div className="mt-1 border-t border-line pt-3 text-[15px] leading-snug text-ink-2">
+                <p>
+                  {hemsida
+                    ? "Inget telefonnummer eller e-post är lämnat av företaget."
+                    : "Företaget har inte lämnat telefonnummer, e-post eller hemsida."}
+                </p>
+                <p className="mt-1">
+                  Är det här ditt företag?{" "}
+                  <Link href="/kontakt" className="sg-link font-semibold">
+                    Lägg till dina uppgifter
+                  </Link>
+                </p>
+              </div>
             )}
           </div>
         </div>
@@ -434,15 +444,14 @@ export default async function ForetagSida({
               )}
             </>
           ) : (
+            (sanitizedInfotext || f.kontaktperson || sokord.length > 0) && (
             <section className="sg-panel p-5 sm:p-8">
               <h2 className="sg-label">Om företaget</h2>
-              {sanitizedInfotext ? (
+              {sanitizedInfotext && (
                 <div
                   className="rd-rich-text mt-3 max-w-prose text-[16px] leading-relaxed text-ink-2"
                   dangerouslySetInnerHTML={{ __html: sanitizedInfotext }}
                 />
-              ) : (
-                <p className="mt-3 max-w-prose text-[16px] leading-relaxed text-ink-2">{description}</p>
               )}
               {f.kontaktperson && (
                 <p className="mt-4 text-[15px] text-ink-2">
@@ -468,11 +477,12 @@ export default async function ForetagSida({
                 </>
               )}
             </section>
+            )
           )}
 
-          {/* ========= REGISTERFAKTA ========= */}
+          {/* ========= GRUNDFAKTA — en gång, på ett ställe ========= */}
           <section className="sg-panel p-5 sm:p-8">
-            <h2 className="sg-label">Uppgifter ur registret</h2>
+            <h2 className="sg-label">Fakta om företaget</h2>
             <dl className="mt-3 border-t border-line">
               <InfoRow
                 label="Organisationsnummer"
@@ -532,26 +542,6 @@ export default async function ForetagSida({
                   ) : null
                 }
               />
-              {!profil && webb && (
-                <InfoRow
-                  label="Hemsida"
-                  value={
-                    <a href={webb} target="_blank" rel="nofollow noopener" className="sg-link break-all">
-                      {shortWebb(webb)}
-                    </a>
-                  }
-                />
-              )}
-              {!profil && f.epostadress && (
-                <InfoRow
-                  label="E-post"
-                  value={
-                    <a href={`mailto:${f.epostadress}`} className="sg-link break-all">
-                      {f.epostadress}
-                    </a>
-                  }
-                />
-              )}
             </dl>
             <p className="mt-4 text-sm leading-relaxed text-ink-3">
               {personalOrgnr
@@ -561,26 +551,6 @@ export default async function ForetagSida({
             </p>
           </section>
 
-          {/* ========= FAQ ========= */}
-          <section className="sg-panel p-5 sm:p-8">
-            <h2 className="sg-label">Frågor och svar om {name}</h2>
-            <div className="mt-3 divide-y divide-line border-y border-line">
-              {faqItems.map((it, i) => (
-                <details key={i} className="group py-1" {...(i === 0 ? { open: true } : {})}>
-                  <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 text-[16px] font-bold text-ink">
-                    {it.q}
-                    <span
-                      aria-hidden
-                      className="shrink-0 text-xl font-bold leading-none text-navy transition-transform group-open:rotate-45"
-                    >
-                      +
-                    </span>
-                  </summary>
-                  <p className="pb-4 max-w-prose text-[15px] leading-relaxed text-ink-2">{it.a}</p>
-                </details>
-              ))}
-            </div>
-          </section>
         </div>
 
         {/* ========= HÖGER SPALT ========= */}
@@ -592,18 +562,17 @@ export default async function ForetagSida({
             </>
           ) : (
             <>
-              {/* Hantverkarens väg in: rätta registret eller köp en profil. */}
-              <section className="sg-on-navy bg-navy p-6 text-white">
-                <h2 className="text-[22px] font-extrabold tracking-[-0.02em] text-white">
-                  Är det här ditt företag?
-                </h2>
-                <p className="mt-2 text-[15px] leading-relaxed text-[var(--sg-on-navy-muted)]">
-                  Lägg till logotyp, beskrivning, tjänster och rätt telefonnummer.
-                </p>
-                <Link href="/kontakt" className="sg-btn sg-btn-sok mt-5 w-full">
-                  Uppdatera uppgifter
-                </Link>
-              </section>
+              {/* Hantverkarens väg in — diskret, under företagets egna uppgifter.
+                  Saknas kontaktväg står den redan i kontaktblocket. */}
+              {harKontaktvag && (
+                <section className="border border-line p-4 text-[15px] leading-snug text-ink-2">
+                  <h2 className="font-semibold text-ink">Är det här ditt företag?</h2>
+                  <p className="mt-1">Rätta uppgifterna eller lägg till tjänster och logotyp.</p>
+                  <Link href="/kontakt" className="sg-link mt-2 inline-flex min-h-11 items-center font-semibold">
+                    Uppdatera uppgifter
+                  </Link>
+                </section>
+              )}
 
               {kommun && related.length > 0 && (
                 <section className="sg-panel p-5">
@@ -640,123 +609,6 @@ export default async function ForetagSida({
   );
 }
 
-type FaqItem = { q: string; a: string };
-
-function buildDescription({
-  name,
-  branschName,
-  kommun,
-  f,
-  legalForm,
-}: {
-  name: string;
-  branschName: string | null;
-  kommun: string | null;
-  f: Foretag;
-  legalForm: string | null;
-}): string {
-  const segs: string[] = [];
-  segs.push(
-    `${name} är ${legalForm ? `ett ${legalForm.toLowerCase()}` : "registrerat"}${
-      branschName
-        ? ` verksamt inom ${branschName.toLowerCase()}`
-        : ""
-    }${kommun ? ` i ${kommun} kommun` : ""}.`,
-  );
-  const size = anstallda(f.storleksklass);
-  if (size) segs.push(anstalldaMening(name, size));
-  if (f.gatuadress) {
-    segs.push(
-      `Besöksadress: ${f.gatuadress}${f.postort ? `, ${f.postort}` : ""}.`,
-    );
-  }
-  return segs.join(" ");
-}
-
-function buildFaq({
-  name,
-  branschName,
-  kommun,
-  f,
-  telefon,
-}: {
-  name: string;
-  branschName: string | null;
-  kommun: string | null;
-  f: Foretag;
-  /** Numret sidan visar — visatTelefon(), aldrig f.tel. FAQ:n hamnar också i JSON-LD. */
-  telefon: string | null;
-}): FaqItem[] {
-  const items: FaqItem[] = [];
-
-  if (f.gatuadress || f.postort || kommun) {
-    const addr =
-      [f.gatuadress, [f.postnr, f.postort].filter(Boolean).join(" ")]
-        .filter(Boolean)
-        .join(", ") || kommun || "Sverige";
-    items.push({
-      q: `Var ligger ${name}?`,
-      a: `${name} finns på ${addr}${
-        kommun && !f.postort ? ` i ${kommun} kommun` : ""
-      }.`,
-    });
-  }
-
-  if (branschName) {
-    items.push({
-      q: `Vad gör ${name}?`,
-      a: `${name} är verksamt inom ${branschName.toLowerCase()}${
-        kommun ? ` i ${kommun}` : ""
-      }. För att se andra hantverksföretag i samma bransch kan du klicka på branschlänken ovan.`,
-    });
-  }
-
-  if (telefon || f.epostadress || f.webb) {
-    const ch: string[] = [];
-    if (telefon) ch.push(`telefon ${telefon}`);
-    if (f.epostadress) ch.push(`e-post ${f.epostadress}`);
-    if (f.webb) ch.push(`hemsida ${f.webb}`);
-    items.push({
-      q: `Hur kontaktar jag ${name}?`,
-      a: `Du når ${name} via ${ch.join(", ")}.` +
-        (f.epostadress || f.webb
-          ? ` E-post och hemsida kommer från ett näringslivsregister från omkring ${REGISTER_AR} och kan vara inaktuella.`
-          : ""),
-    });
-  } else {
-    items.push({
-      q: `Hur kontaktar jag ${name}?`,
-      a: `Vi har inga publika kontaktuppgifter för ${name}. Uppgifterna kommer från ett register från omkring ${REGISTER_AR} och kan vara ofullständiga eller inaktuella.`,
-    });
-  }
-
-  const size = anstallda(f.storleksklass);
-  if (size) {
-    items.push({
-      q: `Hur många anställda har ${name}?`,
-      a: `${anstalldaMening(name, size)} Registret anger storleken som ett intervall, inte ett exakt antal.`,
-    });
-  }
-
-  if (f.arEnskildFirma) {
-    items.push({
-      q: `Vad är organisationsnumret för ${name}?`,
-      a: `${name} är en enskild firma. Organisationsnumret är detsamma som ägarens personnummer och visas inte av integritetsskäl enligt GDPR.`,
-    });
-  } else if (f.orgnr) {
-    items.push({
-      q: `Vad är organisationsnumret för ${name}?`,
-      a: `Organisationsnumret för ${name} är ${f.orgnr}. Uppgiften kommer från ett näringslivsregister från omkring ${REGISTER_AR}.`,
-    });
-  } else {
-    items.push({
-      q: `Vad är organisationsnumret för ${name}?`,
-      a: `Organisationsnumret för ${name} är inte tillgängligt i vår källa just nu. Du kan kontrollera det via Bolagsverket eller Skatteverket.`,
-    });
-  }
-
-  return items;
-}
 
 function InfoRow({
   label,

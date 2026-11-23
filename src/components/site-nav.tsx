@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
-import { Home, Search, MapPin, Layers, Briefcase } from "lucide-react";
+import { Home, Search, MapPin, Layers } from "lucide-react";
 import { SearchBar } from "@/components/search-bar";
 import { Ordmarke } from "@/components/ordmarke";
 import { kommunBySlug } from "@/lib/kommuner";
@@ -31,7 +31,7 @@ function useSokvag(): string {
 export function StartHuvud() {
   return (
     <header className="sg-on-navy bg-navy text-white">
-      <div className="sg-wrap flex h-16 items-center gap-4 sm:h-[72px]">
+      <div className="sg-wrap flex h-14 items-center gap-3 sm:h-[72px] sm:gap-4">
         <Link href="/" aria-label="Hantverkardelen, till startsidan" className="shrink-0">
           <Ordmarke stor />
         </Link>
@@ -41,7 +41,7 @@ export function StartHuvud() {
           <NavLink href="/#sa-funkar-det" label="Så funkar det" />
           <Link
             href="/kontakt"
-            className="ml-2 inline-flex min-h-10 items-center bg-white px-3.5 font-bold text-navy transition-colors hover:bg-[var(--sg-line-soft)]"
+            className="ml-2 inline-flex min-h-10 items-center whitespace-nowrap bg-white px-3 text-sm font-bold text-navy transition-colors hover:bg-[var(--sg-line-soft)] sm:px-3.5 sm:text-[15px]"
           >
             För företag
           </Link>
@@ -68,7 +68,7 @@ export function SiteNav() {
           </Link>
           <Link
             href="/kontakt"
-            className="inline-flex min-h-10 items-center border border-white/40 px-3 text-sm font-bold text-white transition-colors hover:border-white md:hidden"
+            className="inline-flex min-h-10 items-center whitespace-nowrap border border-white/40 px-3 text-sm font-bold text-white transition-colors hover:border-white md:hidden"
           >
             För företag
           </Link>
@@ -181,12 +181,7 @@ export function MobileBottomNav() {
       icon: Layers,
       match: (p: string) => p.startsWith("/bransch"),
     },
-    {
-      href: "/kontakt",
-      label: "För företag",
-      icon: Briefcase,
-      match: (p: string) => p.startsWith("/kontakt"),
-    },
+    // "För företag" står i sidhuvudet, inte här — ett ställe.
   ];
 
   return (

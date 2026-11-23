@@ -21,6 +21,7 @@ import {
   parametrarFor,
   tolkaSokfraga,
 } from "@/lib/sokfraga";
+import { yrkesnamn } from "@/lib/yrkesnamn";
 
 type Suggestion = {
   type: "foretag" | "kommun" | "bransch" | "kombination";
@@ -105,6 +106,7 @@ export function SearchBar({
   const router = useRouter();
   const searchParams = { get: (k: string) => params[k] ?? null };
   const listId = useId();
+  const ortListId = useId();
   const qId = useId();
   const ortId = useId();
 
@@ -115,7 +117,9 @@ export function SearchBar({
     // En tolkad fråga ("elektriker kungälv") landar som ?kategori=el — visa
     // yrket i fältet igen så att besökaren ser vad som söktes.
     const kategori = searchParams.get("kategori");
-    return kategori ? kategoriNamn(kategori) : "";
+    if (kategori) return kategoriNamn(kategori);
+    const bransch = Number(searchParams.get("bransch"));
+    return bransch ? yrkesnamn(bransch) : "";
   });
   const [ort, setOrt] = useState<string>(() => {
     if (initialOrt) return initialOrt;
@@ -391,36 +395,41 @@ export function SearchBar({
     q.trim().length >= 2 &&
     (allaForslag.length > 0 || loadingSuggest);
 
+  // Comboboxmönstret (W3C APG, "List autocomplete"): fältet behåller fokus,
+  // aria-controls pekar alltid på listboxen och aria-activedescendant på det
+  // markerade alternativet. Listboxen finns i DOM:en även när den är dold, så
+  // att aria-controls aldrig pekar på ett id som saknas.
   const dropdown = useMemo(() => {
-    if (!dropdownVisible) return null;
     return (
       <div
-        id={listId}
-        role="listbox"
+        hidden={!dropdownVisible}
         className="absolute left-0 right-0 top-full z-50 mt-1 border border-line bg-white text-left"
       >
-        {loadingSuggest && allaForslag.length === 0 ? (
-          <div className="space-y-2 p-3">
+        {loadingSuggest && allaForslag.length === 0 && (
+          <div className="space-y-2 p-3" aria-hidden>
             <div className="sg-skeleton h-4 w-3/5" />
             <div className="sg-skeleton h-4 w-4/5" />
             <div className="sg-skeleton h-4 w-2/3" />
           </div>
-        ) : (
-          <ul className="max-h-[60vh] overflow-y-auto">
-            {allaForslag.map((s, i) => {
+        )}
+        <ul id={listId} role="listbox" aria-label="Förslag" className="max-h-[60vh] overflow-y-auto">
+            {dropdownVisible && allaForslag.map((s, i) => {
               const Icon = iconFor(s.type);
               const active = i === activeIndex;
               return (
-                <li key={`${s.type}-${s.href}-${i}`} className="border-b border-line-soft">
-                  <button
-                    type="button"
-                    role="option"
-                    aria-selected={active}
-                    onMouseEnter={() => setActiveIndex(i)}
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      goToSuggestion(s);
-                    }}
+                <li
+                  key={`${s.type}-${s.href}-${i}`}
+                  id={`${listId}-${i}`}
+                  role="option"
+                  aria-selected={active}
+                  onMouseEnter={() => setActiveIndex(i)}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    goToSuggestion(s);
+                  }}
+                  className="cursor-pointer border-b border-line-soft"
+                >
+                  <div
                     className={`flex min-h-11 w-full items-center gap-3 px-3 py-2 text-left transition-colors ${
                       active ? "bg-line-soft" : "hover:bg-page"
                     }`}
@@ -439,11 +448,13 @@ export function SearchBar({
                       </span>
                     </span>
                     <span className="shrink-0 text-xs text-ink-3">{s.sub}</span>
-                  </button>
+                  </div>
                 </li>
               );
             })}
-            <li>
+        </ul>
+        {dropdownVisible && allaForslag.length > 0 && (
+          <div>
               <button
                 type="button"
                 onMouseDown={(e) => {
@@ -458,8 +469,7 @@ export function SearchBar({
                   <span className="font-semibold text-ink">&ldquo;{q.trim()}&rdquo;</span>
                 </span>
               </button>
-            </li>
-          </ul>
+          </div>
         )}
       </div>
     );
@@ -479,27 +489,29 @@ export function SearchBar({
     showOrtSuggestions && ort.trim().length >= 1 && ortSuggestions.length > 0;
 
   const ortDropdown = useMemo(() => {
-    if (!ortDropdownVisible) return null;
     return (
       <div
-        role="listbox"
+        hidden={!ortDropdownVisible}
         className="absolute left-0 right-0 top-full z-50 mt-1 border border-line bg-white text-left"
       >
-        <ul className="max-h-[60vh] overflow-y-auto">
-          {ortSuggestions.map((s, i) => {
+        <ul id={ortListId} role="listbox" aria-label="Orter" className="max-h-[60vh] overflow-y-auto">
+          {ortDropdownVisible && ortSuggestions.map((s, i) => {
             const active = i === ortActiveIndex;
             const key = s.type === "postort" ? `postort-${s.value}-${i}` : `${s.type}-${s.slug}-${i}`;
             return (
-              <li key={key} className="border-b border-line-soft last:border-b-0">
-                <button
-                  type="button"
-                  role="option"
-                  aria-selected={active}
-                  onMouseEnter={() => setOrtActiveIndex(i)}
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    pickOrt(s);
-                  }}
+              <li
+                key={key}
+                id={`${ortListId}-${i}`}
+                role="option"
+                aria-selected={active}
+                onMouseEnter={() => setOrtActiveIndex(i)}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  pickOrt(s);
+                }}
+                className="cursor-pointer border-b border-line-soft last:border-b-0"
+              >
+                <div
                   className={`flex min-h-11 w-full items-center gap-3 px-3 py-2 text-left transition-colors ${
                     active ? "bg-line-soft" : "hover:bg-page"
                   }`}
@@ -509,14 +521,14 @@ export function SearchBar({
                     {s.label}
                   </span>
                   <span className="shrink-0 text-xs text-ink-3">{s.sub}</span>
-                </button>
+                </div>
               </li>
             );
           })}
         </ul>
       </div>
     );
-  }, [ortDropdownVisible, ortSuggestions, ortActiveIndex, pickOrt]);
+  }, [ortDropdownVisible, ortSuggestions, ortActiveIndex, pickOrt, ortListId]);
 
   const qInput = (className: string, placeholder: string) => (
     <input
@@ -540,8 +552,9 @@ export function SearchBar({
       enterKeyHint="next"
       role="combobox"
       aria-autocomplete="list"
-      aria-controls={dropdownVisible ? listId : undefined}
+      aria-controls={listId}
       aria-expanded={dropdownVisible}
+      aria-activedescendant={dropdownVisible && activeIndex >= 0 ? `${listId}-${activeIndex}` : undefined}
       className={className}
     />
   );
@@ -567,7 +580,9 @@ export function SearchBar({
       enterKeyHint="search"
       role="combobox"
       aria-autocomplete="list"
+      aria-controls={ortListId}
       aria-expanded={ortDropdownVisible}
+      aria-activedescendant={ortDropdownVisible && ortActiveIndex >= 0 ? `${ortListId}-${ortActiveIndex}` : undefined}
       className={className}
     />
   );
@@ -620,7 +635,7 @@ export function SearchBar({
           aria-label="Sök hantverkare"
           className="grid w-full grid-cols-1 bg-white md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_auto]"
         >
-          <div className="relative px-4 pb-2 pt-3 focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-navy md:px-5 md:pt-4">
+          <div className="relative px-4 pb-1 pt-2.5 focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-navy md:px-5 md:pb-2 md:pt-4">
             <label htmlFor={qId} className="sg-label block text-ink-2">
               Vad behöver du hjälp med?
             </label>
@@ -629,7 +644,7 @@ export function SearchBar({
               "Elektriker, målare, VVS …",
             )}
           </div>
-          <div className="relative border-t border-line px-4 pb-2 pt-3 focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-navy md:border-l md:border-t-0 md:px-5 md:pt-4">
+          <div className="relative border-t border-line px-4 pb-1 pt-2.5 focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-navy md:border-l md:border-t-0 md:px-5 md:pb-2 md:pt-4">
             <label htmlFor={ortId} className="sg-label block text-ink-2">
               Var?
             </label>
@@ -643,7 +658,7 @@ export function SearchBar({
             <button
               type="submit"
               disabled={pending}
-              className="sg-btn sg-btn-sok h-14 w-full px-9 text-lg md:h-full md:min-h-[4.5rem]"
+              className="sg-btn sg-btn-sok h-12 w-full px-9 text-lg md:h-full md:min-h-[4.5rem]"
             >
               {pending ? "Söker…" : "Sök"}
             </button>
@@ -653,7 +668,8 @@ export function SearchBar({
       </div>
 
       {snabbval && (
-        <ul className="mt-5 flex flex-wrap gap-2" aria-label="Vanliga yrken">
+        /* På mobil står yrkesindexet direkt under heron; snabbvalen vore samma länkar två gånger. */
+        <ul className="mt-5 hidden flex-wrap gap-2 sm:flex" aria-label="Vanliga yrken">
           {HERO_SNABBVAL.map((s) => (
             <li key={s.kategori}>
               <a

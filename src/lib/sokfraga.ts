@@ -3,6 +3,8 @@ import { ALL_LAN, type Lan } from "./lan";
 import { ALL_POSTORTER } from "./postorter";
 import { HANTVERK_KATEGORIER } from "./hantverk-kategorier";
 import { KOMMUN_FORETAG } from "./seo-snapshot";
+import { allaSokord, kodForSokord } from "./kluster/klassning";
+import { yrkesnamn } from "./yrkesnamn";
 
 /**
  * Tolkning av en fritextfråga som "elektriker kungälv" eller "VVS i Uppsala".
@@ -21,40 +23,19 @@ import { KOMMUN_FORETAG } from "./seo-snapshot";
  * får namnsöket sköta den som förut.
  */
 
-/** Ord → kategori-slug i hantverk-kategorier.ts. Gemener, utan bindestreck. */
+/**
+ * Ord → kategori-slug i hantverk-kategorier.ts, för ord som spänner över flera
+ * branschkoder ("bygg", "tak", "vvs"). Ord som betyder EN kod — "rörmokare",
+ * "laddbox", "målare" — står i klustrets SOKORD (kluster/klassning.ts) och går
+ * före den här tabellen. Gemener, utan bindestreck.
+ */
 const YRKESORD: Readonly<Record<string, string>> = {
   // El
   el: "el",
-  elektriker: "el",
-  elektrikern: "el",
-  elfirma: "el",
-  elinstallatör: "el",
-  elinstallatörer: "el",
-  elinstallation: "el",
-  elinstallationer: "el",
-  laddbox: "el",
   // VVS
   vvs: "vvs",
-  rörmokare: "vvs",
-  rörmokaren: "vvs",
-  rörmokeri: "vvs",
-  rör: "vvs",
-  ventilation: "vvs",
-  värmepump: "vvs",
-  värmepumpar: "vvs",
   // Måleri
-  målare: "maleri",
-  målaren: "maleri",
-  måleri: "maleri",
-  målning: "maleri",
-  tapetsering: "maleri",
-  tapetserare: "maleri",
   // Snickeri
-  snickare: "snickeri",
-  snickaren: "snickeri",
-  snickeri: "snickeri",
-  byggnadssnickare: "snickeri",
-  köksmontering: "snickeri",
   // Bygg
   bygg: "bygg",
   byggare: "bygg",
@@ -71,15 +52,8 @@ const YRKESORD: Readonly<Record<string, string>> = {
   takläggning: "tak",
   takarbeten: "tak",
   takrenovering: "tak",
-  plåtslagare: "tak",
   // Golv
   golv: "golv",
-  golvläggare: "golv",
-  golvläggning: "golv",
-  parkett: "golv",
-  kakel: "golv",
-  klinker: "golv",
-  plattsättare: "golv",
   // Mark & anläggning
   mark: "mark-anlaggning",
   markarbeten: "mark-anlaggning",
@@ -90,21 +64,13 @@ const YRKESORD: Readonly<Record<string, string>> = {
   schakt: "mark-anlaggning",
   grävning: "mark-anlaggning",
   dränering: "mark-anlaggning",
-  rivning: "mark-anlaggning",
   // Trädgård
   trädgård: "tradgard",
-  trädgårdsskötsel: "tradgard",
   trädgårdsarbete: "tradgard",
-  trädgårdsmästare: "tradgard",
-  gräsklippning: "tradgard",
   // Glas, puts, betong
   glas: "glas",
-  glasmästare: "glas",
-  glasmästeri: "glas",
-  puts: "puts-fasad",
   fasad: "puts-fasad",
   fasadrenovering: "puts-fasad",
-  stuckatör: "puts-fasad",
   betong: "betong",
 };
 
@@ -142,16 +108,29 @@ export function normalisera(s: string): string {
     .trim();
 }
 
-function yrkeFor(ord: string): string | null {
-  const direkt = YRKESORD[ord];
+/** Ett yrkesord tolkat: en enda branschkod, eller en kategori av flera. */
+type Yrke = { ng1: number } | { kategori: string };
+
+function slaUpp(ord: string): Yrke | null {
+  const kod = kodForSokord(ord);
+  if (kod != null) return { ng1: kod };
+  const kategori = YRKESORD[ord];
+  return kategori ? { kategori } : null;
+}
+
+function yrkeFor(ord: string): Yrke | null {
+  const direkt = slaUpp(ord);
   if (direkt) return direkt;
   // "elfirmor", "målerifirma", "byggföretagen" — ta bort ändelsen och försök igen.
   const stam = ord.replace(/(firmorna|firmor|firman|firma|företagen|företag)$/, "");
   if (stam !== ord && stam.length >= 2) {
-    return YRKESORD[stam] ?? YRKESORD[stam.replace(/i$/, "")] ?? null;
+    return slaUpp(stam) ?? slaUpp(stam.replace(/i$/, "")) ?? slaUpp(`${stam.replace(/i$/, "")}are`);
   }
   return null;
 }
+
+const sammaYrke = (a: Yrke, b: Yrke) =>
+  "ng1" in a ? "ng1" in b && a.ng1 === b.ng1 : "kategori" in b && a.kategori === b.kategori;
 
 type OrtTraff =
   | { typ: "kommun"; kommun: Kommun }
@@ -195,6 +174,8 @@ function hittaOrt(ord: string[]): { ort: OrtTraff; index: Set<number> } | null {
 export type Tolkning = {
   /** Kategori-slug ur hantverk-kategorier.ts. */
   kategori: string | null;
+  /** En enda branschkod, när yrkesordet betyder just den (klustrets SOKORD). */
+  ng1: number | null;
   ort: OrtTraff | null;
   /** Ord som varken var yrke, ort eller småord. */
   rest: string[];
@@ -207,7 +188,7 @@ export type Tolkning = {
 export function tolkaSokfraga(fraga: string): Tolkning {
   const ord = normalisera(fraga).split(" ").filter(Boolean);
   const traff = hittaOrt(ord);
-  let kategori: string | null = null;
+  let yrke: Yrke | null = null;
   let saknatYrke: string | null = null;
   let allaYrken = false;
   const rest: string[] = [];
@@ -218,9 +199,9 @@ export function tolkaSokfraga(fraga: string): Tolkning {
       allaYrken = true;
       return;
     }
-    const k = yrkeFor(o);
-    if (k && (!kategori || kategori === k)) {
-      kategori = k;
+    const y = yrkeFor(o);
+    if (y && (!yrke || sammaYrke(yrke, y))) {
+      yrke = y;
       return;
     }
     if (SAKNADE_YRKEN[o]) {
@@ -229,13 +210,24 @@ export function tolkaSokfraga(fraga: string): Tolkning {
     }
     rest.push(o);
   });
-  return { kategori, ort: traff?.ort ?? null, rest, saknatYrke, allaYrken };
+  const y = yrke as Yrke | null;
+  return {
+    kategori: y && "kategori" in y ? y.kategori : null,
+    ng1: y && "ng1" in y ? y.ng1 : null,
+    ort: traff?.ort ?? null,
+    rest,
+    saknatYrke,
+    allaYrken,
+  };
 }
 
 /** Sökparametrar för en tolkning som gick att placera helt, annars null. */
 export function parametrarFor(t: Tolkning): URLSearchParams | null {
-  if (!t.kategori || t.rest.length > 0) return null;
-  const p = new URLSearchParams({ kategori: t.kategori });
+  if ((!t.kategori && t.ng1 == null) || t.rest.length > 0) return null;
+  const p =
+    t.ng1 != null
+      ? new URLSearchParams({ bransch: String(t.ng1) })
+      : new URLSearchParams({ kategori: t.kategori! });
   if (t.ort?.typ === "kommun") p.set("kommun", t.ort.kommun.slug);
   else if (t.ort?.typ === "lan") p.set("lan", t.ort.lan.slug);
   else if (t.ort?.typ === "postort") p.set("postort", t.ort.postort);
@@ -281,31 +273,38 @@ export function kombinationsforslag(fraga: string, max = 4): Kombination[] {
   const hel = tolkaSokfraga(fraga);
   const params = parametrarFor(hel);
   if (params && hel.ort) {
-    return [{ label: etikett(hel.kategori!, hel.ort), href: `/sok?${params}` }];
+    return [{ label: etikett(hel, hel.ort), href: `/sok?${params}` }];
   }
   // Sista ordet som början på ett kommunnamn.
   const sista = ord[ord.length - 1];
   const fore = tolkaSokfraga(ord.slice(0, -1).join(" "));
-  if (!fore.kategori || fore.rest.length > 0 || fore.ort || sista.length < 2) return [];
+  const forsta = parametrarFor(fore);
+  if (!forsta || fore.ort || sista.length < 2) return [];
   // Störst först: "kung" ska föreslå Kungsbacka och Kungälv före Kungsör.
   return KOMMUN_NAMN.filter(({ n }) => n.startsWith(sista))
     .map(({ k }) => k)
     .sort((a, b) => (KOMMUN_FORETAG[b.code] ?? 0) - (KOMMUN_FORETAG[a.code] ?? 0))
     .slice(0, max)
     .map((k) => ({
-      label: etikett(fore.kategori!, { typ: "kommun", kommun: k }),
-      href: `/sok?kategori=${fore.kategori}&kommun=${k.slug}`,
+      label: etikett(fore, { typ: "kommun", kommun: k }),
+      href: `/sok?${forsta}&kommun=${k.slug}`,
     }));
 }
 
-function etikett(kategori: string, ort: OrtTraff): string {
+/** Yrkets namn i en tolkning: kodens yrkesnamn eller kategorins etikett. */
+export function tolkningensYrke(t: Pick<Tolkning, "kategori" | "ng1">): string | null {
+  if (t.ng1 != null) return yrkesnamn(t.ng1);
+  return t.kategori ? kategoriNamn(t.kategori) : null;
+}
+
+function etikett(t: Pick<Tolkning, "kategori" | "ng1">, ort: OrtTraff): string {
   const plats =
     ort.typ === "kommun"
       ? ort.kommun.name
       : ort.typ === "lan"
         ? `${ort.lan.name}s län`
         : ort.postort;
-  return `${kategoriNamn(kategori)} i ${plats}`;
+  return `${tolkningensYrke(t)} i ${plats}`;
 }
 
 /** Snabbval på startsidan och i tomma sökresultat. */
@@ -320,3 +319,78 @@ export const SNABBVAL: ReadonlyArray<{ label: string; kategori: string }> = [
   { label: "Mark & entreprenad", kategori: "mark-anlaggning" },
   { label: "Trädgård", kategori: "tradgard" },
 ];
+
+// ---- Stavningsförslag -------------------------------------------------------
+
+/** Damerau–Levenshtein (optimal string alignment), med tak: avbryter över max. */
+function avstand(a: string, b: string, max: number): number {
+  if (Math.abs(a.length - b.length) > max) return max + 1;
+  const d: number[][] = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
+  for (let j = 1; j <= b.length; j++) d[0][j] = j;
+  for (let i = 1; i <= a.length; i++) {
+    let radMin = Infinity;
+    for (let j = 1; j <= b.length; j++) {
+      const kostnad = a[i - 1] === b[j - 1] ? 0 : 1;
+      d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + kostnad);
+      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) {
+        d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1);
+      }
+      radMin = Math.min(radMin, d[i][j]);
+    }
+    if (radMin > max) return max + 1;
+  }
+  return d[a.length][b.length];
+}
+
+let ordforrad: string[] | null = null;
+/** Orden söket förstår: yrkesord, kategoriord och ortnamn i ett ord. */
+function kandaOrd(): string[] {
+  ordforrad ??= [
+    ...new Set([
+      ...allaSokord(),
+      ...Object.keys(YRKESORD),
+      ...Object.keys(SAKNADE_YRKEN),
+      ...ALLA_YRKEN,
+      ...KOMMUN_NAMN.map(({ n }) => n),
+      ...LAN_NAMN.map(({ n }) => n),
+    ]),
+  ].filter((o) => !o.includes(" "));
+  return ordforrad;
+}
+
+/**
+ * "elektrikker mölndal" → "elektriker mölndal". Föreslås bara när varje okänt
+ * ord har EN närmaste kandidat inom ett fel (två för ord på åtta tecken och
+ * mer), och när den rättade frågan går att placera helt. Annars null — ett
+ * förslag som också ger noll träffar är sämre än inget.
+ */
+export function stavningsforslag(fraga: string): string | null {
+  const t = tolkaSokfraga(fraga);
+  if (t.rest.length === 0) return null;
+  const ord = normalisera(fraga).split(" ").filter(Boolean);
+  let andrat = false;
+  const rattat = ord.map((o) => {
+    if (!t.rest.includes(o) || o.length < 4) return o;
+    const max = o.length >= 8 ? 2 : 1;
+    let bast: string | null = null;
+    let bastAvstand = max + 1;
+    let delad = false;
+    for (const k of kandaOrd()) {
+      const d = avstand(o, k, max);
+      if (d < bastAvstand) {
+        bast = k;
+        bastAvstand = d;
+        delad = false;
+      } else if (d === bastAvstand && d <= max) {
+        delad = true;
+      }
+    }
+    if (!bast || bastAvstand > max || delad) return o;
+    andrat = true;
+    return bast;
+  });
+  if (!andrat) return null;
+  const forslag = rattat.join(" ");
+  const ny = tolkaSokfraga(forslag);
+  return ny.rest.length === 0 && (ny.kategori || ny.ng1 != null || ny.allaYrken || ny.ort) ? forslag : null;
+}

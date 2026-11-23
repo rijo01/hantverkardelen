@@ -10,6 +10,7 @@ import {
   branschPageSlug,
   listForetagInKommunByBransch,
   parseBranschSlug,
+  listTjansterForKunder,
 } from "@/lib/queries";
 import { isHantverkBransch } from "@/lib/hantverk-branscher";
 import { JsonLd, buildBreadcrumb } from "@/components/json-ld";
@@ -120,6 +121,7 @@ export default async function BranschSida({
     loadAktivaOverlays(),
   ]);
   const rows = ordnaBoostade(oboostade, overlays);
+  const tjanster = await listTjansterForKunder(rows);
   // En sida bortom listans slut är tom. Med självrefererande canonical hade
   // den blivit en egen indexerbar tom sida (soft 404) — svara 404.
   if (page > 1 && rows.length === 0) notFound();
@@ -237,6 +239,7 @@ export default async function BranschSida({
                 <CompanyCard
                   foretag={f}
                   overlay={overlayFor(f, overlays)}
+                  tjanster={tjanster.get(f.cfarnr)}
                   branschName={yrke}
                   kommunName={kommun.name}
                 />

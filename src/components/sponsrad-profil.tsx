@@ -117,7 +117,7 @@ export function KontaktRuta({
     rader.push({
       etikett: "Hemsida",
       varde: (
-        <a href={profil.hemsida} target="_blank" rel="noopener noreferrer" className="sg-link break-all">
+        <a href={profil.hemsida} target="_blank" rel="sponsored noopener noreferrer" className="sg-link break-all">
           {shortWebb(profil.hemsida) ?? profil.hemsida}
         </a>
       ),

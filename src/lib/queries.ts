@@ -982,3 +982,39 @@ export function parseBranschSlug(slug: string): number | null {
   const n = Number(m[1]);
   return Number.isFinite(n) ? n : null;
 }
+
+/**
+ * Tjänsterna på listkorten: registrets sökord för kunderna (`poang > 0`) på
+ * sidan, i en fråga. Bara kunder — för andra är sokordtable ett tretton år
+ * gammalt sökordsfält, inte tjänster företaget självt angett.
+ */
+export async function listTjansterForKunder(rader: Foretag[], max = 6): Promise<Map<number, string[]>> {
+  const ut = new Map<number, string[]>();
+  const kunder = rader.filter((f) => (f.poang ?? 0) > 0).map((f) => f.cfarnr);
+  if (kunder.length === 0) return ut;
+  const supa = getSupabaseAnon();
+  const { data, error } = await supa
+    .from("sokordtable")
+    .select("cfarnr,sokord")
+    .in("cfarnr", kunder)
+    .not("sokord", "is", null)
+    .limit(kunder.length * 40);
+  if (error || !data) {
+    if (error) console.warn("listTjansterForKunder", error.message);
+    return ut;
+  }
+  const kf = await kontaktsparrFilter();
+  const perBolag = new Map<number, string[]>();
+  for (const r of data as Array<{ cfarnr: number; sokord: string | null }>) {
+    const s = (r.sokord ?? "").trim();
+    if (!s) continue;
+    const lista = perBolag.get(r.cfarnr) ?? [];
+    if (!lista.some((x) => x.toLowerCase() === s.toLowerCase())) lista.push(s);
+    perBolag.set(r.cfarnr, lista);
+  }
+  for (const [cfarnr, ord] of perBolag) {
+    const rena = rensaSokord(filtreraSokord(ord, kf), true).slice(0, max);
+    if (rena.length) ut.set(cfarnr, rena);
+  }
+  return ut;
+}

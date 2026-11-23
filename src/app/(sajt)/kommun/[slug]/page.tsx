@@ -8,6 +8,7 @@ import {
   countForetagInKommun,
   getBranschFordelning,
   listForetagInKommun,
+  listTjansterForKunder,
 } from "@/lib/queries";
 import { getBranschNamesBulk } from "@/lib/branscher";
 import { JsonLd, buildBreadcrumb } from "@/components/json-ld";
@@ -73,7 +74,10 @@ export default async function KommunPage({ params }: { params: Params }) {
   // Stabil sortering: den som inte köpt framhävning står kvar där den stod.
   const foretagSample = ordnaBoostade(oboostadeForetag, overlays);
 
-  const branschNames = await getBranschNamesBulk(fordelning.map((f) => f.ng1));
+  const [branschNames, tjanster] = await Promise.all([
+    getBranschNamesBulk(fordelning.map((f) => f.ng1)),
+    listTjansterForKunder(foretagSample),
+  ]);
 
   const lan = lanByCode(kommun.lan);
   // Närliggande = samma län. Grannskapsdata finns inte; länet är det ärliga
@@ -155,6 +159,7 @@ export default async function KommunPage({ params }: { params: Params }) {
                 <CompanyCard
                   foretag={f}
                   overlay={overlayFor(f, overlays)}
+                  tjanster={tjanster.get(f.cfarnr)}
                   branschName={f.ng1 ? yrkesnamn(f.ng1) : null}
                   kommunName={kommun.name}
                 />
