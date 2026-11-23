@@ -382,7 +382,8 @@ export default async function ForetagSida({
               </a>
             )}
             {adressText && (
-              <p className="text-[15px] leading-snug text-ink-2">
+              /* div, inte p: <address> får inte ligga i ett <p> (hydreringsfel #418). */
+              <div className="text-[15px] leading-snug text-ink-2">
                 <address className="inline not-italic">{adressText}</address>
                 {mapsUrl && (
                   <>
@@ -392,7 +393,7 @@ export default async function ForetagSida({
                     </a>
                   </>
                 )}
-              </p>
+              </div>
             )}
             {!harKontaktvag && (
               <div className="mt-1 border-t border-line pt-3 text-[15px] leading-snug text-ink-2">
