@@ -63,6 +63,13 @@ const NISCH = [];
     if (k) NISCH.push(Number(k[1]));
   }
 }
+/**
+ * Gamla registerkoder som vyn hantverk_foretag_publik visar under en annan
+ * nischkod (lib/sql/hantverk-pafyllning-002.sql). De hör till nischen när
+ * påfyllningen jämför orgnr och räknar hubbarnas antal.
+ */
+const SAMMA_YRKE = { 16232: 16233 };
+const NISCH_MED_SAMMA_YRKE = [...NISCH, ...Object.keys(SAMMA_YRKE).map(Number)];
 
 /** SNI 2025 → sajtens ng1 (SNI 2007). Riktningen är ny kod → dagens yrke. */
 const SNI_TILL_NG1 = {
@@ -190,7 +197,7 @@ const medOrgnr = (o) => `${o.slice(0, 6)}-${o.slice(6)}`;
 const orgnrPaSajten = new Set(
   (
     await iBitar([...new Set(kandidater.map((k) => medOrgnr(k.orgnr)))], 150, (bit) =>
-      rest(`foretag_publik?select=orgnr&ng1=in.(${NISCH.join(",")})&orgnr=in.(${bit.map((o) => `"${o}"`).join(",")})`, {}, H_ANON),
+      rest(`foretag_publik?select=orgnr&ng1=in.(${NISCH_MED_SAMMA_YRKE.join(",")})&orgnr=in.(${bit.map((o) => `"${o}"`).join(",")})`, {}, H_ANON),
     )
   ).map((r) => r.orgnr),
 );
@@ -261,6 +268,20 @@ for (const r of rader) {
   kf[r.kommun] = (kf[r.kommun] ?? 0) + 1;
   (kbf[r.kommun] ??= {})[r.ng1] = (kbf[r.kommun][r.ng1] ?? 0) + 1;
 }
+// Gamla rader som vyn flyttar till en nischkod (16232 -> 16233) finns inte i
+// seo-snapshot.ts, eftersom deras kod inte är nischens. De räknas här.
+let flyttade = 0;
+for (const [fran, till] of Object.entries(SAMMA_YRKE)) {
+  const gamla = await rest(`foretag_publik?select=cfarnr,kommun&ng1=eq.${fran}`, {}, H_ANON);
+  for (const g of gamla) {
+    if (g.kommun == null || dolda.has(String(g.cfarnr))) continue;
+    const k = String(g.kommun);
+    flyttade++;
+    kf[k] = (kf[k] ?? 0) + 1;
+    (kbf[k] ??= {})[till] = (kbf[k][till] ?? 0) + 1;
+  }
+}
+console.error(`  gamla rader under annan nischkod (räknade i hubbarna): ${flyttade}`);
 const sortera = (o) => Object.fromEntries(Object.keys(o).sort().map((k) => [k, o[k]]));
 const datum = new Date().toISOString().slice(0, 10);
 const snapshot = `/**
@@ -269,7 +290,9 @@ const snapshot = `/**
  * Påfyllningens tillskott till seo-snapshot.ts: antal NYA rader (vyn
  * hantverk_foretag_publik minus foretag_publik) per kommun och per kommun ×
  * bransch. Läggs till ögonblicksbilden bara när flaggan PAFYLLNING är på
- * (lib/seo.ts). Rader utan kommun räknas inte.
+ * (lib/seo.ts). Rader utan kommun räknas inte. Hit räknas också gamla
+ * registerrader som vyn visar under en nischkod (16232 som 16233); de ingår
+ * inte i PAFYLLNING_TOTAL.
  *
  * Skapad av scripts/importera-pafyllning.mjs.
  */

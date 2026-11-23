@@ -43,7 +43,7 @@ export const HANTVERK_BRANSCHER: readonly number[] = [
   43310, // Putsning, fasadbeklädnad och stuckatörsarbeten
   // — Snickeri, kök, inredning, dörrar/fönster —
   43320, // Byggnadssnickeriarbeten (snickeri på plats)
-  16233, // SNI 2007: tillverkning av fönster av trä. Påfyllningen lägger SNI 2025 16250 (dörrar och fönster av trä) här
+  16233, // SNI 2007: fönster av trä. Hit hör också 16232 (dörrar av trä, via vyn) och SNI 2025 16250 (påfyllningen)
   25120, // Tillverkning av dörrar och fönster av metall
   // — Trädgård / grönytor —
   81300, // Skötsel och underhåll av grönytor

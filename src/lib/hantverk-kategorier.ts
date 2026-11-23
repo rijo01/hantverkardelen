@@ -70,7 +70,7 @@ const KATEGORIER_2011: ReadonlyArray<HantverkKategori> = [
   {
     slug: "snickeri",
     name: "Snickeri & kök",
-    description: "Snickare, köksinredning, dörrar & fönster",
+    description: "Snickare, dörrar & fönster",
     ng1: [43320, 16233, 25120],
     count: 9721,
     icon: Hammer,

@@ -34,12 +34,12 @@ const YRKESNAMN: Readonly<Record<number, string>> = {
   43342: "Glasmästare",
   43310: "Puts & fasad",
   43320: "Snickare",
-  // SNI 2007 16233 = fönster av trä (16232 = dörrar av trä). SNI 2025 slår ihop
-  // dem till 16250 "dörrar och fönster av trä"; påfyllningen lägger 16250 här.
-  // Det gamla namnet "Kök- & badrumsinredning" var fel. "av trä" skiljer yrket
-  // från 25120 (metall). Förslag 2026-11-23, väntar på beslut.
+  // SNI 2007 16233 = fönster av trä, 16232 = dörrar av trä. SNI 2025 slår ihop
+  // dem till 16250, som påfyllningen lägger här, och vyn hantverk_foretag_publik
+  // visar de gamla 16232-raderna som 16233. Det gamla namnet "Kök- &
+  // badrumsinredning" var fel. Beslut 2026-11-23.
   16233: "Dörrar & fönster av trä",
-  25120: "Dörrar & fönster",
+  25120: "Dörrar & fönster av metall",
   81300: "Trädgård & grönytor",
   23630: "Fabriksbetong",
   23610: "Betongvaror",

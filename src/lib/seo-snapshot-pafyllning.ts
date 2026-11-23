@@ -4,33 +4,35 @@
  * Påfyllningens tillskott till seo-snapshot.ts: antal NYA rader (vyn
  * hantverk_foretag_publik minus foretag_publik) per kommun och per kommun ×
  * bransch. Läggs till ögonblicksbilden bara när flaggan PAFYLLNING är på
- * (lib/seo.ts). Rader utan kommun räknas inte.
+ * (lib/seo.ts). Rader utan kommun räknas inte. Hit räknas också gamla
+ * registerrader som vyn visar under en nischkod (16232 som 16233); de ingår
+ * inte i PAFYLLNING_TOTAL.
  *
  * Skapad av scripts/importera-pafyllning.mjs.
  */
 
 export const PAFYLLNING_GENERERAD = "2026-11-23";
 
-export const PAFYLLNING_TOTAL = 59947;
+export const PAFYLLNING_TOTAL = 59945;
 
 export const KOMMUN_FORETAG_NYA: Readonly<Record<string, number>> = {
   "114": 354,
   "115": 327,
-  "117": 545,
+  "117": 546,
   "120": 588,
   "123": 546,
   "125": 340,
   "126": 1031,
   "127": 798,
   "128": 129,
-  "136": 1059,
-  "138": 426,
+  "136": 1060,
+  "138": 427,
   "139": 248,
   "140": 150,
   "160": 373,
   "162": 143,
-  "163": 434,
-  "180": 4862,
+  "163": 435,
+  "180": 4869,
   "181": 748,
   "182": 724,
   "183": 258,
@@ -39,25 +41,25 @@ export const KOMMUN_FORETAG_NYA: Readonly<Record<string, number>> = {
   "187": 111,
   "188": 873,
   "191": 376,
-  "192": 312,
+  "192": 314,
   "305": 217,
   "319": 53,
   "330": 168,
-  "331": 115,
-  "360": 148,
-  "380": 1041,
-  "381": 414,
+  "331": 117,
+  "360": 150,
+  "380": 1042,
+  "381": 415,
   "382": 184,
   "428": 58,
-  "461": 103,
-  "480": 345,
+  "461": 105,
+  "480": 346,
   "481": 36,
   "482": 99,
   "483": 164,
-  "484": 593,
+  "484": 594,
   "486": 349,
   "488": 151,
-  "509": 29,
+  "509": 30,
   "512": 20,
   "513": 56,
   "560": 23,
@@ -69,29 +71,29 @@ export const KOMMUN_FORETAG_NYA: Readonly<Record<string, number>> = {
   "582": 121,
   "583": 207,
   "584": 38,
-  "586": 118,
+  "586": 119,
   "604": 56,
   "617": 36,
   "642": 30,
   "643": 74,
   "662": 118,
   "665": 58,
-  "680": 635,
-  "682": 116,
-  "683": 129,
+  "680": 638,
+  "682": 117,
+  "683": 132,
   "684": 50,
-  "685": 126,
+  "685": 128,
   "686": 57,
   "687": 108,
   "760": 47,
   "761": 41,
-  "763": 70,
+  "763": 71,
   "764": 88,
-  "765": 65,
+  "765": 67,
   "767": 63,
-  "780": 375,
-  "781": 100,
-  "821": 22,
+  "780": 376,
+  "781": 101,
+  "821": 24,
   "834": 43,
   "840": 104,
   "860": 71,
@@ -100,54 +102,54 @@ export const KOMMUN_FORETAG_NYA: Readonly<Record<string, number>> = {
   "880": 372,
   "881": 65,
   "882": 114,
-  "883": 183,
+  "883": 184,
   "884": 67,
   "885": 94,
-  "980": 437,
+  "980": 442,
   "1060": 35,
-  "1080": 291,
-  "1081": 99,
+  "1080": 292,
+  "1081": 100,
   "1082": 159,
-  "1083": 105,
+  "1083": 106,
   "1214": 94,
   "1230": 139,
   "1231": 132,
   "1233": 273,
   "1256": 74,
-  "1257": 81,
+  "1257": 82,
   "1260": 120,
   "1261": 229,
   "1262": 89,
   "1263": 169,
-  "1264": 142,
-  "1265": 202,
+  "1264": 143,
+  "1265": 204,
   "1266": 132,
-  "1267": 128,
+  "1267": 129,
   "1270": 88,
   "1272": 74,
-  "1273": 53,
+  "1273": 57,
   "1275": 33,
   "1276": 120,
-  "1277": 113,
+  "1277": 114,
   "1278": 156,
-  "1280": 1378,
-  "1281": 352,
+  "1280": 1383,
+  "1281": 353,
   "1282": 250,
-  "1283": 671,
-  "1284": 200,
+  "1283": 672,
+  "1284": 201,
   "1285": 177,
-  "1286": 176,
+  "1286": 179,
   "1287": 326,
-  "1290": 428,
-  "1291": 125,
+  "1290": 429,
+  "1291": 129,
   "1292": 304,
-  "1293": 311,
-  "1315": 39,
-  "1380": 446,
+  "1293": 312,
+  "1315": 40,
+  "1380": 447,
   "1381": 214,
-  "1382": 284,
-  "1383": 470,
-  "1384": 689,
+  "1382": 285,
+  "1383": 472,
+  "1384": 691,
   "1401": 280,
   "1402": 221,
   "1407": 91,
@@ -156,13 +158,13 @@ export const KOMMUN_FORETAG_NYA: Readonly<Record<string, number>> = {
   "1421": 206,
   "1427": 108,
   "1430": 87,
-  "1435": 125,
+  "1435": 127,
   "1438": 41,
   "1439": 56,
   "1440": 235,
-  "1441": 333,
+  "1441": 334,
   "1442": 106,
-  "1443": 74,
+  "1443": 75,
   "1444": 42,
   "1445": 47,
   "1446": 28,
@@ -171,35 +173,35 @@ export const KOMMUN_FORETAG_NYA: Readonly<Record<string, number>> = {
   "1460": 36,
   "1461": 65,
   "1462": 140,
-  "1463": 294,
+  "1463": 296,
   "1465": 70,
   "1466": 62,
   "1470": 91,
-  "1471": 58,
+  "1471": 59,
   "1472": 49,
-  "1473": 40,
-  "1480": 2187,
+  "1473": 41,
+  "1480": 2189,
   "1481": 372,
-  "1482": 419,
-  "1484": 93,
+  "1482": 420,
+  "1484": 94,
   "1485": 428,
   "1486": 99,
   "1487": 189,
   "1488": 235,
   "1489": 234,
   "1490": 557,
-  "1491": 136,
+  "1491": 137,
   "1492": 60,
   "1493": 108,
   "1494": 216,
-  "1495": 50,
+  "1495": 51,
   "1496": 199,
-  "1497": 45,
+  "1497": 46,
   "1498": 51,
-  "1499": 131,
+  "1499": 132,
   "1715": 93,
   "1730": 28,
-  "1737": 72,
+  "1737": 73,
   "1760": 30,
   "1761": 79,
   "1762": 12,
@@ -208,18 +210,18 @@ export const KOMMUN_FORETAG_NYA: Readonly<Record<string, number>> = {
   "1765": 42,
   "1766": 110,
   "1780": 458,
-  "1781": 109,
+  "1781": 110,
   "1782": 37,
   "1783": 36,
-  "1784": 119,
-  "1785": 85,
+  "1784": 122,
+  "1785": 86,
   "1814": 102,
   "1860": 31,
   "1861": 114,
   "1862": 31,
   "1863": 37,
   "1864": 18,
-  "1880": 810,
+  "1880": 811,
   "1881": 162,
   "1882": 85,
   "1883": 130,
@@ -227,18 +229,18 @@ export const KOMMUN_FORETAG_NYA: Readonly<Record<string, number>> = {
   "1885": 127,
   "1904": 18,
   "1907": 54,
-  "1960": 44,
+  "1960": 45,
   "1961": 91,
   "1962": 36,
-  "1980": 704,
-  "1981": 175,
+  "1980": 705,
+  "1981": 177,
   "1982": 59,
   "1983": 113,
   "1984": 92,
   "2021": 45,
-  "2023": 116,
-  "2026": 101,
-  "2029": 114,
+  "2023": 117,
+  "2026": 102,
+  "2029": 116,
   "2031": 100,
   "2034": 50,
   "2039": 84,
@@ -247,24 +249,24 @@ export const KOMMUN_FORETAG_NYA: Readonly<Record<string, number>> = {
   "2080": 353,
   "2081": 331,
   "2082": 102,
-  "2083": 89,
+  "2083": 90,
   "2084": 115,
   "2085": 152,
   "2101": 39,
   "2104": 39,
-  "2121": 49,
-  "2132": 70,
+  "2121": 50,
+  "2132": 71,
   "2161": 183,
-  "2180": 612,
+  "2180": 613,
   "2181": 170,
   "2182": 172,
-  "2183": 154,
-  "2184": 244,
-  "2260": 46,
+  "2183": 156,
+  "2184": 246,
+  "2260": 47,
   "2262": 98,
   "2280": 130,
   "2281": 571,
-  "2282": 74,
+  "2282": 75,
   "2283": 99,
   "2284": 271,
   "2303": 41,
@@ -273,7 +275,7 @@ export const KOMMUN_FORETAG_NYA: Readonly<Record<string, number>> = {
   "2313": 71,
   "2321": 162,
   "2326": 90,
-  "2361": 127,
+  "2361": 128,
   "2380": 460,
   "2401": 49,
   "2403": 13,
@@ -282,15 +284,15 @@ export const KOMMUN_FORETAG_NYA: Readonly<Record<string, number>> = {
   "2417": 17,
   "2418": 9,
   "2421": 43,
-  "2422": 25,
+  "2422": 26,
   "2425": 17,
-  "2460": 43,
+  "2460": 44,
   "2462": 52,
   "2463": 15,
-  "2480": 576,
-  "2481": 60,
-  "2482": 443,
-  "2505": 45,
+  "2480": 580,
+  "2481": 61,
+  "2482": 445,
+  "2505": 46,
   "2506": 18,
   "2510": 46,
   "2513": 23,
@@ -299,8 +301,8 @@ export const KOMMUN_FORETAG_NYA: Readonly<Record<string, number>> = {
   "2521": 53,
   "2523": 135,
   "2560": 73,
-  "2580": 410,
-  "2581": 303,
+  "2580": 411,
+  "2581": 305,
   "2582": 177,
   "2583": 87,
   "2584": 151
@@ -355,7 +357,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
   },
   "117": {
     "16231": 1,
-    "16233": 1,
+    "16233": 2,
     "23610": 2,
     "41200": 167,
     "42110": 5,
@@ -526,7 +528,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
   },
   "136": {
     "16231": 2,
-    "16233": 1,
+    "16233": 2,
     "25120": 2,
     "41200": 253,
     "42110": 5,
@@ -553,7 +555,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
     "81300": 26
   },
   "138": {
-    "16233": 1,
+    "16233": 2,
     "25120": 1,
     "41200": 90,
     "42110": 3,
@@ -661,6 +663,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
     "81300": 13
   },
   "163": {
+    "16233": 1,
     "23630": 1,
     "41200": 118,
     "42110": 3,
@@ -687,7 +690,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
   },
   "180": {
     "16231": 16,
-    "16233": 8,
+    "16233": 15,
     "23610": 8,
     "25120": 7,
     "41200": 1375,
@@ -914,6 +917,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
   },
   "192": {
     "16231": 1,
+    "16233": 2,
     "25120": 1,
     "41200": 70,
     "42110": 6,
@@ -1001,6 +1005,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
     "81300": 7
   },
   "331": {
+    "16233": 2,
     "41200": 16,
     "42110": 2,
     "42210": 3,
@@ -1018,6 +1023,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
     "43999": 4
   },
   "360": {
+    "16233": 2,
     "25120": 1,
     "41200": 21,
     "42110": 2,
@@ -1040,6 +1046,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
   },
   "380": {
     "16231": 6,
+    "16233": 1,
     "23610": 1,
     "25120": 2,
     "41200": 213,
@@ -1066,6 +1073,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
     "81300": 40
   },
   "381": {
+    "16233": 1,
     "23610": 1,
     "41200": 92,
     "42110": 6,
@@ -1126,6 +1134,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
     "81300": 3
   },
   "461": {
+    "16233": 2,
     "41200": 24,
     "42210": 1,
     "42220": 1,
@@ -1145,6 +1154,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
   },
   "480": {
     "16231": 1,
+    "16233": 1,
     "25120": 1,
     "41200": 61,
     "42110": 6,
@@ -1226,7 +1236,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
   },
   "484": {
     "16231": 1,
-    "16233": 2,
+    "16233": 3,
     "23610": 2,
     "23690": 1,
     "25120": 5,
@@ -1297,6 +1307,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
     "81300": 5
   },
   "509": {
+    "16233": 1,
     "41200": 6,
     "42120": 2,
     "42910": 1,
@@ -1497,6 +1508,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
     "81300": 3
   },
   "586": {
+    "16233": 1,
     "41200": 22,
     "42110": 3,
     "42120": 1,
@@ -1614,6 +1626,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
     "81300": 2
   },
   "680": {
+    "16233": 3,
     "23610": 1,
     "25120": 4,
     "41200": 123,
@@ -1641,7 +1654,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
   },
   "682": {
     "16231": 1,
-    "16233": 1,
+    "16233": 2,
     "41200": 22,
     "42110": 2,
     "42120": 4,
@@ -1662,7 +1675,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
     "81300": 1
   },
   "683": {
-    "16233": 1,
+    "16233": 4,
     "41200": 23,
     "42110": 2,
     "43120": 16,
@@ -1696,7 +1709,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
   },
   "685": {
     "16231": 2,
-    "16233": 1,
+    "16233": 3,
     "25120": 1,
     "41200": 29,
     "42110": 2,
@@ -1783,7 +1796,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
   },
   "763": {
     "16231": 1,
-    "16233": 2,
+    "16233": 3,
     "23610": 1,
     "41200": 10,
     "42110": 2,
@@ -1821,6 +1834,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
     "81300": 1
   },
   "765": {
+    "16233": 2,
     "41200": 18,
     "43120": 6,
     "43210": 4,
@@ -1851,6 +1865,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
   },
   "780": {
     "16231": 3,
+    "16233": 1,
     "41200": 91,
     "42110": 6,
     "42120": 2,
@@ -1875,6 +1890,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
   },
   "781": {
     "16231": 1,
+    "16233": 1,
     "23610": 1,
     "41200": 14,
     "42110": 1,
@@ -1893,6 +1909,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
     "81300": 5
   },
   "821": {
+    "16233": 2,
     "41200": 5,
     "42210": 1,
     "43120": 4,
@@ -2052,6 +2069,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
   },
   "883": {
     "16231": 1,
+    "16233": 1,
     "23630": 1,
     "41200": 36,
     "42110": 4,
@@ -2109,7 +2127,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
   },
   "980": {
     "16231": 2,
-    "16233": 3,
+    "16233": 8,
     "23690": 1,
     "25120": 1,
     "41200": 118,
@@ -2148,7 +2166,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
     "81300": 2
   },
   "1080": {
-    "16233": 1,
+    "16233": 2,
     "41200": 57,
     "42110": 5,
     "42120": 1,
@@ -2170,6 +2188,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
     "81300": 10
   },
   "1081": {
+    "16233": 1,
     "25120": 1,
     "41200": 17,
     "42110": 1,
@@ -2210,6 +2229,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
   },
   "1083": {
     "16231": 2,
+    "16233": 1,
     "41200": 17,
     "42110": 1,
     "42120": 1,
@@ -2331,6 +2351,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
     "81300": 2
   },
   "1257": {
+    "16233": 1,
     "23610": 1,
     "41200": 19,
     "42210": 1,
@@ -2432,6 +2453,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
     "81300": 7
   },
   "1264": {
+    "16233": 1,
     "41200": 28,
     "42110": 1,
     "42120": 2,
@@ -2451,6 +2473,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
     "81300": 16
   },
   "1265": {
+    "16233": 2,
     "23610": 1,
     "23690": 1,
     "25120": 2,
@@ -2494,7 +2517,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
     "81300": 2
   },
   "1267": {
-    "16233": 1,
+    "16233": 2,
     "23610": 1,
     "41200": 35,
     "42110": 1,
@@ -2548,6 +2571,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
   },
   "1273": {
     "16231": 1,
+    "16233": 4,
     "41200": 10,
     "43120": 5,
     "43210": 6,
@@ -2600,6 +2624,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
     "81300": 7
   },
   "1277": {
+    "16233": 1,
     "23630": 1,
     "41200": 23,
     "42110": 1,
@@ -2645,7 +2670,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
   },
   "1280": {
     "16231": 3,
-    "16233": 3,
+    "16233": 8,
     "25120": 1,
     "41200": 406,
     "42110": 6,
@@ -2673,7 +2698,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
   },
   "1281": {
     "16231": 2,
-    "16233": 1,
+    "16233": 2,
     "23630": 1,
     "25120": 3,
     "41200": 87,
@@ -2722,7 +2747,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
     "81300": 9
   },
   "1283": {
-    "16233": 2,
+    "16233": 3,
     "23610": 1,
     "23630": 1,
     "25120": 2,
@@ -2750,7 +2775,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
     "81300": 21
   },
   "1284": {
-    "16233": 2,
+    "16233": 3,
     "41200": 61,
     "42110": 2,
     "42120": 2,
@@ -2790,6 +2815,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
     "81300": 5
   },
   "1286": {
+    "16233": 3,
     "41200": 44,
     "42120": 2,
     "42210": 3,
@@ -2830,7 +2856,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
   },
   "1290": {
     "16231": 1,
-    "16233": 1,
+    "16233": 2,
     "23610": 1,
     "41200": 92,
     "42110": 7,
@@ -2854,7 +2880,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
     "81300": 25
   },
   "1291": {
-    "16233": 4,
+    "16233": 8,
     "25120": 1,
     "41200": 43,
     "42220": 1,
@@ -2897,6 +2923,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
     "81300": 17
   },
   "1293": {
+    "16233": 1,
     "23610": 1,
     "41200": 67,
     "42110": 6,
@@ -2921,6 +2948,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
     "81300": 10
   },
   "1315": {
+    "16233": 1,
     "41200": 8,
     "42220": 1,
     "43110": 1,
@@ -2937,6 +2965,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
     "81300": 4
   },
   "1380": {
+    "16233": 1,
     "41200": 90,
     "42110": 2,
     "42120": 2,
@@ -2984,7 +3013,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
   },
   "1382": {
     "16231": 4,
-    "16233": 2,
+    "16233": 3,
     "25120": 1,
     "41200": 76,
     "42110": 2,
@@ -3010,6 +3039,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
   },
   "1383": {
     "16231": 2,
+    "16233": 2,
     "41200": 102,
     "42110": 2,
     "42120": 6,
@@ -3034,7 +3064,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
   },
   "1384": {
     "16231": 1,
-    "16233": 1,
+    "16233": 3,
     "23610": 1,
     "23630": 1,
     "41200": 147,
@@ -3233,6 +3263,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
     "81300": 2
   },
   "1435": {
+    "16233": 2,
     "41200": 28,
     "42210": 2,
     "42220": 4,
@@ -3304,7 +3335,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
     "81300": 11
   },
   "1441": {
-    "16233": 1,
+    "16233": 2,
     "41200": 64,
     "42110": 6,
     "42120": 2,
@@ -3345,6 +3376,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
     "81300": 1
   },
   "1443": {
+    "16233": 1,
     "23610": 1,
     "41200": 20,
     "42210": 1,
@@ -3492,6 +3524,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
     "81300": 1
   },
   "1463": {
+    "16233": 2,
     "41200": 55,
     "42110": 2,
     "42210": 6,
@@ -3564,6 +3597,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
     "81300": 3
   },
   "1471": {
+    "16233": 1,
     "23610": 2,
     "41200": 7,
     "42120": 1,
@@ -3596,6 +3630,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
     "81300": 3
   },
   "1473": {
+    "16233": 1,
     "41200": 9,
     "42220": 1,
     "43120": 4,
@@ -3611,7 +3646,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
   },
   "1480": {
     "16231": 5,
-    "16233": 2,
+    "16233": 4,
     "23610": 1,
     "23690": 1,
     "25120": 5,
@@ -3664,6 +3699,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
   },
   "1482": {
     "16231": 1,
+    "16233": 1,
     "23610": 1,
     "41200": 97,
     "42110": 3,
@@ -3689,6 +3725,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
     "81300": 15
   },
   "1484": {
+    "16233": 1,
     "23610": 1,
     "41200": 27,
     "42110": 1,
@@ -3851,6 +3888,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
   },
   "1491": {
     "16231": 1,
+    "16233": 1,
     "25120": 1,
     "41200": 27,
     "42120": 1,
@@ -3928,6 +3966,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
     "81300": 9
   },
   "1495": {
+    "16233": 1,
     "41200": 12,
     "42220": 1,
     "42990": 1,
@@ -3964,6 +4003,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
     "81300": 6
   },
   "1497": {
+    "16233": 1,
     "41200": 9,
     "43120": 4,
     "43210": 4,
@@ -3989,6 +4029,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
     "81300": 2
   },
   "1499": {
+    "16233": 1,
     "23610": 1,
     "23630": 1,
     "41200": 16,
@@ -4041,6 +4082,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
     "81300": 1
   },
   "1737": {
+    "16233": 1,
     "41200": 33,
     "42110": 3,
     "42220": 1,
@@ -4191,7 +4233,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
     "81300": 15
   },
   "1781": {
-    "16233": 1,
+    "16233": 2,
     "23610": 1,
     "41200": 23,
     "42110": 1,
@@ -4240,7 +4282,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
     "43911": 1
   },
   "1784": {
-    "16233": 1,
+    "16233": 4,
     "41200": 30,
     "42110": 1,
     "43110": 1,
@@ -4257,6 +4299,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
     "81300": 1
   },
   "1785": {
+    "16233": 1,
     "23690": 1,
     "41200": 11,
     "42110": 1,
@@ -4374,6 +4417,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
   },
   "1880": {
     "16231": 2,
+    "16233": 1,
     "23610": 1,
     "23690": 1,
     "25120": 2,
@@ -4525,6 +4569,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
     "81300": 1
   },
   "1960": {
+    "16233": 1,
     "23610": 1,
     "41200": 13,
     "42220": 1,
@@ -4577,7 +4622,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
   },
   "1980": {
     "16231": 4,
-    "16233": 1,
+    "16233": 2,
     "23610": 1,
     "25120": 2,
     "41200": 137,
@@ -4605,7 +4650,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
     "81300": 22
   },
   "1981": {
-    "16233": 1,
+    "16233": 3,
     "23610": 1,
     "41200": 31,
     "42110": 2,
@@ -4700,7 +4745,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
   },
   "2023": {
     "16231": 1,
-    "16233": 1,
+    "16233": 2,
     "23630": 1,
     "41200": 25,
     "42110": 2,
@@ -4719,7 +4764,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
     "81300": 1
   },
   "2026": {
-    "16233": 1,
+    "16233": 2,
     "41200": 21,
     "42110": 3,
     "42120": 4,
@@ -4738,6 +4783,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
     "81300": 3
   },
   "2029": {
+    "16233": 2,
     "41200": 22,
     "42120": 3,
     "42210": 1,
@@ -4920,6 +4966,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
     "81300": 2
   },
   "2083": {
+    "16233": 1,
     "25120": 1,
     "41200": 14,
     "42110": 2,
@@ -5011,7 +5058,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
     "81300": 2
   },
   "2121": {
-    "16233": 1,
+    "16233": 2,
     "25120": 1,
     "41200": 4,
     "42990": 1,
@@ -5026,6 +5073,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
   },
   "2132": {
     "16231": 1,
+    "16233": 1,
     "25120": 1,
     "41200": 11,
     "42110": 1,
@@ -5066,6 +5114,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
     "81300": 3
   },
   "2180": {
+    "16233": 1,
     "23630": 1,
     "25120": 1,
     "41200": 110,
@@ -5137,6 +5186,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
   },
   "2183": {
     "16231": 2,
+    "16233": 2,
     "41200": 23,
     "42110": 1,
     "42210": 2,
@@ -5158,6 +5208,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
   },
   "2184": {
     "16231": 3,
+    "16233": 2,
     "23610": 2,
     "25120": 1,
     "41200": 46,
@@ -5182,6 +5233,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
   },
   "2260": {
     "16231": 1,
+    "16233": 1,
     "23610": 1,
     "23690": 1,
     "41200": 2,
@@ -5269,7 +5321,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
     "81300": 13
   },
   "2282": {
-    "16233": 1,
+    "16233": 2,
     "41200": 10,
     "42110": 1,
     "42990": 1,
@@ -5434,6 +5486,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
   },
   "2361": {
     "16231": 2,
+    "16233": 1,
     "41200": 34,
     "42110": 5,
     "42120": 2,
@@ -5559,7 +5612,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
     "43999": 2
   },
   "2422": {
-    "16233": 1,
+    "16233": 2,
     "23690": 1,
     "41200": 3,
     "42110": 3,
@@ -5583,6 +5636,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
     "81300": 2
   },
   "2460": {
+    "16233": 1,
     "41200": 7,
     "42110": 1,
     "42120": 1,
@@ -5628,6 +5682,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
   },
   "2480": {
     "16231": 5,
+    "16233": 4,
     "25120": 1,
     "41200": 142,
     "42110": 4,
@@ -5655,6 +5710,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
   },
   "2481": {
     "16231": 1,
+    "16233": 1,
     "41200": 5,
     "42110": 1,
     "42220": 4,
@@ -5673,6 +5729,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
   },
   "2482": {
     "16231": 7,
+    "16233": 2,
     "25120": 1,
     "41200": 82,
     "42110": 5,
@@ -5697,6 +5754,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
     "81300": 7
   },
   "2505": {
+    "16233": 1,
     "41200": 3,
     "42110": 2,
     "42120": 2,
@@ -5839,7 +5897,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
   },
   "2580": {
     "16231": 2,
-    "16233": 2,
+    "16233": 3,
     "23610": 1,
     "23630": 1,
     "41200": 77,
@@ -5867,6 +5925,7 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
   },
   "2581": {
     "16231": 3,
+    "16233": 2,
     "41200": 55,
     "42110": 3,
     "42120": 5,
