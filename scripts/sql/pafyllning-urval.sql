@@ -32,6 +32,8 @@ select
   coalesce(nullif(f.juridisk_form,''), nullif(fk.juridisk_form,''), nullif(fk.bolagsform,'')) as juridisk_form,
   coalesce(s.antal, 1)                                      as aeant,
   a.reklamsparr,
+  a.epostsparr,
+  a.telefonsparr,
   case when a.epostsparr is distinct from 2
         and split_part(lower(trim(f.email)),'@',1) in
             ('info','kontakt','kontakta','kontor','offert','order','mail','post','hej','hello','sales',

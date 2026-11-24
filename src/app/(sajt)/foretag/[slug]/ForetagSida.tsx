@@ -38,6 +38,7 @@ import {
   REGISTER_AR,
   REGISTER_FORKLARING,
   nyKallaForklaring,
+  SCB_KALLANGIVELSE,
 } from "@/lib/dataprovenans";
 import { sanitizeInfotext, safeLogotypUrl } from "@/lib/sanitize-html";
 import {
@@ -561,6 +562,9 @@ export default async function ForetagSida({
                 }
               />
             </dl>
+            {f.kalla === "infofinder" ? (
+              <p className="mt-4 text-sm font-semibold leading-relaxed text-ink-2">{SCB_KALLANGIVELSE}</p>
+            ) : null}
             <p className="mt-4 text-sm leading-relaxed text-ink-3">
               {personalOrgnr
                 ? "Inget organisationsnummer visas — för en enskild firma är numret ett personnummer, och det hämtas aldrig ut ur databasen. "

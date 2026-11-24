@@ -269,7 +269,7 @@ async function ResultsAsync({
       {rows.length === 0 ? (
         <TomtResultat query={query} tolkning={tolkning} forslag={query ? stavningsforslag(query) : null} kommunSlug={kommun?.slug} kommunNamn={kommun?.name} />
       ) : (
-        <CompanyCardList komplettaFinns={komplettaFinns}>
+        <CompanyCardList komplettaFinns={komplettaFinns} scb={rows.some((f) => f.kalla === "infofinder")}>
           {rows.map((f) => {
             const k = f.kommun ? kommunByCode(f.kommun) : null;
             return (

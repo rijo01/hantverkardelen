@@ -11,7 +11,7 @@
  * Skapad av scripts/importera-pafyllning.mjs.
  */
 
-export const PAFYLLNING_GENERERAD = "2026-11-23";
+export const PAFYLLNING_GENERERAD = "2026-11-24";
 
 export const PAFYLLNING_TOTAL = 59945;
 

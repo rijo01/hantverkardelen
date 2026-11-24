@@ -234,7 +234,7 @@ export default async function BranschSida({
             </Link>
           </div>
         ) : (
-          <CompanyCardList komplettaFinns={rows.some((f) => (f.poang ?? 0) > 0)}>
+          <CompanyCardList komplettaFinns={rows.some((f) => (f.poang ?? 0) > 0)} scb={rows.some((f) => f.kalla === "infofinder")}>
             {rows.map((f) => (
               <li key={f.id}>
                 <CompanyCard

@@ -3,7 +3,7 @@ import { foretagSlug, type Foretag } from "@/lib/queries";
 import { sidhuvudetsLogotyp, type OverlayProfilRow } from "@/lib/overlay-contract";
 import { visatTelefon } from "@/lib/visat-telefon";
 import { safeLogotypUrl } from "@/lib/sanitize-html";
-import { REGISTER_AR } from "@/lib/dataprovenans";
+import { REGISTER_AR, SCB_KALLANGIVELSE } from "@/lib/dataprovenans";
 import { yrkesnamn } from "@/lib/yrkesnamn";
 import { yrkeFor } from "@/lib/kluster/klassning";
 import { PAFYLLNING, VISA_REGISTERTELEFON } from "@/lib/flaggor";
@@ -203,8 +203,11 @@ export function RingKnapp({
  */
 export function CompanyCardList({
   children,
+  scb = false,
 }: {
   children: React.ReactNode;
+  /** Listan innehåller företag ur SCB:s företagsregister (påfyllningen): källangivelsen visas. */
+  scb?: boolean;
   /** Kvar för anroparnas skull; kunderna märks inte längre (beslut 2026-11-23). */
   komplettaFinns?: boolean;
 }) {
@@ -219,6 +222,7 @@ export function CompanyCardList({
         Telefonnummer visas när företaget självt har lämnat dem. Hemsidor ur registret kan vara
         inaktuella.
       </p>
+      {scb ? <p className="mt-2 text-sm leading-relaxed text-ink-3">{SCB_KALLANGIVELSE}</p> : null}
     </div>
   );
 }

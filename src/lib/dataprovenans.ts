@@ -41,6 +41,14 @@ export const PERSONUPPGIFT_FORKLARING =
   "personer är offentliga uppgifter och visas i sin helhet.";
 
 /**
+ * Källangivelsen för uppgifter ur SCB:s företagsregister, ordagrant (beslut
+ * 2026-11-24). Står på varje företagssida ur påfyllningen, under varje lista
+ * som innehåller sådana företag och i sidfoten när påfyllningen är på.
+ */
+export const SCB_KALLANGIVELSE =
+  "Källa: SCB:s allmänna företagsregister. Uppgifterna är bearbetade av Hantverkardelen.";
+
+/**
  * Källtexten för en rad ur påfyllningen (kalla = "infofinder"): läst ur SCB:s
  * företagsregister via Infofinder, med datum. Telefonnummer visas inte för
  * de raderna alls förrän SCB:s villkor är lästa (lib/flaggor.ts).
@@ -48,7 +56,7 @@ export const PERSONUPPGIFT_FORKLARING =
 export function nyKallaForklaring(uppdaterad: string | null): string {
   const nar = uppdaterad ? ` Uppgifterna lästes ${uppdaterad}.` : "";
   return (
-    "Namn, adress, bransch och storlek kommer från SCB:s företagsregister." +
+    "Det gäller namn, adress, bransch och storlek." +
     nar +
     " Telefonnummer visas bara när företaget självt har lämnat dem. Kontrollera uppgiften innan du förlitar dig på den."
   );
@@ -68,5 +76,6 @@ export const SIDFOT_FORKLARING = PAFYLLNING
     `uppdaterades omkring ${REGISTER_AR}; företag som lagts till senare kommer ` +
     `från SCB:s företagsregister, och det står på varje företags sida. Adresser ` +
     `kan ha ändrats och företag kan ha upphört. Telefonnummer visas bara när ` +
-    `företaget självt har lämnat dem. Kontrollera uppgiften innan du förlitar dig på den.`
+    `företaget självt har lämnat dem. Kontrollera uppgiften innan du förlitar dig på den. ` +
+    SCB_KALLANGIVELSE
   : REGISTER_FORKLARING;

@@ -202,6 +202,9 @@ const orgnrPaSajten = new Set(
   ).map((r) => r.orgnr),
 );
 
+/** SCB:s spärrkod som heltal, eller null om den saknas eller är okänd. */
+const sparrkod = (v, giltiga) => (giltiga.includes(Number(v)) ? Number(v) : null);
+
 const skal = { cfarnr_i_registret: 0, orgnr_pa_sajten: 0, utanfor_nischen: 0 };
 const rader = [];
 for (const k of kandidater) {
@@ -233,6 +236,10 @@ for (const k of kandidater) {
     epost_kalla: epost ? k.epost_kalla : null,
     verksamhet: k.verksamhet,
     reklamsparr: k.reklamsparr === "2",
+    // SCB:s spärrkoder som de står (lib/sql/hantverk-pafyllning-003.sql).
+    reklam_sparr_typ: sparrkod(k.reklamsparr, [1, 2]),
+    epost_sparr_typ: sparrkod(k.epostsparr, [1, 2]),
+    telefon_sparr_typ: sparrkod(k.telefonsparr, [1, 2, 3]),
     omgang: OMGANG,
     kalla: "infofinder",
     afr_datum: k.afr_datum,
@@ -252,6 +259,9 @@ const rapport = {
   med_funktionsepost: rader.filter((r) => r.epost).length,
   med_verksamhet: rader.filter((r) => r.verksamhet).length,
   reklamsparr: rader.filter((r) => r.reklamsparr).length,
+  telefonsparr: rakna((r) => r.telefon_sparr_typ ?? "saknas"),
+  epostsparr: rakna((r) => r.epost_sparr_typ ?? "saknas"),
+  reklamsparr_typ: rakna((r) => r.reklam_sparr_typ ?? "saknas"),
   jurform_okand: rader.filter((r) => r.jurform == null).length,
   per_ng1: rakna((r) => r.ng1),
 };
