@@ -26,7 +26,7 @@ const YRKESNAMN: Readonly<Record<number, string>> = {
   42990: "Övriga anläggningsarbeten",
   43221: "VVS & rörmokare",
   43222: "Ventilation",
-  43223: "Kyla & värme",
+  43223: "Kyl & frys",
   43290: "Övriga bygginstallationer",
   43341: "Målare",
   43330: "Golv & kakel",
@@ -79,6 +79,9 @@ const YRKESNAMN_I_RUBRIK: ReadonlySet<number> = new Set([41200, 43221, 43222, 43
 const RUBRIKNAMN: Readonly<Record<number, string>> = {
   43330: "Golvläggare & plattsättare",
   81300: "Trädgårdsskötsel",
+  // SNI 43223 är kyl- och frysinstallation; i namnen står kyl/frys hos 303 av
+  // 617 företag, värme hos 51 (45 av dem också kyl/frys). Beslut 2026-11-24.
+  43223: "Kyl- & frysinstallation",
 };
 
 /**
