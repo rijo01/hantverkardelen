@@ -203,11 +203,8 @@ export function RingKnapp({
  */
 export function CompanyCardList({
   children,
-  scb = false,
 }: {
   children: React.ReactNode;
-  /** Listan innehåller företag ur SCB:s företagsregister (påfyllningen): källangivelsen visas. */
-  scb?: boolean;
   /** Kvar för anroparnas skull; kunderna märks inte längre (beslut 2026-11-23). */
   komplettaFinns?: boolean;
 }) {
@@ -222,7 +219,9 @@ export function CompanyCardList({
         Telefonnummer visas när företaget självt har lämnat dem. Hemsidor ur registret kan vara
         inaktuella.
       </p>
-      {scb ? <p className="mt-2 text-sm leading-relaxed text-ink-3">{SCB_KALLANGIVELSE}</p> : null}
+      {/* Med påfyllningen bygger varje lista (och dess antal) delvis på SCB:s register,
+          även när sidan råkar visa bara äldre rader. */}
+      {PAFYLLNING ? <p className="mt-2 text-sm leading-relaxed text-ink-3">{SCB_KALLANGIVELSE}</p> : null}
     </div>
   );
 }

@@ -153,7 +153,7 @@ export default async function KommunPage({ params }: { params: Params }) {
             Inga hantverksföretag registrerade i {kommun.name}.
           </p>
         ) : (
-          <CompanyCardList komplettaFinns={foretagSample.some((f) => (f.poang ?? 0) > 0)} scb={foretagSample.some((f) => f.kalla === "infofinder")}>
+          <CompanyCardList komplettaFinns={foretagSample.some((f) => (f.poang ?? 0) > 0)}>
             {foretagSample.map((f) => (
               <li key={f.id}>
                 <CompanyCard
