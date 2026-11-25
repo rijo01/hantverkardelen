@@ -12,12 +12,15 @@ export const dynamic = "force-dynamic";
  * kommunsida och sitemap kan ha ändrats, så hela sajten markeras inaktuell
  * och byggs om vid nästa besök.
  *
- * Signerad med samma hemlighet som overlay-flödet (OVERLAY_PUBLISH_SECRET).
+ * Signerad med en egen hemlighet, REVALIDERA_SECRET (beslut 2026-11-25), inte
+ * med OVERLAY_PUBLISH_SECRET: det dagliga jobbet ska inte kunna publicera
+ * overlay, och CRM:et ska inte kunna bygga om sajten. Ingen reserv till den
+ * andra hemligheten. Saknas REVALIDERA_SECRET avvisas varje anrop.
  */
 export async function POST(req: Request) {
   if (!STEG2) return NextResponse.json({ ok: false, error: "steg två är inte på" }, { status: 404 });
   const raw = await req.text();
-  const hemlighet = process.env.OVERLAY_PUBLISH_SECRET;
+  const hemlighet = process.env.REVALIDERA_SECRET;
   if (!hemlighet || !(await verifyOverlaySignature(raw, hemlighet, req.headers.get(SIGNATURE_HEADER)))) {
     return NextResponse.json({ ok: false, error: "ogiltig signatur" }, { status: 401 });
   }

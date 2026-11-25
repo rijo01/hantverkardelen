@@ -50,6 +50,10 @@ const TORR = process.argv.includes("--torrkorning");
 const TVINGA = process.argv.includes("--tvinga");
 const argv = process.argv.slice(2);
 const REVALIDERA = argv.includes("--revalidera") ? argv[argv.indexOf("--revalidera") + 1] : null;
+if (REVALIDERA && !process.env.REVALIDERA_SECRET) {
+  console.error("--revalidera kräver REVALIDERA_SECRET (egen hemlighet, inte OVERLAY_PUBLISH_SECRET).");
+  process.exit(1);
+}
 
 const SUPA = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -544,7 +548,8 @@ console.error("Skrev src/lib/seo-snapshot-steg2.ts");
 // ---- 9. Bygg om sidorna -------------------------------------------------------------
 
 if (REVALIDERA) {
-  const secret = process.env.OVERLAY_PUBLISH_SECRET;
+  // Egen hemlighet för ombyggnaden, inte overlay-flödets (beslut 2026-11-25).
+  const secret = process.env.REVALIDERA_SECRET;
   const raw = JSON.stringify({ action: "steg2_revalidera", sent_at: new Date().toISOString() });
   const sig = createHmac("sha256", secret).update(raw).digest("hex");
   const extra = process.env.VERCEL_OIDC_TOKEN ? { "x-vercel-trusted-oidc-idp-token": process.env.VERCEL_OIDC_TOKEN } : {};

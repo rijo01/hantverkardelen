@@ -38,6 +38,7 @@ const arg = (n) => {
 const TORR = process.argv.includes("--torrkorning");
 const TVINGA = process.argv.includes("--tvinga");
 const OMGANG = Number(arg("--omgang"));
+const KORNINGSTID = new Date().toISOString();
 if (OMGANG !== 1) {
   console.error("Bara --omgang 1 finns (juridiska personer). Omgång 2 (enskilda firmor) byggs senare.");
   process.exit(1);
@@ -280,6 +281,10 @@ for (const k of kandidater) {
     omgang: OMGANG,
     kalla: "infofinder",
     afr_datum: k.afr_datum,
+    // Inläsningsdagen. Sätts vid varje körning; utan den behåller upserten
+    // den första dagen (default now()). Läses av hantverk_scb_datum() för
+    // integritetspolicyn.
+    importerad: KORNINGSTID,
   });
 }
 
