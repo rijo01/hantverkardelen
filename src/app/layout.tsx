@@ -10,7 +10,7 @@ import {
 } from "@/lib/dataprovenans";
 import { Analytics } from "@vercel/analytics/next";
 import { KALLA_KORT, SIDFOT_FORKLARING } from "@/lib/dataprovenans";
-import { PAFYLLNING } from "@/lib/flaggor";
+import { PAFYLLNING, STEG2 } from "@/lib/flaggor";
 
 // Archivo är en variabel font: en fil täcker 400–800, i stället för fem.
 const archivo = Archivo({
@@ -111,7 +111,7 @@ export default function RootLayout({
           <div className="border-t border-white/15">
             <p className="sg-wrap py-5 text-sm">
               © {new Date().getFullYear()} Hantverkardelen · QS Group AB · Data från{" "}
-              {PAFYLLNING ? `näringslivsregister (ca ${REGISTER_AR}) och SCB` : `näringslivsregister, ca ${REGISTER_AR}`}
+              {STEG2 ? "SCB:s företagsregister" : PAFYLLNING ? `näringslivsregister (ca ${REGISTER_AR}) och SCB` : `näringslivsregister, ca ${REGISTER_AR}`}
             </p>
           </div>
         </footer>

@@ -15,12 +15,18 @@
 
 /** Året registret senast kan beläggas ha uppdaterats. Delas i klustret. */
 import { REGISTER_AR } from "./kluster/register";
-import { PAFYLLNING } from "./flaggor";
+import { PAFYLLNING, STEG2 } from "./flaggor";
 export { REGISTER_AR };
 
-/** Längre förklaring — används i informationsrutor och sidfot. */
-export const REGISTER_FORKLARING =
-  `Kontaktuppgifterna kommer från ett näringslivsregister som ` +
+/**
+ * Längre förklaring — används i informationsrutor och sidfot. Med steg två
+ * är bara kunderna kvar ur det köpta registret, och då nämns ingen ålder.
+ */
+export const REGISTER_FORKLARING = STEG2
+  ? "Uppgifterna kommer från ett näringslivsregister och från företaget självt. " +
+    "Telefonnummer visas bara när företaget självt har lämnat dem. " +
+    "Kontrollera uppgiften innan du förlitar dig på den."
+  : `Kontaktuppgifterna kommer från ett näringslivsregister som ` +
   `senast uppdaterades omkring ${REGISTER_AR}. Adresser och e-postadresser ` +
   `kan ha ändrats sedan dess, och företag kan ha upphört. Telefonnummer visas ` +
   `bara när företaget självt har lämnat dem. ` +
@@ -49,12 +55,13 @@ export const SCB_KALLANGIVELSE =
   "Källa: SCB:s allmänna företagsregister. Uppgifterna är bearbetade av Hantverkardelen.";
 
 /**
- * Källtexten för en rad ur påfyllningen (kalla = "infofinder"): läst ur SCB:s
- * företagsregister via Infofinder, med datum. Telefonnummer visas inte för
- * de raderna alls förrän SCB:s villkor är lästa (lib/flaggor.ts).
+ * Källtexten för en rad med SCB:s uppgifter (påfyllningen, kalla =
+ * "infofinder", och steg två, "register_scb"), med SCB:s registerdatum
+ * (afr_datum). Telefonnummer ur SCB visas inte förrän SCB:s villkor är lästa
+ * (lib/flaggor.ts).
  */
 export function nyKallaForklaring(uppdaterad: string | null): string {
-  const nar = uppdaterad ? ` Uppgifterna lästes ${uppdaterad}.` : "";
+  const nar = uppdaterad ? ` Uppgifterna är från SCB:s register ${uppdaterad}.` : "";
   return (
     "Det gäller namn, adress, bransch och storlek." +
     nar +
@@ -66,12 +73,20 @@ export function nyKallaForklaring(uppdaterad: string | null): string {
  * Källan i en mening, för sidfot, startsida och listor. Med påfyllningen
  * (flaggan PAFYLLNING) kommer en del av företagen ur SCB:s företagsregister.
  */
-export const KALLA_KORT = PAFYLLNING
+export const KALLA_KORT = STEG2
+  ? "SCB:s företagsregister"
+  : PAFYLLNING
   ? `ett register från omkring ${REGISTER_AR} och SCB:s företagsregister`
   : `ett register från omkring ${REGISTER_AR}`;
 
 /** Sidfotens längre förklaring, med påfyllningen när flaggan är på. */
-export const SIDFOT_FORKLARING = PAFYLLNING
+export const SIDFOT_FORKLARING = STEG2
+  ? "Namn, adress, bransch och storlek kommer från SCB:s företagsregister, och datum " +
+    "står på varje företags sida. Företag med en profil hos oss har själva lämnat sina " +
+    "uppgifter. Telefonnummer visas bara när företaget självt har lämnat dem. " +
+    "Kontrollera uppgiften innan du förlitar dig på den. " +
+    SCB_KALLANGIVELSE
+  : PAFYLLNING
   ? `De flesta uppgifterna kommer från ett näringslivsregister som senast ` +
     `uppdaterades omkring ${REGISTER_AR}; företag som lagts till senare kommer ` +
     `från SCB:s företagsregister, och det står på varje företags sida. Adresser ` +

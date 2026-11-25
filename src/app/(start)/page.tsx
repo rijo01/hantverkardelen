@@ -6,7 +6,7 @@ import { REGISTER_AR } from "@/lib/dataprovenans";
 import { HANTVERK_KATEGORIER } from "@/lib/hantverk-kategorier";
 import { kategoriNamn } from "@/lib/sokfraga";
 import { KALLA_KORT } from "@/lib/dataprovenans";
-import { PAFYLLNING } from "@/lib/flaggor";
+import { PAFYLLNING, STEG2 } from "@/lib/flaggor";
 
 export const revalidate = 86400;
 
@@ -47,7 +47,7 @@ export default function HomePage() {
             ingress; registrets ålder står kvar, bara inte som egen rad. */}
         <div className="sg-wrap pb-6 pt-4 sm:pb-20 sm:pt-14">
           <p className="hidden text-[13px] font-bold uppercase tracking-[0.06em] text-signal tabular-nums sm:block">
-            {TOTAL_KOMMUNER} kommuner · {PAFYLLNING ? "register från 2011 och SCB" : `register från omkring ${REGISTER_AR}`}
+            {TOTAL_KOMMUNER} kommuner · {STEG2 ? "SCB:s företagsregister" : PAFYLLNING ? "register från 2011 och SCB" : `register från omkring ${REGISTER_AR}`}
           </p>
           <h1
             id="hero-title"
@@ -56,7 +56,10 @@ export default function HomePage() {
             Hitta hantverkare i hela Sverige
           </h1>
           <p className="mt-2 max-w-2xl text-[15px] leading-snug text-[var(--sg-on-navy-muted)] sm:mt-5 sm:text-xl sm:leading-relaxed">
-            Elektriker, VVS, snickare och fler i {TOTAL_KOMMUNER} kommuner. {PAFYLLNING ? "Ur SCB:s företagsregister och ett äldre register från omkring" : "Register från omkring"} {REGISTER_AR}
+            Elektriker, VVS, snickare och fler i {TOTAL_KOMMUNER} kommuner.{" "}
+            {STEG2
+              ? "Verksamma företag ur SCB:s företagsregister"
+              : `${PAFYLLNING ? "Ur SCB:s företagsregister och ett äldre register från omkring" : "Register från omkring"} ${REGISTER_AR}`}
             <span className="hidden sm:inline">; inga offertformulär</span>.
           </p>
           <div className="mt-4 max-w-5xl sm:mt-8">
@@ -120,8 +123,10 @@ export default function HomePage() {
 
 const LOFTEN = [
   {
-    rubrik: "Ärligt om åldern",
-    text: PAFYLLNING
+    rubrik: STEG2 ? "Ärligt om källan" : "Ärligt om åldern",
+    text: STEG2
+      ? `Uppgifterna kommer från ${KALLA_KORT}, och datum står på varje företags sida.`
+      : PAFYLLNING
       ? `Uppgifterna kommer från ${KALLA_KORT}, och det står på varje sida varifrån.`
       : `Uppgifterna kommer från ett register från omkring ${REGISTER_AR}, och det står på varje sida.`,
   },

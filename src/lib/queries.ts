@@ -8,6 +8,7 @@ import {
 import { kommunCodesForLan } from "./lan";
 import { filtreraSokord, kontaktsparrFilter } from "./kontaktsparr";
 import { FORETAG_VY, PAFYLLNING_KOLUMNER } from "./foretagsvy";
+import { STEG2 } from "./flaggor";
 import { arSparrad, sparradeNycklar, utanSparrade } from "./foretag-sparr";
 import type { KontaktsparrFilter } from "./overlay-contract";
 import { foretagIsIndexable } from "./seo";
@@ -151,9 +152,11 @@ export type Foretag = {
   /**
    * Var raden kommer ifrån. "register2011" är det gamla registret
    * (aesamtable); "infofinder" är påfyllningen (hantverk_pafyllning), läst ur
-   * SCB:s arbetsställeregister via Infofinder. Avgör källtexten på sidan.
+   * SCB:s arbetsställeregister via Infofinder. "register_scb" (steg två) är
+   * en rad ur det köpta registret som är verksam i SCB:s register och visas
+   * med SCB:s namn, adress, bransch och storleksklass. Avgör källtexten på sidan.
    */
-  kalla: "register2011" | "infofinder";
+  kalla: Kalla;
   /** Kommunen är härledd ur postnumret (registret saknade den). */
   kommunHarledd: boolean;
   /** Bolagsverkets verksamhetsbeskrivning. Visas, räknas inte i grind 2. */
@@ -193,6 +196,17 @@ type PublikRow = {
 };
 
 const VIEW = FORETAG_VY;
+
+export type Kalla = "register2011" | "infofinder" | "register_scb";
+
+/** Vyns `kalla` som en av sajtens tre källor. Okänt räknas som det köpta registret. */
+export function tolkaKalla(v: string | null | undefined): Kalla {
+  return v === "infofinder" || v === "register_scb" ? v : "register2011";
+}
+
+/** Visar raden SCB:s uppgifter (påfyllningen eller steg två)? */
+export const visarScb = (f: { kalla?: string | null }): boolean =>
+  f.kalla === "infofinder" || f.kalla === "register_scb";
 
 const COLUMNS =
   "id,cfarnr,firma,namn,gatuadress,postnr,postort,tel,webb,epostadress,ng1,kommun,aeant,orgnr,ar_enskild_firma,orgnr_maskerat,jurform,poang,infotext,logotyp,kontaktperson" +
@@ -242,7 +256,7 @@ function mapRad(row: Partial<PublikRow>, kf: KontaktsparrFilter): Foretag {
     infotext: kf.skrubba(row.infotext ?? null),
     logotyp: row.logotyp ?? null,
     kontaktperson: kf.skrubba(row.kontaktperson ?? null),
-    kalla: row.kalla === "infofinder" ? "infofinder" : "register2011",
+    kalla: tolkaKalla(row.kalla),
     kommunHarledd: row.kommun_harledd ?? false,
     verksamhet: kf.skrubba(row.verksamhet ?? null),
     uppdaterad: row.uppdaterad ?? null,
@@ -906,6 +920,31 @@ export async function getForetagByCfarnr(cfarnr: number): Promise<Foretag | null
   return mapRow(rad, await kontaktsparrFilter());
 }
 
+/**
+ * Steg två: varför en rad ur det köpta registret saknas i vyn. 308 med mål,
+ * 404, eller null när raden inte står i hantverk_steg2 (eller flaggan är av).
+ * anon får bara läsa de här kolumnerna (lib/sql/hantverk-steg2-004.sql).
+ */
+export type Steg2Utfall = {
+  utfall: "visas" | "404" | "308";
+  mal_cfarnr: number | null;
+  kommun_register: string | null;
+  ng1_register: number | null;
+};
+export async function getSteg2Utfall(cfarnr: number): Promise<Steg2Utfall | null> {
+  if (!STEG2) return null;
+  const { data, error } = await getSupabaseAnon()
+    .from("hantverk_steg2")
+    .select("utfall,mal_cfarnr,kommun_register,ng1_register")
+    .eq("cfarnr", cfarnr)
+    .maybeSingle();
+  if (error) {
+    console.error("getSteg2Utfall", error.message);
+    return null;
+  }
+  return (data as Steg2Utfall | null) ?? null;
+}
+
 async function searchSokordCfarnrs(query: string): Promise<number[]> {
   const cleaned = query.trim();
   if (cleaned.length < 3) return [];
@@ -1042,7 +1081,7 @@ export async function listIndexableForetag(): Promise<IndexerbarRad[]> {
         epostadress: r.epostadress ?? null,
         poang: r.poang ?? null,
       });
-      const kalla = r.kalla === "infofinder" ? "infofinder" : "register2011";
+      const kalla = tolkaKalla(r.kalla);
       if (foretagIsIndexable({ ...rensad, kalla, kommun: r.kommun ?? null })) out.push(rensad);
     }
     if (rows.length < PAGE) break;

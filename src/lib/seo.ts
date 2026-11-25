@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import type { Foretag } from "./queries";
 import { KOMMUN_BRANSCH_FORETAG, KOMMUN_FORETAG } from "./seo-snapshot";
 import { KOMMUN_BRANSCH_FORETAG_NYA, KOMMUN_FORETAG_NYA } from "./seo-snapshot-pafyllning";
-import { INDEXERA_PAFYLLNING, PAFYLLNING } from "./flaggor";
+import { KOMMUN_BRANSCH_FORETAG_STEG2, KOMMUN_FORETAG_STEG2 } from "./seo-snapshot-steg2";
+import { INDEXERA_PAFYLLNING, PAFYLLNING, STEG2 } from "./flaggor";
 
 /**
  * Tvågrindsmodellen — vilka sidor får indexeras.
@@ -50,6 +51,8 @@ export function robotsFor(indexable: boolean): Metadata["robots"] {
 
 /** Antal hantverksföretag i en kommun enligt snapshoten. */
 export function snapshotKommunCount(kommunCode: string): number {
+  // Steg två: antalen räknas ur samma vy som listorna (seo-snapshot-steg2.ts).
+  if (STEG2) return KOMMUN_FORETAG_STEG2[kommunCode] ?? 0;
   const nya = PAFYLLNING ? (KOMMUN_FORETAG_NYA[kommunCode] ?? 0) : 0;
   return (KOMMUN_FORETAG[kommunCode] ?? 0) + nya;
 }
@@ -59,6 +62,7 @@ export function snapshotKommunBranschCount(
   kommunCode: string,
   ng1: number,
 ): number {
+  if (STEG2) return KOMMUN_BRANSCH_FORETAG_STEG2[kommunCode]?.[String(ng1)] ?? 0;
   const nya = PAFYLLNING ? (KOMMUN_BRANSCH_FORETAG_NYA[kommunCode]?.[String(ng1)] ?? 0) : 0;
   return (KOMMUN_BRANSCH_FORETAG[kommunCode]?.[String(ng1)] ?? 0) + nya;
 }

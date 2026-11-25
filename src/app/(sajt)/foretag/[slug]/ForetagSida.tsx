@@ -9,11 +9,14 @@ import {
   branschPageSlug,
   foretagSlug,
   getForetagByCfarnr,
+  getSteg2Utfall,
   listRelatedForetag,
   listSokordForCfarnr,
   parseCfarnrFromSlug,
+  visarScb,
   type Foretag,
 } from "@/lib/queries";
+import { STEG2 } from "@/lib/flaggor";
 import { getBranschName } from "@/lib/branscher";
 import { JsonLd, buildBreadcrumb } from "@/components/json-ld";
 import { Breadcrumb } from "@/components/breadcrumb";
@@ -76,9 +79,11 @@ export async function generateMetadata({
   const description = `${name}${
     kommun ? ` i ${kommun.name} kommun` : ""
   }${f.gatuadress ? `, ${f.gatuadress}` : ""}. ${
-    f.kalla === "infofinder"
+    visarScb(f)
       ? "Bransch och adress ur SCB:s företagsregister."
-      : `Bransch och adress ur ett register från omkring ${REGISTER_AR}.`
+      : STEG2
+        ? "Bransch och adress ur ett näringslivsregister."
+        : `Bransch och adress ur ett register från omkring ${REGISTER_AR}.`
   }`;
   return {
     title,
@@ -125,7 +130,14 @@ export default async function ForetagSida({
   // getForetagByCfarnr filtrerar mot HANTVERK_BRANSCHER — företag utanför
   // nischen returnerar null och route:n får 404 (samma pattern som vårddelen).
   const f = await getForetagByCfarnr(cfarnr);
-  if (!f) notFound();
+  if (!f) {
+    // Steg två: en rad ur det köpta registret som inte är verksam i SCB och har
+    // en efterföljare på sajten får 308 dit. Övriga får 404 (not-found.tsx).
+    const u = await getSteg2Utfall(cfarnr);
+    const mal = u?.utfall === "308" && u.mal_cfarnr ? await getForetagByCfarnr(u.mal_cfarnr) : null;
+    if (mal && !previewToken) permanentRedirect(`/foretag/${foretagSlug(mal)}`);
+    notFound();
+  }
 
   // Routen matchar bara på det avslutande cfarnr, så varje påhittad slug med
   // rätt id svarade 200 — obegränsat med dubbletter av samma sida. Skicka
@@ -527,9 +539,11 @@ export default async function ForetagSida({
                     <>
                       <span className="tabular-nums">{size.label}</span>
                       <span className="text-ink-3">
-                        {f.kalla === "infofinder"
+                        {visarScb(f)
                           ? ` · storleksklass, SCB ${f.uppdaterad?.slice(0, 4) ?? ""}`.trimEnd()
-                          : ` · storleksklass, ca ${REGISTER_AR}`}
+                          : STEG2
+                            ? " · storleksklass"
+                            : ` · storleksklass, ca ${REGISTER_AR}`}
                       </span>
                     </>
                   ) : null
@@ -562,7 +576,7 @@ export default async function ForetagSida({
                 }
               />
             </dl>
-            {f.kalla === "infofinder" ? (
+            {visarScb(f) ? (
               <p className="mt-4 text-sm font-semibold leading-relaxed text-ink-2">{SCB_KALLANGIVELSE}</p>
             ) : null}
             <p className="mt-4 text-sm leading-relaxed text-ink-3">
@@ -570,7 +584,7 @@ export default async function ForetagSida({
                 ? "Inget organisationsnummer visas — för en enskild firma är numret ett personnummer, och det hämtas aldrig ut ur databasen. "
                 : ""}
               {PERSONUPPGIFT_FORKLARING}{" "}
-              {f.kalla === "infofinder" ? nyKallaForklaring(f.uppdaterad) : REGISTER_FORKLARING}
+              {visarScb(f) ? nyKallaForklaring(f.uppdaterad) : REGISTER_FORKLARING}
             </p>
           </section>
 

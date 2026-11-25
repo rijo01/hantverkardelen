@@ -25,4 +25,14 @@ export const PAFYLLNING = process.env.NEXT_PUBLIC_PAFYLLNING === "pa";
  * `noindex, follow` och utanför sitemap, oavsett grind 2 (beslut 2026-11-23,
  * tills källan för e-postadresserna är utredd och SCB:s villkor lästa).
  */
+/**
+ * Steg två (beslut 2026-11-24): rader ur det köpta registret visas bara om
+ * arbetsstället är verksamt i SCB:s register, och då med SCB:s uppgifter.
+ * Övriga ger 308 till en efterföljare på sajten eller 404. PÅ läser sajten den
+ * materialiserade vyn `hantverk_foretag_steg2` (lib/sql/hantverk-steg2-004.sql)
+ * och tar bort texterna om registrets ålder. Verkar bara tillsammans med
+ * PAFYLLNING. Bara exakt "pa" slår på.
+ */
+export const STEG2 = PAFYLLNING && process.env.NEXT_PUBLIC_STEG2 === "pa";
+
 export const INDEXERA_PAFYLLNING = process.env.NEXT_PUBLIC_INDEXERA_PAFYLLNING === "pa";
