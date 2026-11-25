@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { REGISTER_AR } from "@/lib/dataprovenans";
+import { STEG2 } from "@/lib/flaggor";
 import Link from "next/link";
-import { TOP_BRANSCHER, TOTAL_BRANSCHER } from "@/lib/stats";
-import { HANTVERK_KATEGORIER } from "@/lib/hantverk-kategorier";
+import { hamtaTopBranscher, TOTAL_BRANSCHER } from "@/lib/stats";
+import { hamtaKategorier } from "@/lib/kategorier-antal";
 import { kategoriNamn } from "@/lib/sokfraga";
 import { yrkesnamn } from "@/lib/yrkesnamn";
 import { JsonLd, buildBreadcrumb } from "@/components/json-ld";
@@ -15,11 +16,14 @@ const fmt = (n: number) => n.toLocaleString("sv-SE");
 
 export const metadata: Metadata = {
   title: `Hantverkskategorier i Sverige`,
-  description: `Bläddra bland ${TOTAL_BRANSCHER} hantverks- & byggkategorier. Företag ur ett register från omkring ${REGISTER_AR}.`,
+  description: STEG2
+    ? `Bläddra bland ${TOTAL_BRANSCHER} hantverks- & byggkategorier. Företag ur SCB:s företagsregister.`
+    : `Bläddra bland ${TOTAL_BRANSCHER} hantverks- & byggkategorier. Företag ur ett register från omkring ${REGISTER_AR}.`,
   alternates: { canonical: `${SITE_URL}/branscher` },
 };
 
-export default function BranscherPage() {
+export default async function BranscherPage() {
+  const [HANTVERK_KATEGORIER, TOP_BRANSCHER] = await Promise.all([hamtaKategorier(), hamtaTopBranscher()]);
   const breadcrumbItems = [
     { name: "Hantverkardelen", href: "/" },
     { name: "Branscher" },
@@ -39,7 +43,7 @@ export default function BranscherPage() {
             Hantverkare efter yrke
           </h1>
           <p className="text-[17px] leading-relaxed text-ink-2">
-            Hantverksföretag ur ett register från omkring {REGISTER_AR}. Välj ett yrke
+            {STEG2 ? "Hantverksföretag ur SCB:s företagsregister." : `Hantverksföretag ur ett register från omkring ${REGISTER_AR}.`} Välj ett yrke
             för att se företagen, eller sök på yrke och ort.
           </p>
         </header>

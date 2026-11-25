@@ -7,6 +7,8 @@ import {
 } from "./hantverk-branscher";
 import { kommunCodesForLan } from "./lan";
 import { filtreraSokord, kontaktsparrFilter } from "./kontaktsparr";
+import { FORETAG_VY, PAFYLLNING_KOLUMNER } from "./foretagsvy";
+import { STEG2 } from "./flaggor";
 import { arSparrad, sparradeNycklar, utanSparrade } from "./foretag-sparr";
 import type { KontaktsparrFilter } from "./overlay-contract";
 import { foretagIsIndexable } from "./seo";
@@ -70,7 +72,8 @@ export function _aeantFilterArbetsstallen<T>(q: T, opts: AeantFilter): T {
 }
 
 /**
- * Datalager. Alla anrop går mot vyn `foretag_publik` via anon-nyckeln.
+ * Datalager. Alla anrop går mot vyn FORETAG_VY (lib/foretagsvy.ts) via anon-nyckeln:
+ * `foretag_publik`, eller med flaggan PAFYLLNING `hantverk_foretag_publik`.
  *
  * Hantverkardelen-nisch: ALLA företagsqueries filtreras med
  * .in("ng1", HANTVERK_BRANSCHER) så att enbart hem- & hantverksföretag visas.
@@ -146,6 +149,20 @@ export type Foretag = {
    * lämnar aldrig mapRow.
    */
   namnDolt?: boolean;
+  /**
+   * Var raden kommer ifrån. "register2011" är det gamla registret
+   * (aesamtable); "infofinder" är påfyllningen (hantverk_pafyllning), läst ur
+   * SCB:s arbetsställeregister via Infofinder. "register_scb" (steg två) är
+   * en rad ur det köpta registret som är verksam i SCB:s register och visas
+   * med SCB:s namn, adress, bransch och storleksklass. Avgör källtexten på sidan.
+   */
+  kalla: Kalla;
+  /** Kommunen är härledd ur postnumret (registret saknade den). */
+  kommunHarledd: boolean;
+  /** Bolagsverkets verksamhetsbeskrivning. Visas, räknas inte i grind 2. */
+  verksamhet: string | null;
+  /** När raden senast lästes ur källan (ISO-datum), bara för påfyllningen. */
+  uppdaterad: string | null;
 };
 
 type PublikRow = {
@@ -170,15 +187,41 @@ type PublikRow = {
   infotext: string | null;
   logotyp: string | null;
   kontaktperson: string | null;
+  // Bara i hantverk_foretag_publik (flaggan PAFYLLNING).
+  storleksklass?: number | null;
+  kalla?: string | null;
+  kommun_harledd?: boolean | null;
+  verksamhet?: string | null;
+  uppdaterad?: string | null;
 };
 
-const VIEW = "foretag_publik";
+const VIEW = FORETAG_VY;
+/**
+ * Steg två: rader som bara har hantverk som SCB-bikod sorteras efter rader med
+ * hantverk som huvudkod (beslut 2026-11-25, hantverk-steg2-006.sql). Står
+ * efter poang, så kunder ligger kvar först. Utan steg två finns kolumnen inte,
+ * och då står aeant här (en upprepad sortering ändrar ingenting).
+ */
+const HUVUDKOD_ORDNING = STEG2 ? "huvudkod_hantverk" : "aeant";
+
+export type Kalla = "register2011" | "infofinder" | "register_scb";
+
+/** Vyns `kalla` som en av sajtens tre källor. Okänt räknas som det köpta registret. */
+export function tolkaKalla(v: string | null | undefined): Kalla {
+  return v === "infofinder" || v === "register_scb" ? v : "register2011";
+}
+
+/** Visar raden SCB:s uppgifter (påfyllningen eller steg två)? */
+export const visarScb = (f: { kalla?: string | null }): boolean =>
+  f.kalla === "infofinder" || f.kalla === "register_scb";
 
 const COLUMNS =
-  "id,cfarnr,firma,namn,gatuadress,postnr,postort,tel,webb,epostadress,ng1,kommun,aeant,orgnr,ar_enskild_firma,orgnr_maskerat,jurform,poang,infotext,logotyp,kontaktperson";
+  "id,cfarnr,firma,namn,gatuadress,postnr,postort,tel,webb,epostadress,ng1,kommun,aeant,orgnr,ar_enskild_firma,orgnr_maskerat,jurform,poang,infotext,logotyp,kontaktperson" +
+  PAFYLLNING_KOLUMNER;
 
 const COLUMNS_LIST =
-  "id,cfarnr,firma,namn,gatuadress,postnr,postort,tel,webb,epostadress,ng1,kommun,aeant,orgnr,ar_enskild_firma,orgnr_maskerat,jurform,poang,logotyp,kontaktperson";
+  "id,cfarnr,firma,namn,gatuadress,postnr,postort,tel,webb,epostadress,ng1,kommun,aeant,orgnr,ar_enskild_firma,orgnr_maskerat,jurform,poang,logotyp,kontaktperson" +
+  PAFYLLNING_KOLUMNER;
 
 /**
  * Registerraden som sajten ser den.
@@ -210,7 +253,8 @@ function mapRad(row: Partial<PublikRow>, kf: KontaktsparrFilter): Foretag {
     ng1: row.ng1 ?? null,
     kommun: row.kommun ?? null,
     aeant: row.aeant ?? null,
-    storleksklass: row.cfarnr != null ? storleksklassFor(row.cfarnr) : null,
+    // De nya raderna bär sin egen storleksklass; de gamla läses ur ögonblicksbilden.
+    storleksklass: row.storleksklass ?? (row.cfarnr != null ? storleksklassFor(row.cfarnr) : null),
     orgnr: row.orgnr ?? null,
     arEnskildFirma: row.ar_enskild_firma ?? false,
     orgnrMaskerat: row.orgnr_maskerat ?? null,
@@ -219,6 +263,10 @@ function mapRad(row: Partial<PublikRow>, kf: KontaktsparrFilter): Foretag {
     infotext: kf.skrubba(row.infotext ?? null),
     logotyp: row.logotyp ?? null,
     kontaktperson: kf.skrubba(row.kontaktperson ?? null),
+    kalla: tolkaKalla(row.kalla),
+    kommunHarledd: row.kommun_harledd ?? false,
+    verksamhet: kf.skrubba(row.verksamhet ?? null),
+    uppdaterad: row.uppdaterad ?? null,
   };
 }
 
@@ -265,6 +313,7 @@ export async function listForetagInKommun(
     .eq("kommun", kommunCode)
     .in("ng1", HANTVERK_BRANSCHER)
     .or(NISCH_JURFORM_VILLKOR)
+    .order(HUVUDKOD_ORDNING, { ascending: false, nullsFirst: false })
     .order("aeant", { ascending: false, nullsFirst: false })
     .order("cfarnr", { ascending: true })
     .limit(limit);
@@ -346,6 +395,7 @@ export async function listForetagInKommunByBransch(
 
   const { data, error } = await q
     .order("poang", { ascending: false, nullsFirst: false })
+    .order(HUVUDKOD_ORDNING, { ascending: false, nullsFirst: false })
     .order("aeant", { ascending: false, nullsFirst: false })
     .order("cfarnr", { ascending: true })
     .range(from, to);
@@ -567,6 +617,7 @@ async function runKategoriBrowse(
   // sajten hellre visar rader helt utan total än ett tal vi inte kan stå för.
   const dataQuery = q
     .order("poang", { ascending: false, nullsFirst: false })
+    .order(HUVUDKOD_ORDNING, { ascending: false, nullsFirst: false })
     .order("aeant", { ascending: false, nullsFirst: false })
     .order("cfarnr", { ascending: true })
     .range(from, to);
@@ -639,6 +690,7 @@ async function runBranschSearch(
   qA = applyAeantFilter(qA, opts);
   const branschQuery = qA
     .order("poang", { ascending: false, nullsFirst: false })
+    .order(HUVUDKOD_ORDNING, { ascending: false, nullsFirst: false })
     .order("aeant", { ascending: false, nullsFirst: false })
     .order("cfarnr", { ascending: true })
     .range(from, to);
@@ -677,7 +729,8 @@ async function runBranschSearch(
         qB = applyAeantFilter(qB, opts);
         return qB
           .order("poang", { ascending: false, nullsFirst: false })
-          .order("aeant", { ascending: false, nullsFirst: false })
+          .order(HUVUDKOD_ORDNING, { ascending: false, nullsFirst: false })
+    .order("aeant", { ascending: false, nullsFirst: false })
           .order("cfarnr", { ascending: true })
           .limit(8);
       })()
@@ -780,6 +833,7 @@ async function runTextSearch(
 
   const textQuery = q
     .order("poang", { ascending: false, nullsFirst: false })
+    .order(HUVUDKOD_ORDNING, { ascending: false, nullsFirst: false })
     .order("aeant", { ascending: false, nullsFirst: false })
     .order("cfarnr", { ascending: true })
     .range(from, to);
@@ -845,6 +899,7 @@ export async function listRelatedForetag(
     .or(NISCH_JURFORM_VILLKOR)
     .neq("cfarnr", excludeCfarnr)
     .order("poang", { ascending: false, nullsFirst: false })
+    .order(HUVUDKOD_ORDNING, { ascending: false, nullsFirst: false })
     .order("aeant", { ascending: false, nullsFirst: false })
     .order("cfarnr", { ascending: true })
     .limit(limit);
@@ -874,8 +929,34 @@ export async function getForetagByCfarnr(cfarnr: number): Promise<Foretag | null
     return null;
   }
   // Ett raderat bolag (kontrakt 1.6) finns inte: null, och sidan svarar 404.
-  if (arSparrad(data as PublikRow, await sparradeNycklar())) return null;
-  return mapRow(data as PublikRow, await kontaktsparrFilter());
+  const rad = data as unknown as PublikRow;
+  if (arSparrad(rad, await sparradeNycklar())) return null;
+  return mapRow(rad, await kontaktsparrFilter());
+}
+
+/**
+ * Steg två: varför en rad ur det köpta registret saknas i vyn. 308 med mål,
+ * 404, eller null när raden inte står i hantverk_steg2 (eller flaggan är av).
+ * anon får bara läsa de här kolumnerna (lib/sql/hantverk-steg2-004.sql).
+ */
+export type Steg2Utfall = {
+  utfall: "visas" | "404" | "308";
+  mal_cfarnr: number | null;
+  kommun_register: string | null;
+  ng1_register: number | null;
+};
+export async function getSteg2Utfall(cfarnr: number): Promise<Steg2Utfall | null> {
+  if (!STEG2) return null;
+  const { data, error } = await getSupabaseAnon()
+    .from("hantverk_steg2")
+    .select("utfall,mal_cfarnr,kommun_register,ng1_register")
+    .eq("cfarnr", cfarnr)
+    .maybeSingle();
+  if (error) {
+    console.error("getSteg2Utfall", error.message);
+    return null;
+  }
+  return (data as Steg2Utfall | null) ?? null;
 }
 
 async function searchSokordCfarnrs(query: string): Promise<number[]> {
@@ -954,6 +1035,7 @@ async function fetchByCfarnrs(
   q = applyAeantFilter(q, opts);
   const { data, error } = await q
     .order("poang", { ascending: false, nullsFirst: false })
+    .order(HUVUDKOD_ORDNING, { ascending: false, nullsFirst: false })
     .order("aeant", { ascending: false, nullsFirst: false });
   if (error || !data) {
     if (error) console.warn("fetchByCfarnrs", error.message);
@@ -988,7 +1070,7 @@ export async function listIndexableForetag(): Promise<IndexerbarRad[]> {
   for (let offset = 0; ; offset += PAGE) {
     const { data, error } = await supa
       .from(VIEW)
-      .select("cfarnr,orgnr,firma,namn,postort,jurform,tel,webb,epostadress,poang,infotext")
+      .select(`cfarnr,orgnr,firma,namn,postort,jurform,tel,webb,epostadress,poang,infotext${PAFYLLNING_KOLUMNER ? ",kommun,kalla" : ""}`)
       .in("ng1", HANTVERK_BRANSCHER)
       .or(NISCH_JURFORM_VILLKOR)
       .or("infotext.not.is.null,webb.not.is.null,epostadress.not.is.null,poang.gt.0")
@@ -1014,7 +1096,8 @@ export async function listIndexableForetag(): Promise<IndexerbarRad[]> {
         epostadress: r.epostadress ?? null,
         poang: r.poang ?? null,
       });
-      if (foretagIsIndexable(rensad)) out.push(rensad);
+      const kalla = tolkaKalla(r.kalla);
+      if (foretagIsIndexable({ ...rensad, kalla, kommun: r.kommun ?? null })) out.push(rensad);
     }
     if (rows.length < PAGE) break;
   }

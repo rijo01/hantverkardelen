@@ -11,6 +11,7 @@ import {
   type KontaktsparrFilter,
   type OverlayProfilRow,
 } from "./overlay-contract";
+import { FORETAG_VY } from "./foretagsvy";
 
 /**
  * Kontaktspärren (kontrakt 1.2): en kontaktuppgift som inte får visas.
@@ -152,7 +153,7 @@ export async function kontaktsparrRevalidatePaths(
     }
 
     const { data: rad } = await klient
-      .from("foretag_publik")
+      .from(FORETAG_VY)
       .select("kommun,ng1")
       .eq("cfarnr", cfarnr)
       .limit(1)
@@ -161,7 +162,7 @@ export async function kontaktsparrRevalidatePaths(
     if (!r?.kommun || r.ng1 == null) continue;
 
     const { data: grannar } = await klient
-      .from("foretag_publik")
+      .from(FORETAG_VY)
       .select("cfarnr,firma,namn,postort,jurform,poang")
       .eq("kommun", r.kommun)
       .eq("ng1", r.ng1)

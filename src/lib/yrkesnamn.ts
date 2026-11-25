@@ -6,9 +6,10 @@
  * kommunsida blev det tre likadana rader som ledde till tre olika listor.
  * Här får varje kod ett eget namn som säger vad som skiljer den från de andra.
  *
- * Påverkar INTE vilka branscher som ingår (det är hantverk-branscher.ts), inte
- * sidornas rubriker eller metadata (de läser t_bransch som förut) och inte
- * URL:erna. Saknas en kod här faller anroparen tillbaka på registrets namn.
+ * Påverkar INTE vilka branscher som ingår (det är hantverk-branscher.ts) och
+ * inte URL:erna (de byggs av registrets namn, t_bransch + kluster/klassning).
+ * Rubrikerna tar registrets namn, utom där två koder delar det: se rubrikNamn.
+ * Saknas en kod här faller anroparen tillbaka på registrets namn.
  */
 const YRKESNAMN: Readonly<Record<number, string>> = {
   41200: "Byggföretag",
@@ -25,7 +26,7 @@ const YRKESNAMN: Readonly<Record<number, string>> = {
   42990: "Övriga anläggningsarbeten",
   43221: "VVS & rörmokare",
   43222: "Ventilation",
-  43223: "Kyla & värme",
+  43223: "Kyl & frys",
   43290: "Övriga bygginstallationer",
   43341: "Målare",
   43330: "Golv & kakel",
@@ -34,8 +35,12 @@ const YRKESNAMN: Readonly<Record<number, string>> = {
   43342: "Glasmästare",
   43310: "Puts & fasad",
   43320: "Snickare",
-  16233: "Kök- & badrumsinredning",
-  25120: "Dörrar & fönster",
+  // SNI 2007 16233 = fönster av trä, 16232 = dörrar av trä. SNI 2025 slår ihop
+  // dem till 16250, som påfyllningen lägger här, och vyn hantverk_foretag_publik
+  // visar de gamla 16232-raderna som 16233. Det gamla namnet "Kök- &
+  // badrumsinredning" var fel. Beslut 2026-11-23.
+  16233: "Dörrar & fönster av trä",
+  25120: "Dörrar & fönster av metall",
   81300: "Trädgård & grönytor",
   23630: "Fabriksbetong",
   23610: "Betongvaror",
@@ -44,4 +49,50 @@ const YRKESNAMN: Readonly<Record<number, string>> = {
 
 export function yrkesnamn(ng1: number, registerNamn?: string | null): string {
   return YRKESNAMN[ng1] ?? registerNamn ?? `Bransch ${ng1}`;
+}
+
+/**
+ * Nischkoder vars registernamn (t_bransch, efter rättelserna i
+ * kluster/klassning BRANSCHNAMN) delas med en annan nischkod. Kontrollerat
+ * 2026-11-23:
+ *   "Anläggningsarbeten"                 42110, 42120
+ *   "Betong- & Betongvarutillverkning"   23610, 23630, 23690
+ *   "Dörrar & Fönster"                   16233, 25120
+ *   "Takarbeten"                         43911, 43912
+ * Utan undantaget fick två kommun×yrke-sidor samma H1, title och brödsmula.
+ */
+const DELAT_REGISTERNAMN: ReadonlySet<number> = new Set([
+  42110, 42120, 23610, 23630, 23690, 16233, 25120, 43911, 43912,
+]);
+
+/**
+ * Koder där rubrikerna tar yrkesnamnet fast registrets namn är unikt.
+ * Registrets namn var en firmakategori ("Byggmästare", "Ventilationsfirmor")
+ * eller en ordagrann SNI-text. Beslut 2026-11-23.
+ */
+const YRKESNAMN_I_RUBRIK: ReadonlySet<number> = new Set([41200, 43221, 43222, 43290, 43310, 42210]);
+
+/**
+ * Rubrik som skiljer sig från menyns korta yrkesnamn. Menyn och listorna
+ * behåller "Golv & kakel" och "Trädgård & grönytor". Beslut 2026-11-23.
+ */
+const RUBRIKNAMN: Readonly<Record<number, string>> = {
+  43330: "Golvläggare & plattsättare",
+  81300: "Trädgårdsskötsel",
+  // SNI 43223 är kyl- och frysinstallation; i namnen står kyl/frys hos 303 av
+  // 617 företag, värme hos 51 (45 av dem också kyl/frys). Beslut 2026-11-24.
+  43223: "Kyl- & frysinstallation",
+};
+
+/**
+ * Namnet i rubrik, title, metabeskrivning och brödsmula för en kommun×yrke-sida
+ * och länken dit. I första hand RUBRIKNAMN, sedan yrkesnamnet för koder som
+ * delar registernamn med en annan kod eller står i YRKESNAMN_I_RUBRIK, annars
+ * registrets namn. Adressen byggs fortfarande av registrets namn
+ * (branschPageSlug) och ändras inte.
+ */
+export function rubrikNamn(ng1: number, registerNamn?: string | null): string {
+  if (RUBRIKNAMN[ng1]) return RUBRIKNAMN[ng1];
+  if (DELAT_REGISTERNAMN.has(ng1) || YRKESNAMN_I_RUBRIK.has(ng1)) return yrkesnamn(ng1, registerNamn);
+  return registerNamn ?? `SNI ${ng1}`;
 }

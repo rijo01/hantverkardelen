@@ -14,6 +14,7 @@ import { getBranschNamesBulk } from "@/lib/branscher";
 import { JsonLd, buildBreadcrumb } from "@/components/json-ld";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { hubIsIndexable, robotsFor, snapshotKommunCount } from "@/lib/seo";
+import { hamtaAntal } from "@/lib/antal";
 import { CompanyCard, CompanyCardList } from "@/components/company-card";
 import { LankLista, ResultatVy } from "@/components/resultat-vy";
 import { loadAktivaOverlays, overlayFor } from "@/lib/overlay";
@@ -51,7 +52,7 @@ export async function generateMetadata({
     alternates: { canonical: `${SITE_URL}/kommun/${kommun.slug}` },
     openGraph: { title, description, type: "website", locale: "sv_SE" },
     // Grind 1, se lib/seo.ts — en kommun med för få företag är en tunn sida.
-    robots: robotsFor(hubIsIndexable(snapshotKommunCount(kommun.code))),
+    robots: robotsFor(hubIsIndexable(await snapshotKommunCount(kommun.code))),
   };
 }
 
@@ -83,10 +84,11 @@ export default async function KommunPage({ params }: { params: Params }) {
   // Närliggande = samma län. Grannskapsdata finns inte; länet är det ärliga
   // närmevärdet. Bara kommuner vars sida passerar indexgrinden, så att
   // länkarna aldrig leder till en noindex-sida.
+  const antal = await hamtaAntal();
   const grannar = ALL_KOMMUNER.filter(
     (k) => k.lan === kommun.lan && k.code !== kommun.code,
   )
-    .map((k) => ({ k, n: snapshotKommunCount(k.code) }))
+    .map((k) => ({ k, n: antal.kommun(k.code) }))
     .filter(({ n }) => hubIsIndexable(n))
     .sort((a, b) => b.n - a.n)
     .slice(0, 12);

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { Foretag } from "./queries";
-import { KOMMUN_BRANSCH_FORETAG, KOMMUN_FORETAG } from "./seo-snapshot";
+import { INDEXERA_PAFYLLNING } from "./flaggor";
+import { hamtaAntal } from "./antal";
 
 /**
  * Tvågrindsmodellen — vilka sidor får indexeras.
@@ -22,6 +23,8 @@ import { KOMMUN_BRANSCH_FORETAG, KOMMUN_FORETAG } from "./seo-snapshot";
  *     Företaget måste ha något utöver den nakna registerraden: en
  *     beskrivning, en webbplats, en e-postadress eller status som betalkund.
  *     Enbart namn + adress + gammalt telefonnummer räcker inte.
+ *     Påfyllningens verksamhetsbeskrivning (Bolagsverket) räknas inte: den är
+ *     bolagsordningens standardtext och finns på nästan varje rad.
  *
  * Allt som inte passerar får `noindex, follow` och hålls utanför sitemap.
  * `follow` behålls så att Google fortsätter gå vidare till de sidor som
@@ -44,17 +47,18 @@ export function robotsFor(indexable: boolean): Metadata["robots"] {
 
 // ---- Grind 1: hubbar -------------------------------------------------------
 
-/** Antal hantverksföretag i en kommun enligt snapshoten. */
-export function snapshotKommunCount(kommunCode: string): number {
-  return KOMMUN_FORETAG[kommunCode] ?? 0;
+/**
+ * Antal hantverksföretag i en kommun. Underlaget är lib/antal.ts: tabellen
+ * hantverk_antal när steg två är på, annars de genererade filerna. Behövs
+ * många tal på en sida, hämta `hamtaAntal()` en gång och fråga den.
+ */
+export async function snapshotKommunCount(kommunCode: string): Promise<number> {
+  return (await hamtaAntal()).kommun(kommunCode);
 }
 
-/** Antal hantverksföretag i en kommun + bransch enligt snapshoten. */
-export function snapshotKommunBranschCount(
-  kommunCode: string,
-  ng1: number,
-): number {
-  return KOMMUN_BRANSCH_FORETAG[kommunCode]?.[String(ng1)] ?? 0;
+/** Antal hantverksföretag i en kommun + bransch (se snapshotKommunCount). */
+export async function snapshotKommunBranschCount(kommunCode: string, ng1: number): Promise<number> {
+  return (await hamtaAntal()).kommunBransch(kommunCode, ng1);
 }
 
 /** Passerar en hubbsida med `count` renderbara företag grinden? */
@@ -91,9 +95,14 @@ export function foretagHarSubstans(
  * en sida utan rubrik är inget sökresultat värt att erbjuda.
  */
 export function foretagIsIndexable(
-  f: Pick<Foretag, "infotext" | "webb" | "epostadress" | "poang" | "firma" | "namn">,
+  f: Pick<Foretag, "infotext" | "webb" | "epostadress" | "poang" | "firma" | "namn"> &
+    Partial<Pick<Foretag, "kalla" | "kommun">>,
 ): boolean {
   if (!harText(f.firma) && !harText(f.namn)) return false;
+  // Påfyllningen: alla nya sidor är noindex tills ägaren slår på indexeringen
+  // (flaggor.ts). En rad utan kommun indexeras aldrig — den hör inte till
+  // någon kommunsida och sökmotorn har ingen ort att visa.
+  if (f.kalla === "infofinder" && (!INDEXERA_PAFYLLNING || !harText(f.kommun))) return false;
   return foretagHarSubstans(f);
 }
 

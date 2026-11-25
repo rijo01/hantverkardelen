@@ -41,7 +41,7 @@ export type HantverkKategori = {
   icon: LucideIcon;
 };
 
-export const HANTVERK_KATEGORIER: ReadonlyArray<HantverkKategori> = [
+const KATEGORIER_2011: ReadonlyArray<HantverkKategori> = [
   {
     slug: "bygg",
     name: "Byggföretag",
@@ -68,8 +68,8 @@ export const HANTVERK_KATEGORIER: ReadonlyArray<HantverkKategori> = [
   },
   {
     slug: "snickeri",
-    name: "Snickeri & kök",
-    description: "Snickare, köksinredning, dörrar & fönster",
+    name: "Snickeri",
+    description: "Snickare, dörrar & fönster",
     ng1: [43320, 16233, 25120],
     count: 9721,
     icon: Hammer,
@@ -144,3 +144,6 @@ export const HANTVERK_KATEGORIER: ReadonlyArray<HantverkKategori> = [
 export function getKategoriBySlug(slug: string): HantverkKategori | null {
   return HANTVERK_KATEGORIER.find((k) => k.slug === slug) ?? null;
 }
+
+/** Kategorierna med registrets tal. För namn, slug och koder; talen som visas kommer ur hamtaKategorier(). */
+export const HANTVERK_KATEGORIER: ReadonlyArray<HantverkKategori> = KATEGORIER_2011;

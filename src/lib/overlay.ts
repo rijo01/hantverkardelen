@@ -16,6 +16,7 @@ import {
   type EntityType,
   type OverlayProfilRow,
 } from "./overlay-contract";
+import { FORETAG_VY } from "./foretagsvy";
 
 /**
  * Overlay-lagret: betald synlighet ovanpå read-only registerdata.
@@ -73,7 +74,9 @@ export const STODD_CONTRACT_VERSION = CONTRACT_VERSION;
 export const STODDA_ENTITY_TYPES: readonly EntityType[] = ["bolag", "arbetsstalle"];
 
 /** Registervyn. Read-only härifrån, undantagslöst. */
-const KATALOG_VY = "foretag_publik";
+// Samma frågeväg som resten av sajten (lib/foretagsvy.ts): en köpt profil
+// kan gälla ett företag ur påfyllningen.
+const KATALOG_VY = FORETAG_VY;
 
 /**
  * Kolumn-allowlist. `preview_token` ingår ALDRIG i publik rendering — den är

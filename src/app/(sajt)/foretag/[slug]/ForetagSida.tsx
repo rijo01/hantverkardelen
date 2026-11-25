@@ -9,17 +9,20 @@ import {
   branschPageSlug,
   foretagSlug,
   getForetagByCfarnr,
+  getSteg2Utfall,
   listRelatedForetag,
   listSokordForCfarnr,
   parseCfarnrFromSlug,
+  visarScb,
   type Foretag,
 } from "@/lib/queries";
+import { STEG2 } from "@/lib/flaggor";
 import { getBranschName } from "@/lib/branscher";
 import { JsonLd, buildBreadcrumb } from "@/components/json-ld";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { RingKnapp } from "@/components/company-card";
 import { MobilRingrad } from "@/components/mobil-ringrad";
-import { yrkesnamn } from "@/lib/yrkesnamn";
+import { rubrikNamn, yrkesnamn } from "@/lib/yrkesnamn";
 import { yrkeFor } from "@/lib/kluster/klassning";
 import {
   displayName,
@@ -37,6 +40,8 @@ import {
   PERSONUPPGIFT_FORKLARING,
   REGISTER_AR,
   REGISTER_FORKLARING,
+  nyKallaForklaring,
+  SCB_KALLANGIVELSE,
 } from "@/lib/dataprovenans";
 import { sanitizeInfotext, safeLogotypUrl } from "@/lib/sanitize-html";
 import {
@@ -73,7 +78,13 @@ export async function generateMetadata({
   const title = kommun ? `${name} – ${kommun.name}` : name;
   const description = `${name}${
     kommun ? ` i ${kommun.name} kommun` : ""
-  }${f.gatuadress ? `, ${f.gatuadress}` : ""}. Bransch och adress ur ett register från omkring ${REGISTER_AR}.`;
+  }${f.gatuadress ? `, ${f.gatuadress}` : ""}. ${
+    visarScb(f)
+      ? "Bransch och adress ur SCB:s företagsregister."
+      : STEG2
+        ? "Bransch och adress ur ett näringslivsregister."
+        : `Bransch och adress ur ett register från omkring ${REGISTER_AR}.`
+  }`;
   return {
     title,
     description,
@@ -119,7 +130,14 @@ export default async function ForetagSida({
   // getForetagByCfarnr filtrerar mot HANTVERK_BRANSCHER — företag utanför
   // nischen returnerar null och route:n får 404 (samma pattern som vårddelen).
   const f = await getForetagByCfarnr(cfarnr);
-  if (!f) notFound();
+  if (!f) {
+    // Steg två: en rad ur det köpta registret som inte är verksam i SCB och har
+    // en efterföljare på sajten får 308 dit. Övriga får 404 (not-found.tsx).
+    const u = await getSteg2Utfall(cfarnr);
+    const mal = u?.utfall === "308" && u.mal_cfarnr ? await getForetagByCfarnr(u.mal_cfarnr) : null;
+    if (mal && !previewToken) permanentRedirect(`/foretag/${foretagSlug(mal)}`);
+    notFound();
+  }
 
   // Routen matchar bara på det avslutande cfarnr, så varje påhittad slug med
   // rätt id svarade 200 — obegränsat med dubbletter av samma sida. Skicka
@@ -142,6 +160,9 @@ export default async function ForetagSida({
   const webb = normalizeWebb(f.webb);
   const orgnrInfo = orgnrDisplay(f);
   const sanitizedInfotext = sanitizeInfotext(f.infotext);
+  // Bolagsverkets verksamhetsbeskrivning, bara för juridiska personer ur
+  // påfyllningen. Visas, men räknas inte i grind 2 (lib/seo.ts).
+  const verksamhet = !f.arEnskildFirma && f.verksamhet?.trim() ? f.verksamhet.trim() : null;
   const personalOrgnr = isPersonalOrgnr(f.jurform);
 
   // Overlay: den betalda profilen. I förhandsvisning läses UTKASTET i stället
@@ -215,7 +236,7 @@ export default async function ForetagSida({
     ...(kommun && branschName && f.ng1
       ? [
           {
-            name: branschName,
+            name: rubrikNamn(f.ng1, branschName),
             href: `/kommun/${kommun.slug}/${branschPageSlug(branschName, f.ng1)}`,
           },
         ]
@@ -283,7 +304,7 @@ export default async function ForetagSida({
   const harKontaktvag = Boolean(visatTelefon || epost);
   const logoStorlek = profil ? "size-20 sm:size-[112px]" : "size-16 sm:size-[88px]";
   const matt = overlay?.logo_url && logoUrl === overlay.logo_url ? logoMatt(overlay.logo_url) : null;
-  const antalIYrket = kommun && f.ng1 ? snapshotKommunBranschCount(kommun.code, f.ng1) : 0;
+  const antalIYrket = kommun && f.ng1 ? await snapshotKommunBranschCount(kommun.code, f.ng1) : 0;
   // Registrets namn är en plural ("Ventilationsfirmor", "Elektriker") och går
   // att räkna med; yrkesnamnet ("Ventilation") gör det inte alltid.
   const flerOrd = (branschName ?? yrke)?.toLowerCase() ?? null;
@@ -443,9 +464,15 @@ export default async function ForetagSida({
               )}
             </>
           ) : (
-            (sanitizedInfotext || f.kontaktperson || sokord.length > 0) && (
+            (sanitizedInfotext || f.kontaktperson || sokord.length > 0 || verksamhet) && (
             <section className="sg-panel p-5 sm:p-8">
               <h2 className="sg-label">Om företaget</h2>
+              {verksamhet && (
+                <>
+                  <p className="mt-3 max-w-prose text-[16px] leading-relaxed text-ink-2">{verksamhet}</p>
+                  <p className="mt-1 text-sm text-ink-3">Verksamhet enligt Bolagsverket.</p>
+                </>
+              )}
               {sanitizedInfotext && (
                 <div
                   className="rd-rich-text mt-3 max-w-prose text-[16px] leading-relaxed text-ink-2"
@@ -499,7 +526,7 @@ export default async function ForetagSida({
                 value={
                   branschName ? (
                     <>
-                      {branschName}
+                      {f.ng1 ? rubrikNamn(f.ng1, branschName) : branschName}
                       {f.ng1 ? <span className="tabular-nums text-ink-3"> · SNI {f.ng1}</span> : null}
                     </>
                   ) : null
@@ -511,7 +538,13 @@ export default async function ForetagSida({
                   size ? (
                     <>
                       <span className="tabular-nums">{size.label}</span>
-                      <span className="text-ink-3"> · storleksklass, ca {REGISTER_AR}</span>
+                      <span className="text-ink-3">
+                        {visarScb(f)
+                          ? ` · storleksklass, SCB ${f.uppdaterad?.slice(0, 4) ?? ""}`.trimEnd()
+                          : STEG2
+                            ? " · storleksklass"
+                            : ` · storleksklass, ca ${REGISTER_AR}`}
+                      </span>
                     </>
                   ) : null
                 }
@@ -537,16 +570,21 @@ export default async function ForetagSida({
                         {kommun.name}
                       </Link>
                       {lan ? ` · ${lan.name}s län` : ""}
+                      {f.kommunHarledd && <span className="text-ink-3"> · härledd ur postnumret</span>}
                     </>
                   ) : null
                 }
               />
             </dl>
+            {visarScb(f) ? (
+              <p className="mt-4 text-sm font-semibold leading-relaxed text-ink-2">{SCB_KALLANGIVELSE}</p>
+            ) : null}
             <p className="mt-4 text-sm leading-relaxed text-ink-3">
               {personalOrgnr
                 ? "Inget organisationsnummer visas — för en enskild firma är numret ett personnummer, och det hämtas aldrig ut ur databasen. "
                 : ""}
-              {PERSONUPPGIFT_FORKLARING} {REGISTER_FORKLARING}
+              {PERSONUPPGIFT_FORKLARING}{" "}
+              {visarScb(f) ? nyKallaForklaring(f.uppdaterad) : REGISTER_FORKLARING}
             </p>
           </section>
 

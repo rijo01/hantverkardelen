@@ -1,8 +1,8 @@
 import { ALL_KOMMUNER, type Kommun } from "@/lib/kommuner";
-import { HANTVERK_KATEGORIER } from "@/lib/hantverk-kategorier";
-import { KOMMUN_BRANSCH_FORETAG } from "@/lib/seo-snapshot";
+import type { HantverkKategori } from "@/lib/hantverk-kategorier";
+import type { Antal } from "@/lib/antal";
 import { kategoriNamn } from "@/lib/sokfraga";
-import { REGISTER_AR } from "@/lib/dataprovenans";
+import { KALLA_KORT } from "@/lib/dataprovenans";
 import { LankLista, SidoRuta } from "@/components/resultat-vy";
 
 export type FilterState = {
@@ -22,17 +22,22 @@ export type FilterState = {
  * övriga parametrar.
  *
  * Bara filter som fungerar mot faktisk data: ort och yrke. Antalen
- * i länklistorna kommer ur registrets snapshot (seo-snapshot.ts), summerade
- * över yrkets branschkoder — inga uppskattningar.
+ * i länklistorna kommer ur lib/antal.ts (samma underlag som grinden),
+ * summerade över yrkets branschkoder — inga uppskattningar.
+ * `kategorier` och `antal` hämtas av sidan (hamtaKategorier, hamtaAntal).
  */
 export function sokSidospalt({
   state,
   pathname,
   kommun,
+  kategorier: HANTVERK_KATEGORIER,
+  antal,
 }: {
   state: FilterState;
   pathname: string;
   kommun?: Kommun;
+  kategorier: ReadonlyArray<HantverkKategori>;
+  antal: Antal;
 }): { overst: React.ReactNode; under: React.ReactNode } {
   // Storleksfiltret är borttaget 2026-11-01: det filtrerade på `aeant`, som är
   // antal arbetsställen och inte antal anställda (se lib/storleksklass.ts).
@@ -42,7 +47,7 @@ export function sokSidospalt({
     ? HANTVERK_KATEGORIER.find((k) => k.slug === state.kategori)
     : undefined;
   const iKommun = (kod: string, ng1: readonly number[]) =>
-    ng1.reduce((sum, n) => sum + (KOMMUN_BRANSCH_FORETAG[kod]?.[n] ?? 0), 0);
+    ng1.reduce((sum, n) => sum + antal.kommunBransch(kod, n), 0);
 
   // Samma yrke i länets andra kommuner. Grannskapsdata finns inte; länet är
   // det ärliga närmevärdet (samma regel som kommunsidorna).
@@ -84,8 +89,7 @@ export function sokSidospalt({
         sist={kommun ? { href: `/kommun/${kommun.slug}`, label: `Alla hantverkare i ${kommun.name}` } : undefined}
       />
       <p className="px-1 text-xs leading-relaxed text-ink-3">
-        Uppgifterna kommer från ett näringslivsregister från omkring{" "}
-        {REGISTER_AR}. Personnummer för enskilda firmor visas aldrig.
+        Uppgifterna kommer från {KALLA_KORT}. Personnummer för enskilda firmor visas aldrig.
       </p>
     </>
   );

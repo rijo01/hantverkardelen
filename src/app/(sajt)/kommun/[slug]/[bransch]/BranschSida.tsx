@@ -4,8 +4,8 @@ import { notFound, permanentRedirect } from "next/navigation";
 import { ALL_KOMMUNER, kommunBySlug } from "@/lib/kommuner";
 import { lanByCode } from "@/lib/lan";
 import { getBranschName, getBranschNamesBulk } from "@/lib/branscher";
-import { yrkesnamn } from "@/lib/yrkesnamn";
-import { KOMMUN_BRANSCH_FORETAG } from "@/lib/seo-snapshot";
+import { rubrikNamn, yrkesnamn } from "@/lib/yrkesnamn";
+import { hamtaAntal } from "@/lib/antal";
 import {
   branschPageSlug,
   listForetagInKommunByBransch,
@@ -42,8 +42,9 @@ export async function generateMetadata({
   if (!kommun || !ng1) return { title: "Sida hittades inte" };
   const n = sida && /^\d{1,4}$/.test(sida) ? Number(sida) : 1;
   const name = (await getBranschName(ng1)) ?? `SNI ${ng1}`;
-  const title = n > 1 ? `${name} i ${kommun.name} – sida ${n}` : `${name} i ${kommun.name}`;
-  const description = `Registrerade företag inom ${yrkesnamn(ng1, name).toLowerCase()} i ${kommun.name} kommun, med yrke och ort och en egen sida för varje företag.`;
+  const rubrik = rubrikNamn(ng1, name);
+  const title = n > 1 ? `${rubrik} i ${kommun.name} – sida ${n}` : `${rubrik} i ${kommun.name}`;
+  const description = `Registrerade företag inom ${gemenerUtomForkortningar(rubrik)} i ${kommun.name} kommun, med yrke och ort och en egen sida för varje företag.`;
   // Kanonisk URL byggs ur branschnamnet, inte ur inkommande slug. Routen
   // matchar på det avslutande id:t, så /kommun/x/vadsomhelst-43210 svarade
   // 200 och pekade canonical på sig själv — obegränsat med dubbletter av
@@ -65,7 +66,7 @@ export async function generateMetadata({
     openGraph: { title, description, type: "website", locale: "sv_SE" },
     // Grind 1, se lib/seo.ts.
     robots: robotsFor(
-      hubIsIndexable(snapshotKommunBranschCount(kommun.code, ng1)),
+      hubIsIndexable(await snapshotKommunBranschCount(kommun.code, ng1)),
     ),
   };
 }
@@ -126,7 +127,8 @@ export default async function BranschSida({
   // den blivit en egen indexerbar tom sida (soft 404) — svara 404.
   if (page > 1 && rows.length === 0) notFound();
 
-  const antal = snapshotKommunBranschCount(kommun.code, ng1);
+  const antalen = await hamtaAntal();
+  const antal = antalen.kommunBransch(kommun.code, ng1);
   const yrke = yrkesnamn(ng1, branschName);
   const lan = lanByCode(kommun.lan);
   const genitiv = kommun.name.endsWith("s") ? kommun.name : `${kommun.name}s`;
@@ -137,11 +139,11 @@ export default async function BranschSida({
   const grannar = ALL_KOMMUNER.filter(
     (k) => k.lan === kommun.lan && k.code !== kommun.code,
   )
-    .map((k) => ({ k, n: snapshotKommunBranschCount(k.code, ng1) }))
+    .map((k) => ({ k, n: antalen.kommunBransch(k.code, ng1) }))
     .filter(({ n }) => hubIsIndexable(n))
     .sort((a, b) => b.n - a.n)
     .slice(0, 10);
-  const andraKoder = Object.entries(KOMMUN_BRANSCH_FORETAG[kommun.code] ?? {})
+  const andraKoder = Object.entries(antalen.branscherIKommun(kommun.code))
     .map(([kod, n]) => ({ ng1: Number(kod), n }))
     .filter((r) => r.ng1 !== ng1 && hubIsIndexable(r.n))
     .sort((a, b) => b.n - a.n)
@@ -151,14 +153,14 @@ export default async function BranschSida({
   const breadcrumbItems = [
     { name: "Hantverkardelen", href: "/" },
     { name: kommun.name, href: `/kommun/${kommun.slug}` },
-    { name: branschName, href: `/kommun/${kommun.slug}/${bransch}` },
+    { name: rubrikNamn(ng1, branschName), href: `/kommun/${kommun.slug}/${bransch}` },
   ];
 
   const breadcrumbJsonLd = buildBreadcrumb([
     { name: "Hantverkardelen", url: SITE_URL },
     { name: kommun.name, url: `${SITE_URL}/kommun/${kommun.slug}` },
     {
-      name: branschName,
+      name: rubrikNamn(ng1, branschName),
       url: `${SITE_URL}/kommun/${kommun.slug}/${bransch}`,
     },
   ]);
@@ -185,7 +187,7 @@ export default async function BranschSida({
       <Breadcrumb items={breadcrumbItems} />
 
       <ResultatVy
-        rubrik={`${branschName} i ${kommun.name}`}
+        rubrik={`${rubrikNamn(ng1, branschName)} i ${kommun.name}`}
         antal={antal > 0 ? `${fmt(antal)} företag` : ""}
         ingress={
           <p>
@@ -256,4 +258,9 @@ export default async function BranschSida({
       </ResultatVy>
     </div>
   );
+}
+
+/** "VVS & rörmokare" -> "VVS & rörmokare", "Vatten & avlopp (VA)" -> "vatten & avlopp (VA)". */
+function gemenerUtomForkortningar(s: string): string {
+  return s.replace(/[A-Za-zÅÄÖåäöÉé]+/g, (w) => (w.length > 1 && w === w.toUpperCase() ? w : w.toLowerCase()));
 }

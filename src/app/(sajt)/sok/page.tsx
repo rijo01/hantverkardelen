@@ -11,13 +11,15 @@ import {
 } from "@/lib/queries";
 import { getBranschName } from "@/lib/branscher";
 import { getKategoriBySlug } from "@/lib/hantverk-kategorier";
-import { yrkesnamn } from "@/lib/yrkesnamn";
+import { rubrikNamn, yrkesnamn } from "@/lib/yrkesnamn";
 import { JsonLd, buildBreadcrumb } from "@/components/json-ld";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { CompanyCard, CompanyCardList } from "@/components/company-card";
 import { loadAktivaOverlays, overlayFor } from "@/lib/overlay";
 import { ordnaBoostade } from "@/lib/overlay-rankning";
 import { buildHref, sokSidospalt, type FilterState } from "@/components/filter-panel";
+import { hamtaKategorier } from "@/lib/kategorier-antal";
+import { hamtaAntal } from "@/lib/antal";
 import { ResultatVy, Sidbyte } from "@/components/resultat-vy";
 import {
   SNABBVAL,
@@ -134,7 +136,8 @@ export default async function SokPage({
   const showResults = Boolean(query) || Boolean(kategori) || ng1 != null;
   const rubrik = sokRubrik({ query, kommun, postort, lan, kategoriSlug: kategori?.slug, ng1 });
   // Sidospalten beror bara på adressen — samma i skelettet och i svaret.
-  const sidospalt = sokSidospalt({ state: filterState, pathname: "/sok", kommun });
+  const [kategorierMedAntal, antal] = await Promise.all([hamtaKategorier(), hamtaAntal()]);
+  const sidospalt = sokSidospalt({ state: filterState, pathname: "/sok", kommun, kategorier: kategorierMedAntal, antal });
 
   // Sökrutan sitter i sidhuvudet (site-nav.tsx), ifylld med den här sökningen.
   return (
@@ -300,7 +303,7 @@ async function ResultsAsync({
             href={`/kommun/${kommun.slug}/${branschPageSlug(landning.namn, landning.ng1)}`}
             className="sg-link"
           >
-            {landning.namn} i {kommun.name}
+            {rubrikNamn(landning.ng1, landning.namn)} i {kommun.name}
           </Link>{" "}
           med närliggande kommuner och andra yrken i orten.
         </p>

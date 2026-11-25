@@ -3,8 +3,10 @@ import { SearchBar } from "@/components/search-bar";
 import { JsonLd } from "@/components/json-ld";
 import { TOTAL_KOMMUNER } from "@/lib/stats";
 import { REGISTER_AR } from "@/lib/dataprovenans";
-import { HANTVERK_KATEGORIER } from "@/lib/hantverk-kategorier";
+import { hamtaKategorier } from "@/lib/kategorier-antal";
 import { kategoriNamn } from "@/lib/sokfraga";
+import { KALLA_KORT } from "@/lib/dataprovenans";
+import { PAFYLLNING, STEG2 } from "@/lib/flaggor";
 
 export const revalidate = 86400;
 
@@ -19,7 +21,7 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://hantverkardelen.se
  * är från omkring 2011, och ett antal företag eller ett löfte om fullständighet
  * säger något datat inte kan stå för. Tillbaka först när källan är färsk.
  */
-export default function HomePage() {
+export default async function HomePage() {
   const webSiteJsonLd = {
     "@context": "https://schema.org",
     "@type": "WebSite",
@@ -32,7 +34,7 @@ export default function HomePage() {
     },
   };
 
-  const yrken = [...HANTVERK_KATEGORIER].sort((a, b) => b.count - a.count);
+  const yrken = [...(await hamtaKategorier())].sort((a, b) => b.count - a.count);
 
   return (
     <>
@@ -45,7 +47,7 @@ export default function HomePage() {
             ingress; registrets ålder står kvar, bara inte som egen rad. */}
         <div className="sg-wrap pb-6 pt-4 sm:pb-20 sm:pt-14">
           <p className="hidden text-[13px] font-bold uppercase tracking-[0.06em] text-signal tabular-nums sm:block">
-            {TOTAL_KOMMUNER} kommuner · register från omkring {REGISTER_AR}
+            {TOTAL_KOMMUNER} kommuner · {STEG2 ? "SCB:s företagsregister" : PAFYLLNING ? "register från 2011 och SCB" : `register från omkring ${REGISTER_AR}`}
           </p>
           <h1
             id="hero-title"
@@ -54,7 +56,10 @@ export default function HomePage() {
             Hitta hantverkare i hela Sverige
           </h1>
           <p className="mt-2 max-w-2xl text-[15px] leading-snug text-[var(--sg-on-navy-muted)] sm:mt-5 sm:text-xl sm:leading-relaxed">
-            Elektriker, VVS, snickare och fler i {TOTAL_KOMMUNER} kommuner. Register från omkring {REGISTER_AR}
+            Elektriker, VVS, snickare och fler i {TOTAL_KOMMUNER} kommuner.{" "}
+            {STEG2
+              ? "Uppdaterat från SCB:s företagsregister"
+              : `${PAFYLLNING ? "Ur SCB:s företagsregister och ett äldre register från omkring" : "Register från omkring"} ${REGISTER_AR}`}
             <span className="hidden sm:inline">; inga offertformulär</span>.
           </p>
           <div className="mt-4 max-w-5xl sm:mt-8">
@@ -118,8 +123,12 @@ export default function HomePage() {
 
 const LOFTEN = [
   {
-    rubrik: "Ärligt om åldern",
-    text: `Uppgifterna kommer från ett register från omkring ${REGISTER_AR}, och det står på varje sida.`,
+    rubrik: STEG2 ? "Ärligt om källan" : "Ärligt om åldern",
+    text: STEG2
+      ? `Uppgifterna kommer från ${KALLA_KORT}, och datum står på varje företags sida.`
+      : PAFYLLNING
+      ? `Uppgifterna kommer från ${KALLA_KORT}, och det står på varje sida varifrån.`
+      : `Uppgifterna kommer från ett register från omkring ${REGISTER_AR}, och det står på varje sida.`,
   },
   {
     rubrik: "Ring direkt",

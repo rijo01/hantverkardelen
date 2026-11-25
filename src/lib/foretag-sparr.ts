@@ -5,6 +5,7 @@ import { getSupabaseAdmin } from "./supabase-admin";
 import { getSupabaseAnon } from "./supabase";
 import { SAJT } from "./overlay";
 import { SPARR_TABELL, arSparradRad } from "./overlay-contract";
+import { FORETAG_VY } from "./foretagsvy";
 
 /**
  * Raderade bolag (kontrakt 1.6, "Ta bort företag").
@@ -110,7 +111,7 @@ const lasSparradeCfarnr = unstable_cache(
     for (let i = 0; i < orgnr.length; i += 200) {
       for (let offset = 0; ; offset += 1000) {
         const { data, error } = await klient
-          .from("foretag_publik")
+          .from(FORETAG_VY)
           .select("cfarnr")
           .in("orgnr", orgnr.slice(i, i + 200))
           .order("cfarnr", { ascending: true })

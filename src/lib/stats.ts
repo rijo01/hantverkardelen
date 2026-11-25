@@ -1,6 +1,7 @@
 import { kommunByCode, type Kommun } from "./kommuner";
 import { branschPageSlug } from "./queries";
 import { HANTVERK_BRANSCHER } from "./hantverk-branscher";
+import { hamtaAntal } from "./antal";
 
 /**
  * Förberäknad statistik från `foretag_publik` — Hantverkardelen-nisch.
@@ -139,8 +140,21 @@ const _TOP_BRANSCHER: BranschStat[] = TOP_BRANSCHER_RAW.map((r) => ({
   slug: branschPageSlug(r.name, r.id),
 }));
 
+/** Registrets tal (seo-snapshot). För namn och ordning; talen som visas kommer ur hamtaTop*(). */
 export const TOP_KOMMUNER: ReadonlyArray<KommunStat> = _TOP_KOMMUNER;
 export const TOP_BRANSCHER: ReadonlyArray<BranschStat> = _TOP_BRANSCHER;
+
+/** Kommunerna med dagens tal: registret plus påfyllningen och steg två (lib/antal.ts). */
+export async function hamtaTopKommuner(): Promise<ReadonlyArray<KommunStat>> {
+  const a = await hamtaAntal();
+  return _TOP_KOMMUNER.map((k) => ({ ...k, count: k.count + a.nyaIKommun(k.kommun.code) }));
+}
+
+/** Branscherna med dagens tal (se hamtaTopKommuner). */
+export async function hamtaTopBranscher(): Promise<ReadonlyArray<BranschStat>> {
+  const a = await hamtaAntal();
+  return _TOP_BRANSCHER.map((b) => ({ ...b, count: b.count + a.nyaIBransch(b.id) }));
+}
 
 // kommunForetagCount() låg här och matade kommunsidans rubriktal ur den här
 // snapshoten. Just de värdena var 1001-artefakter, och sidan räknar numera
