@@ -18,7 +18,6 @@
  */
 
 import type { LucideIcon } from "lucide-react";
-import { nyaIBransch } from "./pafyllning-antal";
 import {
   Hammer,
   Zap,
@@ -146,8 +145,5 @@ export function getKategoriBySlug(slug: string): HantverkKategori | null {
   return HANTVERK_KATEGORIER.find((k) => k.slug === slug) ?? null;
 }
 
-/** Kategorierna med påfyllningens tillskott (noll när flaggan är av). */
-export const HANTVERK_KATEGORIER: ReadonlyArray<HantverkKategori> = KATEGORIER_2011.map((k) => ({
-  ...k,
-  count: k.count + k.ng1.reduce((n, b) => n + nyaIBransch(b), 0),
-}));
+/** Kategorierna med registrets tal. För namn, slug och koder; talen som visas kommer ur hamtaKategorier(). */
+export const HANTVERK_KATEGORIER: ReadonlyArray<HantverkKategori> = KATEGORIER_2011;

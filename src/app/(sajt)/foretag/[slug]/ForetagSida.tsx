@@ -304,7 +304,7 @@ export default async function ForetagSida({
   const harKontaktvag = Boolean(visatTelefon || epost);
   const logoStorlek = profil ? "size-20 sm:size-[112px]" : "size-16 sm:size-[88px]";
   const matt = overlay?.logo_url && logoUrl === overlay.logo_url ? logoMatt(overlay.logo_url) : null;
-  const antalIYrket = kommun && f.ng1 ? snapshotKommunBranschCount(kommun.code, f.ng1) : 0;
+  const antalIYrket = kommun && f.ng1 ? await snapshotKommunBranschCount(kommun.code, f.ng1) : 0;
   // Registrets namn är en plural ("Ventilationsfirmor", "Elektriker") och går
   // att räkna med; yrkesnamnet ("Ventilation") gör det inte alltid.
   const flerOrd = (branschName ?? yrke)?.toLowerCase() ?? null;

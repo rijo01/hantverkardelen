@@ -18,6 +18,8 @@ import { CompanyCard, CompanyCardList } from "@/components/company-card";
 import { loadAktivaOverlays, overlayFor } from "@/lib/overlay";
 import { ordnaBoostade } from "@/lib/overlay-rankning";
 import { buildHref, sokSidospalt, type FilterState } from "@/components/filter-panel";
+import { hamtaKategorier } from "@/lib/kategorier-antal";
+import { hamtaAntal } from "@/lib/antal";
 import { ResultatVy, Sidbyte } from "@/components/resultat-vy";
 import {
   SNABBVAL,
@@ -134,7 +136,8 @@ export default async function SokPage({
   const showResults = Boolean(query) || Boolean(kategori) || ng1 != null;
   const rubrik = sokRubrik({ query, kommun, postort, lan, kategoriSlug: kategori?.slug, ng1 });
   // Sidospalten beror bara på adressen — samma i skelettet och i svaret.
-  const sidospalt = sokSidospalt({ state: filterState, pathname: "/sok", kommun });
+  const [kategorierMedAntal, antal] = await Promise.all([hamtaKategorier(), hamtaAntal()]);
+  const sidospalt = sokSidospalt({ state: filterState, pathname: "/sok", kommun, kategorier: kategorierMedAntal, antal });
 
   // Sökrutan sitter i sidhuvudet (site-nav.tsx), ifylld med den här sökningen.
   return (

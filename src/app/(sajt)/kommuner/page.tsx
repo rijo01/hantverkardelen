@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { KALLA_KORT } from "@/lib/dataprovenans";
 import Link from "next/link";
 import { ALL_KOMMUNER } from "@/lib/kommuner";
-import { TOP_KOMMUNER, TOTAL_KOMMUNER, TOTAL_LAN } from "@/lib/stats";
+import { hamtaTopKommuner, TOTAL_KOMMUNER, TOTAL_LAN } from "@/lib/stats";
 import { JsonLd, buildBreadcrumb } from "@/components/json-ld";
 import { Breadcrumb } from "@/components/breadcrumb";
 
@@ -17,7 +17,8 @@ export const metadata: Metadata = {
   alternates: { canonical: `${SITE_URL}/kommuner` },
 };
 
-export default function KommunerPage() {
+export default async function KommunerPage() {
+  const TOP_KOMMUNER = await hamtaTopKommuner();
   const sorted = [...ALL_KOMMUNER].sort((a, b) =>
     a.name.localeCompare(b.name, "sv"),
   );

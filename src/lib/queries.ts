@@ -196,6 +196,13 @@ type PublikRow = {
 };
 
 const VIEW = FORETAG_VY;
+/**
+ * Steg två: rader som bara har hantverk som SCB-bikod sorteras efter rader med
+ * hantverk som huvudkod (beslut 2026-11-25, hantverk-steg2-006.sql). Står
+ * efter poang, så kunder ligger kvar först. Utan steg två finns kolumnen inte,
+ * och då står aeant här (en upprepad sortering ändrar ingenting).
+ */
+const HUVUDKOD_ORDNING = STEG2 ? "huvudkod_hantverk" : "aeant";
 
 export type Kalla = "register2011" | "infofinder" | "register_scb";
 
@@ -306,6 +313,7 @@ export async function listForetagInKommun(
     .eq("kommun", kommunCode)
     .in("ng1", HANTVERK_BRANSCHER)
     .or(NISCH_JURFORM_VILLKOR)
+    .order(HUVUDKOD_ORDNING, { ascending: false, nullsFirst: false })
     .order("aeant", { ascending: false, nullsFirst: false })
     .order("cfarnr", { ascending: true })
     .limit(limit);
@@ -387,6 +395,7 @@ export async function listForetagInKommunByBransch(
 
   const { data, error } = await q
     .order("poang", { ascending: false, nullsFirst: false })
+    .order(HUVUDKOD_ORDNING, { ascending: false, nullsFirst: false })
     .order("aeant", { ascending: false, nullsFirst: false })
     .order("cfarnr", { ascending: true })
     .range(from, to);
@@ -608,6 +617,7 @@ async function runKategoriBrowse(
   // sajten hellre visar rader helt utan total än ett tal vi inte kan stå för.
   const dataQuery = q
     .order("poang", { ascending: false, nullsFirst: false })
+    .order(HUVUDKOD_ORDNING, { ascending: false, nullsFirst: false })
     .order("aeant", { ascending: false, nullsFirst: false })
     .order("cfarnr", { ascending: true })
     .range(from, to);
@@ -680,6 +690,7 @@ async function runBranschSearch(
   qA = applyAeantFilter(qA, opts);
   const branschQuery = qA
     .order("poang", { ascending: false, nullsFirst: false })
+    .order(HUVUDKOD_ORDNING, { ascending: false, nullsFirst: false })
     .order("aeant", { ascending: false, nullsFirst: false })
     .order("cfarnr", { ascending: true })
     .range(from, to);
@@ -718,7 +729,8 @@ async function runBranschSearch(
         qB = applyAeantFilter(qB, opts);
         return qB
           .order("poang", { ascending: false, nullsFirst: false })
-          .order("aeant", { ascending: false, nullsFirst: false })
+          .order(HUVUDKOD_ORDNING, { ascending: false, nullsFirst: false })
+    .order("aeant", { ascending: false, nullsFirst: false })
           .order("cfarnr", { ascending: true })
           .limit(8);
       })()
@@ -821,6 +833,7 @@ async function runTextSearch(
 
   const textQuery = q
     .order("poang", { ascending: false, nullsFirst: false })
+    .order(HUVUDKOD_ORDNING, { ascending: false, nullsFirst: false })
     .order("aeant", { ascending: false, nullsFirst: false })
     .order("cfarnr", { ascending: true })
     .range(from, to);
@@ -886,6 +899,7 @@ export async function listRelatedForetag(
     .or(NISCH_JURFORM_VILLKOR)
     .neq("cfarnr", excludeCfarnr)
     .order("poang", { ascending: false, nullsFirst: false })
+    .order(HUVUDKOD_ORDNING, { ascending: false, nullsFirst: false })
     .order("aeant", { ascending: false, nullsFirst: false })
     .order("cfarnr", { ascending: true })
     .limit(limit);
@@ -1021,6 +1035,7 @@ async function fetchByCfarnrs(
   q = applyAeantFilter(q, opts);
   const { data, error } = await q
     .order("poang", { ascending: false, nullsFirst: false })
+    .order(HUVUDKOD_ORDNING, { ascending: false, nullsFirst: false })
     .order("aeant", { ascending: false, nullsFirst: false });
   if (error || !data) {
     if (error) console.warn("fetchByCfarnrs", error.message);

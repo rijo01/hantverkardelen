@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { hamtaAntal } from "@/lib/antal";
 import { ALL_KOMMUNER } from "@/lib/kommuner";
 import { overlayIndexerbaraSokvagar } from "@/lib/overlay";
 import { getBranschNamesBulk } from "@/lib/branscher";
@@ -12,8 +13,6 @@ import {
   farFinnasISitemap,
   foretagIsIndexable,
   hubIsIndexable,
-  snapshotKommunBranschCount,
-  snapshotKommunCount,
 } from "@/lib/seo";
 
 /**
@@ -63,8 +62,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // ---- Grind 1: kommunhubbar ---------------------------------------------
   const branschNamn = await getBranschNamesBulk([...HANTVERK_BRANSCHER]);
 
+  const antal = await hamtaAntal();
   for (const k of ALL_KOMMUNER) {
-    const kommunCount = snapshotKommunCount(k.code);
+    const kommunCount = antal.kommun(k.code);
     if (!hubIsIndexable(kommunCount)) continue;
     push(`/kommun/${k.slug}`, {
       lastModified: now,
@@ -74,7 +74,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     // ---- Grind 1: kommun × bransch ----------------------------------------
     for (const ng1 of HANTVERK_BRANSCHER) {
-      const count = snapshotKommunBranschCount(k.code, ng1);
+      const count = antal.kommunBransch(k.code, ng1);
       if (!hubIsIndexable(count)) continue;
       const namn = branschNamn.get(String(ng1));
       // Utan branschnamn kan vi inte bilda den kanoniska sluggen — hoppa

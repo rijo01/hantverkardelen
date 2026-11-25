@@ -3,7 +3,7 @@ import { SearchBar } from "@/components/search-bar";
 import { JsonLd } from "@/components/json-ld";
 import { TOTAL_KOMMUNER } from "@/lib/stats";
 import { REGISTER_AR } from "@/lib/dataprovenans";
-import { HANTVERK_KATEGORIER } from "@/lib/hantverk-kategorier";
+import { hamtaKategorier } from "@/lib/kategorier-antal";
 import { kategoriNamn } from "@/lib/sokfraga";
 import { KALLA_KORT } from "@/lib/dataprovenans";
 import { PAFYLLNING, STEG2 } from "@/lib/flaggor";
@@ -21,7 +21,7 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://hantverkardelen.se
  * är från omkring 2011, och ett antal företag eller ett löfte om fullständighet
  * säger något datat inte kan stå för. Tillbaka först när källan är färsk.
  */
-export default function HomePage() {
+export default async function HomePage() {
   const webSiteJsonLd = {
     "@context": "https://schema.org",
     "@type": "WebSite",
@@ -34,7 +34,7 @@ export default function HomePage() {
     },
   };
 
-  const yrken = [...HANTVERK_KATEGORIER].sort((a, b) => b.count - a.count);
+  const yrken = [...(await hamtaKategorier())].sort((a, b) => b.count - a.count);
 
   return (
     <>

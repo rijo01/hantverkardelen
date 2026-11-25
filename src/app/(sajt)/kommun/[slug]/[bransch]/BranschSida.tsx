@@ -5,7 +5,7 @@ import { ALL_KOMMUNER, kommunBySlug } from "@/lib/kommuner";
 import { lanByCode } from "@/lib/lan";
 import { getBranschName, getBranschNamesBulk } from "@/lib/branscher";
 import { rubrikNamn, yrkesnamn } from "@/lib/yrkesnamn";
-import { KOMMUN_BRANSCH_FORETAG } from "@/lib/seo-snapshot";
+import { hamtaAntal } from "@/lib/antal";
 import {
   branschPageSlug,
   listForetagInKommunByBransch,
@@ -66,7 +66,7 @@ export async function generateMetadata({
     openGraph: { title, description, type: "website", locale: "sv_SE" },
     // Grind 1, se lib/seo.ts.
     robots: robotsFor(
-      hubIsIndexable(snapshotKommunBranschCount(kommun.code, ng1)),
+      hubIsIndexable(await snapshotKommunBranschCount(kommun.code, ng1)),
     ),
   };
 }
@@ -127,7 +127,8 @@ export default async function BranschSida({
   // den blivit en egen indexerbar tom sida (soft 404) — svara 404.
   if (page > 1 && rows.length === 0) notFound();
 
-  const antal = snapshotKommunBranschCount(kommun.code, ng1);
+  const antalen = await hamtaAntal();
+  const antal = antalen.kommunBransch(kommun.code, ng1);
   const yrke = yrkesnamn(ng1, branschName);
   const lan = lanByCode(kommun.lan);
   const genitiv = kommun.name.endsWith("s") ? kommun.name : `${kommun.name}s`;
@@ -138,11 +139,11 @@ export default async function BranschSida({
   const grannar = ALL_KOMMUNER.filter(
     (k) => k.lan === kommun.lan && k.code !== kommun.code,
   )
-    .map((k) => ({ k, n: snapshotKommunBranschCount(k.code, ng1) }))
+    .map((k) => ({ k, n: antalen.kommunBransch(k.code, ng1) }))
     .filter(({ n }) => hubIsIndexable(n))
     .sort((a, b) => b.n - a.n)
     .slice(0, 10);
-  const andraKoder = Object.entries(KOMMUN_BRANSCH_FORETAG[kommun.code] ?? {})
+  const andraKoder = Object.entries(antalen.branscherIKommun(kommun.code))
     .map(([kod, n]) => ({ ng1: Number(kod), n }))
     .filter((r) => r.ng1 !== ng1 && hubIsIndexable(r.n))
     .sort((a, b) => b.n - a.n)

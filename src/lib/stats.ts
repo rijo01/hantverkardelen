@@ -1,7 +1,7 @@
 import { kommunByCode, type Kommun } from "./kommuner";
 import { branschPageSlug } from "./queries";
 import { HANTVERK_BRANSCHER } from "./hantverk-branscher";
-import { nyaIBransch, nyaIKommun } from "./pafyllning-antal";
+import { hamtaAntal } from "./antal";
 
 /**
  * Förberäknad statistik från `foretag_publik` — Hantverkardelen-nisch.
@@ -130,18 +130,31 @@ export type BranschStat = {
 const _TOP_KOMMUNER: KommunStat[] = TOP_KOMMUNER_RAW.map((r) => {
   const k = kommunByCode(r.code);
   if (!k) throw new Error(`Unknown kommun code in stats: ${r.code}`);
-  return { kommun: k, count: r.count + nyaIKommun(r.code), href: `/kommun/${k.slug}` };
+  return { kommun: k, count: r.count, href: `/kommun/${k.slug}` };
 });
 
 const _TOP_BRANSCHER: BranschStat[] = TOP_BRANSCHER_RAW.map((r) => ({
   id: r.id,
   name: r.name,
-  count: r.count + nyaIBransch(r.id),
+  count: r.count,
   slug: branschPageSlug(r.name, r.id),
 }));
 
+/** Registrets tal (seo-snapshot). För namn och ordning; talen som visas kommer ur hamtaTop*(). */
 export const TOP_KOMMUNER: ReadonlyArray<KommunStat> = _TOP_KOMMUNER;
 export const TOP_BRANSCHER: ReadonlyArray<BranschStat> = _TOP_BRANSCHER;
+
+/** Kommunerna med dagens tal: registret plus påfyllningen och steg två (lib/antal.ts). */
+export async function hamtaTopKommuner(): Promise<ReadonlyArray<KommunStat>> {
+  const a = await hamtaAntal();
+  return _TOP_KOMMUNER.map((k) => ({ ...k, count: k.count + a.nyaIKommun(k.kommun.code) }));
+}
+
+/** Branscherna med dagens tal (se hamtaTopKommuner). */
+export async function hamtaTopBranscher(): Promise<ReadonlyArray<BranschStat>> {
+  const a = await hamtaAntal();
+  return _TOP_BRANSCHER.map((b) => ({ ...b, count: b.count + a.nyaIBransch(b.id) }));
+}
 
 // kommunForetagCount() låg här och matade kommunsidans rubriktal ur den här
 // snapshoten. Just de värdena var 1001-artefakter, och sidan räknar numera

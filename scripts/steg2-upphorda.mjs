@@ -15,9 +15,11 @@
 //     SCB:s namn (juridiska personer; enskilda firmor behåller registrets namn),
 //     adress, kommun och storleksklass.
 //   - Verksam men utan hantverkskod i SCB: 404.
-//   - Samma regel åt andra hållet: ett arbetsställe som ligger i det köpta
-//     registret under en kod utanför sajten, men har hantverkskod i SCB, visas
-//     (juridiska personer; enskilda firmor kommer med omgång 2).
+//     En bikod räcker för att stanna kvar, inte för att komma in: rader som
+//     bara har hantverk som bikod sorteras efter dem som har det som huvudkod.
+//   - Ett arbetsställe som ligger i det köpta registret under en kod utanför
+//     sajten, men har hantverkskod som SCB:s HUVUDKOD, visas (juridiska
+//     personer; enskilda firmor kommer med omgång 2).
 //   - Ett bolag vars orgnr hör till en dold rad (foretag_dold) visas inte.
 //   - Inte verksam: en efterföljare som redan finns på sajten, i ordningen
 //     samma orgnr → samma namn i samma postnummer → samma telefonnummer.
@@ -27,7 +29,8 @@
 //
 // Läser: foretag_publik (anon), overlay_profil och hantverk_pafyllning (service
 // role), mtoz (READ ONLY). Skriver: hantverk_steg2, bygger om den
-// materialiserade vyn hantverk_foretag_steg2 och skriver
+// materialiserade vyn hantverk_foretag_steg2 och antalen i hantverk_antal
+// (databasfunktionen hantverk_steg2_bygg_om) och skriver reservfilen
 // src/lib/seo-snapshot-steg2.ts. aesamtable och vyerna ändras aldrig.
 //
 // Nödbroms (scripts/korlogg.mjs): skriptet skriver inget om SCB-underlaget är
@@ -55,7 +58,6 @@ if (!SUPA || !SR || !ANON) {
   console.error("NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY och SUPABASE_SERVICE_ROLE_KEY krävs.");
   process.exit(1);
 }
-const PROJEKT = new URL(SUPA).hostname.split(".")[0];
 const H_SR = { apikey: SR, Authorization: `Bearer ${SR}`, "content-type": "application/json" };
 const H_ANON = { apikey: ANON, Authorization: `Bearer ${ANON}` };
 
@@ -149,20 +151,6 @@ function mtoz(sql, listor = {}) {
   return parseCsv(r.stdout);
 }
 
-/** Kör SQL i klusterdatabasen via Supabase CLI (DDL-vägen). Returnerar raderna. */
-function kluster(sql) {
-  const f = join(TMP, "kluster.sql");
-  writeFileSync(f, sql, { mode: 0o600 });
-  const r = spawnSync("supabase", ["db", "query", "--linked", "--project-ref", PROJEKT, "-o", "json", "-f", f], {
-    maxBuffer: 1024 * 1024 * 256, encoding: "utf8",
-  });
-  const text = r.stdout ?? "";
-  const i = text.indexOf("{");
-  if (r.status !== 0 || i < 0) throw new Error(`supabase db query: ${r.stderr || text}`.slice(0, 800));
-  const json = JSON.parse(text.slice(i, text.lastIndexOf("}") + 1));
-  return json.rows ?? json;
-}
-
 // ---- 0. Körloggen och SCB-underlaget ------------------------------------------
 
 const logg = korlogg({ rest, skript: "steg2", tvinga: TVINGA });
@@ -214,8 +202,7 @@ const hantverkJp = mtoz(
   `select a.cfarnr from arbetsstalle a
     where a.aestat = 1 and a.borta_ur_afr is null and not a.ar_fysisk_person
       and a.orgnr ~ '^[0-9]{2}[2-9][0-9]{7}$' and left(a.orgnr, 2) not in ('20','21','22','23')
-      and (a.sni_primar = any(:'sni'::text[])
-           or exists (select 1 from arbetsstalle_sni s where s.cfarnr = a.cfarnr and s.sni = any(:'sni'::text[])))`,
+      and a.sni_primar = any(:'sni'::text[])`,
   { sni: HANTVERK_SNI },
 ).map((r) => Number(r.cfarnr)).filter((c) => !gamlaCf.has(c));
 const utanforRaw = [];
@@ -291,7 +278,7 @@ for (const p of paf) {
   paSajten.set(p.cfarnr, { kommun: p.kommun });
 }
 for (const r of gamla) if (arKund(r) || visas(r)) paSajten.set(r.cfarnr, { kommun: r.kommun });
-for (const r of tillkommer) if (visas(r)) paSajten.set(r.cfarnr, { kommun: r.kommun });
+for (const r of tillkommer) if (visas(r) && hantverkskod(r.cfarnr).huvudkod) paSajten.set(r.cfarnr, { kommun: r.kommun });
 
 // ---- 4. Spårkontroll för rader som inte är verksamma -------------------------
 
@@ -409,6 +396,7 @@ function visasRad(r, via) {
     kommun, lan: kommun ? utanNolla(a.kommun.slice(0, 2)) : null,
     // SCB styr branschen: huvudkoden först, annars första bikoden som är ett av sajtens yrken.
     ng1: hantverkskod(r.cfarnr).ng1,
+    bikod: !hantverkskod(r.cfarnr).huvudkod,
     storleksklass: a.anstkl && Number(a.anstkl) > 0 ? Number(a.anstkl) : null,
     afr_datum: a.afr_datum,
   };
@@ -417,6 +405,7 @@ const dold = (r, via, mal = null) => ({
   cfarnr: r.cfarnr, kommun_register: r.kommun != null ? String(r.kommun) : null, ng1_register: r.ng1,
   utfall: mal ? "308" : "404", via, mal_cfarnr: mal,
   firma: null, gatuadress: null, postnr: null, postort: null, kommun: null, lan: null, ng1: null, storleksklass: null, afr_datum: null,
+  bikod: false,
 });
 
 const rader = [];
@@ -426,7 +415,8 @@ for (const r of gamla) {
   else if (verksam(r)) rader.push(hantverkskod(r.cfarnr) ? visasRad(r, "scb_verksam") : dold(r, "scb_ej_hantverk"));
   else { const s = spar(r); rader.push(dold(r, s.via, s.mal)); }
 }
-for (const r of tillkommer) if (visas(r)) rader.push(visasRad(r, "scb_hantverkskod"));
+// Tillkommande rader kräver hantverk som SCB:s huvudkod (urvalet ovan); en bikod räcker inte.
+for (const r of tillkommer) if (visas(r) && hantverkskod(r.cfarnr).huvudkod) rader.push(visasRad(r, "scb_hantverkskod"));
 
 // ---- 6. Rapport -----------------------------------------------------------------
 
@@ -504,18 +494,18 @@ for (let i = 0; i < bort.length; i += 300) {
 }
 console.error(`  borttagna ur tabellen: ${bort.length}`);
 
-console.error("Bygger om hantverk_foretag_steg2 …");
-const fylld = kluster("select ispopulated from pg_matviews where matviewname = 'hantverk_foretag_steg2';")[0]?.ispopulated;
-kluster(`set statement_timeout = '900s'; refresh materialized view ${fylld ? "concurrently " : ""}public.hantverk_foretag_steg2;`);
+console.error("Bygger om hantverk_foretag_steg2 och antalen (hantverk_steg2_bygg_om) …");
+const ombyggd = await rest("rpc/hantverk_steg2_bygg_om", {
+  method: "POST",
+  body: JSON.stringify({ p_offentliga: OFFENTLIGA.split(",").map(Number) }),
+});
+console.error(`  ${JSON.stringify(ombyggd)}`);
 
-// ---- 8. Antalen för hubbarna, ur samma vy ----------------------------------------
+// ---- 8. Antalen för hubbarna -----------------------------------------------------
+// Sajten läser antalen ur hantverk_antal (src/lib/antal.ts). Filen nedan är
+// reserven om databasen inte svarar, och följer med vid nästa deploy.
 
-const antal = kluster(
-  `select kommun, ng1, count(*)::int as n from public.hantverk_foretag_steg2
-    where kommun is not null
-      and (jurform is null or jurform not in (${OFFENTLIGA}) or orgnr is null or orgnr not like '2%')
-    group by 1, 2 order by 1, 2;`,
-);
+const antal = await allaSidor("hantverk_antal?select=kommun,ng1,n&order=kommun,ng1", H_SR);
 const kf = {}, kbf = {};
 let total = 0;
 for (const { kommun, ng1, n } of antal) {

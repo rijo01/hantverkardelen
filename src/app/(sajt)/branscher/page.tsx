@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { REGISTER_AR } from "@/lib/dataprovenans";
 import { STEG2 } from "@/lib/flaggor";
 import Link from "next/link";
-import { TOP_BRANSCHER, TOTAL_BRANSCHER } from "@/lib/stats";
-import { HANTVERK_KATEGORIER } from "@/lib/hantverk-kategorier";
+import { hamtaTopBranscher, TOTAL_BRANSCHER } from "@/lib/stats";
+import { hamtaKategorier } from "@/lib/kategorier-antal";
 import { kategoriNamn } from "@/lib/sokfraga";
 import { yrkesnamn } from "@/lib/yrkesnamn";
 import { JsonLd, buildBreadcrumb } from "@/components/json-ld";
@@ -22,7 +22,8 @@ export const metadata: Metadata = {
   alternates: { canonical: `${SITE_URL}/branscher` },
 };
 
-export default function BranscherPage() {
+export default async function BranscherPage() {
+  const [HANTVERK_KATEGORIER, TOP_BRANSCHER] = await Promise.all([hamtaKategorier(), hamtaTopBranscher()]);
   const breadcrumbItems = [
     { name: "Hantverkardelen", href: "/" },
     { name: "Branscher" },

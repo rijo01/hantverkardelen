@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
+import { ANTAL_TAGG } from "@/lib/antal";
 import { STEG2 } from "@/lib/flaggor";
 import { SIGNATURE_HEADER, sentAtArFarsk, verifyOverlaySignature } from "@/lib/overlay-contract";
 
@@ -29,6 +30,8 @@ export async function POST(req: Request) {
   if (paket.action !== "steg2_revalidera" || !sentAtArFarsk(paket.sent_at ?? "")) {
     return NextResponse.json({ ok: false, error: "fel action eller för gammal" }, { status: 400 });
   }
+  // Antalen (lib/antal.ts) ligger i datacachen, inte i sidorna: rensa dem först.
+  revalidateTag(ANTAL_TAGG, { expire: 0 });
   revalidatePath("/", "layout");
-  return NextResponse.json({ ok: true, revalidated: ["/ (layout)"] }, { headers: { "cache-control": "no-store" } });
+  return NextResponse.json({ ok: true, revalidated: [ANTAL_TAGG, "/ (layout)"] }, { headers: { "cache-control": "no-store" } });
 }
