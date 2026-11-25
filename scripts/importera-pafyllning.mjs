@@ -2,7 +2,7 @@
 // finns i det gamla registret till hantverk_pafyllning i klusterdatabasen.
 //
 // Kör:
-//   node --env-file=.env.local scripts/importera-pafyllning.mjs --omgang 1 [--torrkorning]
+//   node --env-file=.env.local scripts/importera-pafyllning.mjs --omgang 1 [--torrkorning] [--tvinga]
 //
 // Kräver MTOZ_DATABASE_URL (eller ~/Projects/foretagskoll/.env.local:s
 // DATABASE_URL) och psql för läsningen, samt NEXT_PUBLIC_SUPABASE_URL och
@@ -16,6 +16,12 @@
 //    när det gäller en annan kommun (de tveksamma väntar till en senare omgång).
 //  - Omgång 1: bara juridiska personer. Inga telefonnummer, personnummer
 //    eller personnamn. E-post lagras (bara funktionsadresser) men visas inte.
+//  - Ett orgnr som hör till en dold rad (foretag_dold, via vyn
+//    hantverk_dolda_orgnr) tas inte med: ett dolt bolag kommer inte tillbaka
+//    under ett nytt cfarnr. Bara organisationsnummer, aldrig personnummer.
+//  - Nödbroms (scripts/korlogg.mjs): inget skrivs om SCB-underlaget är under
+//    98 % av förra läsningen eller om körningen skulle ta bort fler än 2 % av
+//    raderna från förra körningen. --tvinga kör ändå.
 //  - Skriptet är idempotent: rader som inte längre uppfyller villkoren tas bort
 //    ur tabellen, så det kan köras dagligen efter SCB-körningen.
 //
@@ -23,12 +29,14 @@
 import { spawnSync } from "node:child_process";
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { homedir } from "node:os";
+import { korlogg, SCB_UNDERLAG_SQL } from "./korlogg.mjs";
 
 const arg = (n) => {
   const i = process.argv.indexOf(n);
   return i < 0 ? null : process.argv[i + 1];
 };
 const TORR = process.argv.includes("--torrkorning");
+const TVINGA = process.argv.includes("--tvinga");
 const OMGANG = Number(arg("--omgang"));
 if (OMGANG !== 1) {
   console.error("Bara --omgang 1 finns (juridiska personer). Omgång 2 (enskilda firmor) byggs senare.");
@@ -163,6 +171,31 @@ async function iBitar(lista, storlek, fn) {
   return ut;
 }
 
+// ---- 0. Körloggen och SCB-underlaget ------------------------------------------
+
+const logg = korlogg({ rest, skript: "pafyllning", tvinga: TVINGA });
+for (const h of ["uncaughtException", "unhandledRejection"]) {
+  process.on(h, async (e) => {
+    console.error(e);
+    try { await logg.skriv({ status: "fel", klar: new Date().toISOString(), orsak: String(e?.message ?? e).slice(0, 500) }); } catch {}
+    process.exit(1);
+  });
+}
+let forra, underlag;
+{
+  const u = spawnSync("psql", [mtozUrl(), "-X", "-q", "-v", "ON_ERROR_STOP=1", "--csv", "-f", "-"], {
+    input: `begin transaction read only;\n${SCB_UNDERLAG_SQL};\nrollback;\n`, encoding: "utf8",
+  });
+  if (u.status !== 0) throw new Error(u.stderr);
+  forra = await logg.fore();
+  underlag = logg.scbSkal(parseCsv(u.stdout)[0], forra);
+}
+console.error(`SCB-underlaget: ${underlag.verksamma} verksamma arbetsställen, läsning ${underlag.afrDatum}` +
+  (forra ? ` (förra körningen ${forra.startad}: ${forra.scb_verksamma})` : " (ingen tidigare körning)"));
+await logg.skriv({ status: TORR ? "torrkorning" : "pagar", afr_datum: underlag.afrDatum, scb_verksamma: underlag.verksamma });
+if (TORR) { if (underlag.skal.length) console.error(`Nödbromsen skulle slå till:\n  - ${underlag.skal.join("\n  - ")}`); }
+else await logg.stoppaOm(underlag.skal);
+
 // ---- 1. Läs kandidaterna ur mtoz --------------------------------------------
 
 console.error("Läser kandidater ur mtoz (read only) …");
@@ -202,15 +235,19 @@ const orgnrPaSajten = new Set(
   ).map((r) => r.orgnr),
 );
 
+// Organisationsnummer bakom dolda rader: ett dolt bolag kommer inte tillbaka.
+const doldaOrgnr = new Set((await rest("hantverk_dolda_orgnr?select=orgnr")).map((r) => r.orgnr));
+
 /** SCB:s spärrkod som heltal, eller null om den saknas eller är okänd. */
 const sparrkod = (v, giltiga) => (giltiga.includes(Number(v)) ? Number(v) : null);
 
-const skal = { cfarnr_i_registret: 0, orgnr_pa_sajten: 0, utanfor_nischen: 0 };
+const skal = { cfarnr_i_registret: 0, orgnr_pa_sajten: 0, orgnr_dolt_bolag: 0, utanfor_nischen: 0 };
 const rader = [];
 for (const k of kandidater) {
   if (cfarnrIRegistret.has(k.cfarnr)) { skal.cfarnr_i_registret++; continue; }
   const orgnr = medOrgnr(k.orgnr);
   if (orgnrPaSajten.has(orgnr)) { skal.orgnr_pa_sajten++; continue; }
+  if (/^\d{2}[2-9]\d{7}$/.test(k.orgnr) && doldaOrgnr.has(k.orgnr)) { skal.orgnr_dolt_bolag++; continue; }
   const ng1 = ng1For(k.sni2025);
   if (!NISCH.includes(ng1)) { skal.utanfor_nischen++; continue; }
   const kommun = k.kommun && k.kommun !== "0000" ? utanNolla(k.kommun) : null;
@@ -320,10 +357,26 @@ export const KOMMUN_BRANSCH_FORETAG_NYA: Readonly<Record<string, Readonly<Record
 )};
 `;
 
+// ---- 4b. Nödbromsen: hur många rader från förra körningen tas bort? ------------
+
+const fanns = [];
+for (let off = 0; ; off += 1000) {
+  const bit = await rest(`hantverk_pafyllning?select=cfarnr&omgang=eq.${OMGANG}&order=cfarnr&offset=${off}&limit=1000`);
+  fanns.push(...bit.map((r) => r.cfarnr));
+  if (bit.length < 1000) break;
+}
+const nu = new Set(rader.map((r) => r.cfarnr));
+const bort = fanns.filter((c) => !nu.has(c));
+console.error(`Rader efter förra körningen: ${fanns.length}, efter den här: ${rader.length}, tas bort: ${bort.length}`);
+const falt = { visade_fore: fanns.length, visade_efter: rader.length, doljs: bort.length };
 if (TORR) {
+  const s = logg.doljsSkal(fanns.length, bort.length);
+  if (s.length) console.error(`Nödbromsen skulle slå till:\n  - ${s.join("\n  - ")}`);
+  await logg.skriv({ ...falt, klar: new Date().toISOString() });
   console.error("Torrkörning: inget skrivet.");
   process.exit(0);
 }
+await logg.stoppaOm(logg.doljsSkal(fanns.length, bort.length), falt);
 
 // ---- 5. Skriv ----------------------------------------------------------------
 
@@ -337,14 +390,6 @@ for (let i = 0; i < rader.length; i += 500) {
 }
 
 // Rader ur samma omgång som inte längre uppfyller villkoren tas bort.
-const nu = new Set(rader.map((r) => r.cfarnr));
-const fanns = [];
-for (let off = 0; ; off += 1000) {
-  const bit = await rest(`hantverk_pafyllning?select=cfarnr&omgang=eq.${OMGANG}&order=cfarnr&offset=${off}&limit=1000`);
-  fanns.push(...bit.map((r) => r.cfarnr));
-  if (bit.length < 1000) break;
-}
-const bort = fanns.filter((c) => !nu.has(c));
 for (let i = 0; i < bort.length; i += 300) {
   await rest(`hantverk_pafyllning?cfarnr=in.(${bort.slice(i, i + 300).join(",")})`, { method: "DELETE" });
 }
@@ -355,3 +400,5 @@ console.error("Skrev src/lib/seo-snapshot-pafyllning.ts");
 // Steg två bygger på påfyllningen: efterföljarna och den materialiserade vyn
 // hantverk_foretag_steg2 måste räknas om efter varje import.
 console.error("Kör nu scripts/steg2-upphorda.mjs, så att steg två följer med (lib/sql/hantverk-steg2-004.sql).");
+
+await logg.skriv({ status: "klar", klar: new Date().toISOString(), ...falt });

@@ -9,7 +9,7 @@ import { PAFYLLNING, STEG2 } from "./flaggor";
  *               raderna i `hantverk_pafyllning` (lib/sql/hantverk-pafyllning-001.sql)
  *   steg två PÅ: `hantverk_foretag_steg2`, samma kolumner, materialiserad: det
  *               köpta registrets rader som inte är verksamma i SCB är borta, de
- *               verksamma bär SCB:s uppgifter (lib/sql/hantverk-steg2-004.sql)
+ *               verksamma bär SCB:s uppgifter (lib/sql/hantverk-steg2-004.sql, -005.sql)
  *
  * Ingen av vyerna läser mtoz. Skripten kopierar dit (scripts/importera-pafyllning.mjs,
  * scripts/steg2-upphorda.mjs).

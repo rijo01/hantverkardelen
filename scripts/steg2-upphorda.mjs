@@ -1,17 +1,25 @@
 // Steg två: rader ur det köpta registret som inte är verksamma i SCB:s register
 // döljs (404) eller pekar på sin efterföljare (308). Beslut 2026-11-24.
 //
-//   node --env-file=.env.local scripts/steg2-upphorda.mjs [--torrkorning] [--revalidera <bas-url>]
+//   node --env-file=.env.local scripts/steg2-upphorda.mjs [--torrkorning] [--tvinga] [--revalidera <bas-url>]
 //
 // Körs EFTER scripts/importera-pafyllning.mjs, och om efter varje inläsning från
 // SCB: en rad som blivit verksam igen tas bort ur listan och visas igen, en ny
 // upphörd försvinner.
 //
-// Regeln:
+// Regeln (beslut 2026-11-24 och 2026-11-25):
 //   - En rad visas bara om arbetsstället (cfarnr) är verksamt i SCB:s register i
-//     mtoz (aestat = 1, inte borta ur filen). Den visas då med SCB:s namn
-//     (juridiska personer), adress, kommun, bransch och storleksklass.
-//   - Annars söks en efterföljare som redan finns på sajten, i ordningen
+//     mtoz (aestat = 1, inte borta ur filen) OCH har en hantverkskod bland SCB:s
+//     näringsgrenar: huvudkoden, annars den första bikoden (arbetsstalle_sni,
+//     i rangordning) som är ett av sajtens yrken. Den visas under det yrket med
+//     SCB:s namn (juridiska personer; enskilda firmor behåller registrets namn),
+//     adress, kommun och storleksklass.
+//   - Verksam men utan hantverkskod i SCB: 404.
+//   - Samma regel åt andra hållet: ett arbetsställe som ligger i det köpta
+//     registret under en kod utanför sajten, men har hantverkskod i SCB, visas
+//     (juridiska personer; enskilda firmor kommer med omgång 2).
+//   - Ett bolag vars orgnr hör till en dold rad (foretag_dold) visas inte.
+//   - Inte verksam: en efterföljare som redan finns på sajten, i ordningen
 //     samma orgnr → samma namn i samma postnummer → samma telefonnummer.
 //     Finns den: 308 dit. Annars 404.
 //   - Kunder (poang > 0 eller en overlay-profil på cfarnr eller orgnr) rörs
@@ -22,6 +30,10 @@
 // materialiserade vyn hantverk_foretag_steg2 och skriver
 // src/lib/seo-snapshot-steg2.ts. aesamtable och vyerna ändras aldrig.
 //
+// Nödbroms (scripts/korlogg.mjs): skriptet skriver inget om SCB-underlaget är
+// under 98 % av förra läsningen eller om körningen skulle dölja fler än 2 % av
+// de rader som visades efter förra körningen. --tvinga kör ändå.
+//
 // Namn, adresser och nummer stannar i minnet; rapporten har bara antal.
 
 import { spawnSync } from "node:child_process";
@@ -29,8 +41,10 @@ import { createHmac } from "node:crypto";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync, chmodSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
+import { korlogg, SCB_UNDERLAG_SQL } from "./korlogg.mjs";
 
 const TORR = process.argv.includes("--torrkorning");
+const TVINGA = process.argv.includes("--tvinga");
 const argv = process.argv.slice(2);
 const REVALIDERA = argv.includes("--revalidera") ? argv[argv.indexOf("--revalidera") + 1] : null;
 
@@ -149,12 +163,31 @@ function kluster(sql) {
   return json.rows ?? json;
 }
 
+// ---- 0. Körloggen och SCB-underlaget ------------------------------------------
+
+const logg = korlogg({ rest, skript: "steg2", tvinga: TVINGA });
+for (const h of ["uncaughtException", "unhandledRejection"]) {
+  process.on(h, async (e) => {
+    console.error(e);
+    try { await logg.skriv({ status: "fel", klar: new Date().toISOString(), orsak: String(e?.message ?? e).slice(0, 500) }); } catch {}
+    process.exit(1);
+  });
+}
+const forra = await logg.fore();
+const underlag = logg.scbSkal(mtoz(SCB_UNDERLAG_SQL)[0], forra);
+console.error(`SCB-underlaget: ${underlag.verksamma} verksamma arbetsställen, läsning ${underlag.afrDatum}` +
+  (forra ? ` (förra körningen ${forra.startad}: ${forra.scb_verksamma})` : " (ingen tidigare körning)"));
+await logg.skriv({ status: TORR ? "torrkorning" : "pagar", afr_datum: underlag.afrDatum, scb_verksamma: underlag.verksamma });
+if (TORR) { if (underlag.skal.length) console.error(`Nödbromsen skulle slå till:\n  - ${underlag.skal.join("\n  - ")}`); }
+else await logg.stoppaOm(underlag.skal);
+
 // ---- 1. Det köpta registrets rader på sajten ---------------------------------
 
 console.error("Läser registrets rader på sajten …");
 const koder = [...NISCH, ...Object.keys(SAMMA_YRKE).map(Number)];
+const RADKOLUMNER = "cfarnr,orgnr,ng1,kommun,poang,jurform,ar_enskild_firma,firma,namn,postnr,gatuadress,tel,telefon";
 const gamla = (await allaSidor(
-  `foretag_publik?select=cfarnr,orgnr,ng1,kommun,poang,jurform,ar_enskild_firma,firma,namn,postnr,gatuadress,tel,telefon&ng1=in.(${koder.join(",")})&${VILLKOR}&order=cfarnr`,
+  `foretag_publik?select=${RADKOLUMNER}&ng1=in.(${koder.join(",")})&${VILLKOR}&order=cfarnr`,
   H_ANON,
 )).map((r) => ({ ...r, ng1: SAMMA_YRKE[r.ng1] ?? r.ng1, orgnr: siffror(r.orgnr) || null }));
 console.error(`  ${gamla.length} rader`);
@@ -163,9 +196,48 @@ const overlay = await allaSidor("overlay_profil?select=external_id&sajt=eq.hantv
 const overlayIds = new Set(overlay.map((o) => siffror(o.external_id)).filter(Boolean));
 const arKund = (r) => (r.poang ?? 0) > 0 || overlayIds.has(String(r.cfarnr)) || (r.orgnr && overlayIds.has(r.orgnr));
 
+// Organisationsnummer bakom dolda rader (foretag_dold). Bara organisationsnummerform.
+const doldaOrgnr = new Set((await rest("hantverk_dolda_orgnr?select=orgnr")).map((r) => r.orgnr));
+const doltBolag = (r) => !!r.orgnr && doldaOrgnr.has(r.orgnr);
+console.error(`  dolda organisationsnummer: ${doldaOrgnr.size}`);
+
+// ---- 1b. Registrets rader under en kod utanför sajten, med hantverkskod i SCB --
+
+/** SNI 2025-koderna som blir ett av sajtens yrken (samma lista som påfyllningens urval). */
+const HANTVERK_SNI = [...readFileSync(new URL("./sql/pafyllning-urval.sql", import.meta.url), "utf8")
+  .match(/a\.sni_primar in \(([\s\S]*?)\)/)[1].matchAll(/'(\d{5})'/g)].map((m) => m[1])
+  .filter((k) => NISCH_SET.has(ng1For(k)));
+
+console.error("Söker registrets rader med hantverkskod i SCB men annan kod i registret …");
+const gamlaCf = new Set(gamla.map((r) => r.cfarnr));
+const hantverkJp = mtoz(
+  `select a.cfarnr from arbetsstalle a
+    where a.aestat = 1 and a.borta_ur_afr is null and not a.ar_fysisk_person
+      and a.orgnr ~ '^[0-9]{2}[2-9][0-9]{7}$' and left(a.orgnr, 2) not in ('20','21','22','23')
+      and (a.sni_primar = any(:'sni'::text[])
+           or exists (select 1 from arbetsstalle_sni s where s.cfarnr = a.cfarnr and s.sni = any(:'sni'::text[])))`,
+  { sni: HANTVERK_SNI },
+).map((r) => Number(r.cfarnr)).filter((c) => !gamlaCf.has(c));
+const utanforRaw = [];
+for (let i = 0; i < hantverkJp.length; i += 2400) {
+  const bitar = [];
+  for (let j = i; j < Math.min(i + 2400, hantverkJp.length); j += 300) bitar.push(hantverkJp.slice(j, j + 300));
+  for (const b of await Promise.all(bitar.map((bit) =>
+    rest(`foretag_publik?select=${RADKOLUMNER}&cfarnr=in.(${bit.join(",")})&${VILLKOR}`, {}, H_ANON)))) utanforRaw.push(...b);
+}
+const utanfor = utanforRaw
+  .map((r) => ({ ...r, ng1: SAMMA_YRKE[r.ng1] ?? r.ng1, orgnr: siffror(r.orgnr) || null }))
+  .filter((r) => !koder.includes(r.ng1));
+// Juridiska personer nu; enskilda firmor kommer med omgång 2. Kunder rörs aldrig.
+const tillkommer = utanfor.filter((r) => !r.ar_enskild_firma && r.jurform !== 10 && !arKund(r) && !doltBolag(r));
+console.error(`  ${hantverkJp.length} verksamma juridiska personer med hantverkskod som inte står under sajtens yrken i registret;` +
+  ` ${utanfor.length} av dem finns i registret under en annan kod, ${tillkommer.length} tillkommer` +
+  ` (${utanfor.filter(arKund).length} kunder och ${utanfor.filter(doltBolag).length} dolda bolag rörs inte)`);
+
 // ---- 2. Status och SCB:s uppgifter per cfarnr --------------------------------
 
 console.error("Läser arbetsställena ur mtoz (read only) …");
+const allaCf = [...gamla, ...tillkommer].map((r) => r.cfarnr);
 const scb = new Map();
 for (const r of mtoz(
   `with karta as (
@@ -179,6 +251,7 @@ for (const r of mtoz(
      coalesce(nullif(trim(a.besok_postort),''), nullif(trim(a.post_postort),'')) as postort,
      case when a.kommun <> '0000' then a.kommun else k.kommun end as kommun,
      a.sni_primar as sni, a.anstkl,
+     (select string_agg(s.sni, ',' order by s.rang) from arbetsstalle_sni s where s.cfarnr = a.cfarnr) as alla_sni,
      (select max(afr_datum) from arbetsstalle_lasning) as afr_datum
    from arbetsstalle a
    left join foretag f on f.orgnr = a.orgnr and not a.ar_fysisk_person
@@ -186,9 +259,24 @@ for (const r of mtoz(
    left join karta k on k.pn = case when a.besok_postnr ~ '^[0-9]{5}$' and a.besok_postnr <> '00000' then a.besok_postnr
                                     when a.post_postnr ~ '^[0-9]{5}$' and a.post_postnr <> '00000' then a.post_postnr end
    where a.cfarnr = any(:'cf'::bigint[])`,
-  { cf: gamla.map((r) => r.cfarnr) },
+  { cf: allaCf },
 )) scb.set(Number(r.cfarnr), r);
 const verksam = (r) => { const a = scb.get(r.cfarnr); return !!a && a.aestat === "1" && a.borta !== "t"; };
+/**
+ * Arbetsställets hantverkskod i SCB: huvudkoden om den är ett av sajtens
+ * yrken, annars den första bikoden (i SCB:s rangordning) som är det.
+ */
+function hantverkskod(cfarnr) {
+  const a = scb.get(cfarnr);
+  if (!a) return null;
+  const alla = [a.sni, ...(a.alla_sni ? a.alla_sni.split(",") : [])].filter(Boolean);
+  for (const k of alla) {
+    const ng1 = ng1For(k);
+    if (NISCH_SET.has(ng1)) return { ng1, kod: k, huvudkod: k === a.sni };
+  }
+  return null;
+}
+const visas = (r) => verksam(r) && !!hantverkskod(r.cfarnr) && !doltBolag(r);
 const AFR_DATUM = [...scb.values()].find((a) => a.afr_datum)?.afr_datum ?? null;
 console.error(`  ${scb.size} hittade i SCB:s register, SCB-datum ${AFR_DATUM}`);
 
@@ -197,10 +285,13 @@ console.error(`  ${scb.size} hittade i SCB:s register, SCB-datum ${AFR_DATUM}`);
 console.error("Läser påfyllningen …");
 const paf = await allaSidor("hantverk_pafyllning?select=cfarnr,orgnr,kommun,ng1&order=cfarnr", H_SR);
 const dolda = new Set((await rest("foretag_dold?select=cfarnr")).map((r) => Number(r.cfarnr)));
-const gamlaCf = new Set(gamla.map((r) => r.cfarnr));
 const paSajten = new Map(); // cfarnr -> { kommun }
-for (const p of paf) if (!dolda.has(p.cfarnr) && !gamlaCf.has(p.cfarnr)) paSajten.set(p.cfarnr, { kommun: p.kommun });
-for (const r of gamla) if (arKund(r) || verksam(r)) paSajten.set(r.cfarnr, { kommun: r.kommun });
+for (const p of paf) {
+  if (dolda.has(p.cfarnr) || gamlaCf.has(p.cfarnr) || doldaOrgnr.has(siffror(p.orgnr))) continue;
+  paSajten.set(p.cfarnr, { kommun: p.kommun });
+}
+for (const r of gamla) if (arKund(r) || visas(r)) paSajten.set(r.cfarnr, { kommun: r.kommun });
+for (const r of tillkommer) if (visas(r)) paSajten.set(r.cfarnr, { kommun: r.kommun });
 
 // ---- 4. Spårkontroll för rader som inte är verksamma -------------------------
 
@@ -305,50 +396,92 @@ function spar(r) {
 
 // ---- 5. Tabellens rader --------------------------------------------------------
 
+/** En rad som visas, med SCB:s uppgifter. */
+function visasRad(r, via) {
+  const a = scb.get(r.cfarnr);
+  const kommun = a.kommun && a.kommun !== "0000" ? utanNolla(a.kommun) : null;
+  return {
+    cfarnr: r.cfarnr, kommun_register: r.kommun != null ? String(r.kommun) : null, ng1_register: r.ng1,
+    utfall: "visas", via, mal_cfarnr: null,
+    // Enskilda firmor behåller registrets namn: SCB:s benämning kan vara ägarens namn.
+    firma: r.ar_enskild_firma || a.fp === "t" ? null : a.namn,
+    gatuadress: a.gatuadress, postnr: a.postnr ? Number(a.postnr) : null, postort: a.postort,
+    kommun, lan: kommun ? utanNolla(a.kommun.slice(0, 2)) : null,
+    // SCB styr branschen: huvudkoden först, annars första bikoden som är ett av sajtens yrken.
+    ng1: hantverkskod(r.cfarnr).ng1,
+    storleksklass: a.anstkl && Number(a.anstkl) > 0 ? Number(a.anstkl) : null,
+    afr_datum: a.afr_datum,
+  };
+}
+const dold = (r, via, mal = null) => ({
+  cfarnr: r.cfarnr, kommun_register: r.kommun != null ? String(r.kommun) : null, ng1_register: r.ng1,
+  utfall: mal ? "308" : "404", via, mal_cfarnr: mal,
+  firma: null, gatuadress: null, postnr: null, postort: null, kommun: null, lan: null, ng1: null, storleksklass: null, afr_datum: null,
+});
+
 const rader = [];
 for (const r of gamla) {
   if (arKund(r)) continue;
-  const bas = { cfarnr: r.cfarnr, kommun_register: r.kommun != null ? String(r.kommun) : null, ng1_register: r.ng1 };
-  if (verksam(r)) {
-    const a = scb.get(r.cfarnr);
-    const ng1Scb = ng1For(a.sni);
-    const kommun = a.kommun && a.kommun !== "0000" ? utanNolla(a.kommun) : null;
-    rader.push({
-      ...bas, utfall: "visas", via: "scb_verksam", mal_cfarnr: null,
-      // Enskilda firmor behåller registrets namn: SCB:s benämning kan vara ägarens namn.
-      firma: r.ar_enskild_firma || a.fp === "t" ? null : a.namn,
-      gatuadress: a.gatuadress, postnr: a.postnr ? Number(a.postnr) : null, postort: a.postort,
-      kommun, lan: kommun ? utanNolla(a.kommun.slice(0, 2)) : null,
-      // SCB:s bransch när den är ett av sajtens yrken, annars registrets.
-      ng1: ng1Scb && NISCH_SET.has(ng1Scb) ? ng1Scb : r.ng1,
-      storleksklass: a.anstkl && Number(a.anstkl) > 0 ? Number(a.anstkl) : null,
-      afr_datum: a.afr_datum,
-    });
-  } else {
-    const s = spar(r);
-    rader.push({
-      ...bas, utfall: s.mal ? "308" : "404", via: s.via, mal_cfarnr: s.mal,
-      firma: null, gatuadress: null, postnr: null, postort: null, kommun: null, lan: null, ng1: null, storleksklass: null, afr_datum: null,
-    });
-  }
+  if (doltBolag(r)) rader.push(dold(r, "dolt_bolag"));
+  else if (verksam(r)) rader.push(hantverkskod(r.cfarnr) ? visasRad(r, "scb_verksam") : dold(r, "scb_ej_hantverk"));
+  else { const s = spar(r); rader.push(dold(r, s.via, s.mal)); }
 }
+for (const r of tillkommer) if (visas(r)) rader.push(visasRad(r, "scb_hantverkskod"));
 
 // ---- 6. Rapport -----------------------------------------------------------------
 
 const rakna = (lista, f) => lista.reduce((m, r) => ((m[f(r)] = (m[f(r)] ?? 0) + 1), m), {});
 const kunder = gamla.filter(arKund);
-console.error(JSON.stringify({
+// Verksamma rader vars huvudkod i SCB inte är ett av sajtens yrken (förra versionens 3 028).
+const annanHuvudkod = gamla.filter((r) => !arKund(r) && verksam(r) && !NISCH_SET.has(ng1For(scb.get(r.cfarnr).sni)));
+const toppKoder = (lista) => Object.entries(rakna(lista, (r) => scb.get(r.cfarnr).sni ?? "saknas"))
+  .sort((a, b) => b[1] - a[1]).slice(0, 12).map(([k, n]) => `${k}: ${n}`);
+const RAPPORT = {
   registerrader: gamla.length,
   kunder: kunder.length,
   kunder_saknas_i_scb: kunder.filter((r) => !verksam(r)).length,
   utfall: rakna(rader, (r) => r.utfall),
   via: rakna(rader, (r) => `${r.utfall} ${r.via}`),
-  visas_med_annat_yrke_an_registret: rader.filter((r) => r.utfall === "visas" && r.ng1 !== r.ng1_register).length,
-  visas_med_annan_kommun_an_registret: rader.filter((r) => r.utfall === "visas" && r.kommun && r.kommun !== r.kommun_register).length,
-  scb_bransch_utanfor_sajtens_yrken: rader.filter((r) => r.utfall === "visas" && !NISCH_SET.has(ng1For(scb.get(r.cfarnr).sni) ?? 0)).length,
-}, null, 2));
+  visas_av_registrets_rader: rader.filter((r) => r.utfall === "visas" && r.via === "scb_verksam").length,
+  visas_byter_yrke: rader.filter((r) => r.utfall === "visas" && r.via === "scb_verksam" && r.ng1 !== r.ng1_register).length,
+  visas_byter_kommun: rader.filter((r) => r.utfall === "visas" && r.via === "scb_verksam" && r.kommun && r.kommun !== r.kommun_register).length,
+  visas_via_bikod: rader.filter((r) => r.utfall === "visas" && !hantverkskod(r.cfarnr).huvudkod).length,
+  huvudkod_utanfor_sajten: {
+    totalt: annanHuvudkod.length,
+    hantverkskod_som_bikod_visas: annanHuvudkod.filter((r) => hantverkskod(r.cfarnr)).length,
+    varav_samma_yrke_som_registret: annanHuvudkod.filter((r) => hantverkskod(r.cfarnr)?.ng1 === r.ng1).length,
+    ingen_hantverkskod_404: annanHuvudkod.filter((r) => !hantverkskod(r.cfarnr)).length,
+    vanligaste_huvudkoder_bland_404: toppKoder(annanHuvudkod.filter((r) => !hantverkskod(r.cfarnr))),
+  },
+  tillkommer_fran_annan_kod_i_registret: {
+    i_registret_under_annan_kod: utanfor.length,
+    enskilda_firmor_vantar_omgang2: utanfor.filter((r) => r.ar_enskild_firma || r.jurform === 10).length,
+    kunder_rors_inte: utanfor.filter(arKund).length,
+    tillkommer: rader.filter((r) => r.via === "scb_hantverkskod").length,
+    varav_via_bikod: rader.filter((r) => r.via === "scb_hantverkskod" && !hantverkskod(r.cfarnr).huvudkod).length,
+    per_yrke: rakna(rader.filter((r) => r.via === "scb_hantverkskod"), (r) => r.ng1),
+  },
+};
+console.error(JSON.stringify(RAPPORT, null, 2));
+if (process.env.STEG2_RAPPORT) writeFileSync(process.env.STEG2_RAPPORT, JSON.stringify(RAPPORT, null, 2));
 
-if (TORR) { console.error("Torrkörning: inget skrivet."); process.exit(0); }
+// ---- 6b. Nödbromsen: hur många visade rader döljs? -----------------------------
+
+const forraTabell = await allaSidor("hantverk_steg2?select=cfarnr,utfall&order=cfarnr", H_SR);
+const visadesFore = new Set(forraTabell.filter((r) => r.utfall === "visas").map((r) => r.cfarnr));
+const visasEfter = new Set(rader.filter((r) => r.utfall === "visas").map((r) => r.cfarnr));
+for (const r of kunder) { visasEfter.add(r.cfarnr); if (forraTabell.length) visadesFore.add(r.cfarnr); }
+const doljs = [...visadesFore].filter((c) => !visasEfter.has(c)).length;
+console.error(`Visades efter förra körningen: ${visadesFore.size}, visas efter den här: ${visasEfter.size}, döljs: ${doljs}`);
+const falt = { visade_fore: visadesFore.size, visade_efter: visasEfter.size, doljs };
+if (TORR) {
+  const skal = logg.doljsSkal(visadesFore.size, doljs);
+  if (skal.length) console.error(`Nödbromsen skulle slå till:\n  - ${skal.join("\n  - ")}`);
+  await logg.skriv({ ...falt, klar: new Date().toISOString() });
+  console.error("Torrkörning: inget skrivet.");
+  process.exit(0);
+}
+await logg.stoppaOm(logg.doljsSkal(visadesFore.size, doljs), falt);
 
 // ---- 7. Skriv tabellen, bygg om vyn ----------------------------------------------
 
@@ -429,4 +562,8 @@ if (REVALIDERA) {
     method: "POST", body: raw, headers: { "content-type": "application/json", "x-overlay-signature": sig, ...extra },
   });
   console.error(`Revalidering: ${res.status} ${await res.text()}`);
+  if (!res.ok) throw new Error(`revalideringen av ${REVALIDERA} svarade ${res.status}; tabellen och vyn är skrivna, sidorna är inte ombyggda`);
 }
+
+await logg.skriv({ status: "klar", klar: new Date().toISOString(), ...falt });
+console.error("Klart. Körningen är loggad i hantverk_korning.");
