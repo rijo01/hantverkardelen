@@ -110,7 +110,7 @@ export default async function BranschSida({
     permanentRedirect(`/kommun/${kommun.slug}/${canonicalBransch}${page > 1 ? `?page=${page}` : ""}`);
   }
 
-  // Databasen sorterar `poang desc, aeant desc, cfarnr asc`. Overlay-lagret
+  // Databasen sorterar enligt ordnaLista() i lib/queries.ts. Overlay-lagret
   // läggs ovanpå den ordningen, inte i stället för den: sorteringen är stabil,
   // så ett företag utan featured/list_priority hamnar exakt där det hade
   // hamnat utan overlay. Räckvidden är sidan — se ordnaBoostade().

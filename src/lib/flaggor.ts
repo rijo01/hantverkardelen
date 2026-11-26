@@ -36,3 +36,12 @@ export const PAFYLLNING = process.env.NEXT_PUBLIC_PAFYLLNING === "pa";
 export const STEG2 = PAFYLLNING && process.env.NEXT_PUBLIC_STEG2 === "pa";
 
 export const INDEXERA_PAFYLLNING = process.env.NEXT_PUBLIC_INDEXERA_PAFYLLNING === "pa";
+
+/**
+ * Listornas sortering (lib/queries.ts, ordnaLista). "a" är dagens: betald
+ * profil, huvudkod före bikod, antal arbetsställen. "b" provas på preview
+ * (beslut 2026-11-26): betald profil, hemsida, övriga; inom varje grupp
+ * huvudkod före bikod och storleksklass. Bara exakt "b" slår på, och bara
+ * tillsammans med STEG2. Inte satt i produktion.
+ */
+export const SORTERING: "a" | "b" = STEG2 && process.env.NEXT_PUBLIC_SORTERING === "b" ? "b" : "a";

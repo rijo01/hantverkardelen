@@ -1,7 +1,10 @@
 // Steg två: rader ur det köpta registret som inte är verksamma i SCB:s register
 // döljs (404) eller pekar på sin efterföljare (308). Beslut 2026-11-24.
 //
-//   node --env-file=.env.local scripts/steg2-upphorda.mjs [--torrkorning] [--tvinga] [--revalidera <bas-url>]
+//   node --env-file=.env.local scripts/steg2-upphorda.mjs [--torrkorning] [--tvinga] [--revalidera <bas-url>] [--reservfil]
+//
+// --reservfil: skriv om reservfilen src/lib/seo-snapshot-steg2.ts, och bara om
+// antalen har ändrats. Utan flaggan rörs filen inte (den dagliga körningen).
 //
 // Körs EFTER scripts/importera-pafyllning.mjs, och om efter varje inläsning från
 // SCB: en rad som blivit verksam igen tas bort ur listan och visas igen, en ny
@@ -517,10 +520,13 @@ for (const { kommun, ng1, n } of antal) {
   kf[kommun] = (kf[kommun] ?? 0) + n;
   (kbf[kommun] ??= {})[ng1] = n;
 }
+// Reservfilen skrivs bara på begäran (--reservfil) och bara om antalen har
+// ändrats: den dagliga körningen ska inte lämna en ändrad fil efter sig, och
+// ett nytt datum ensamt är ingen ändring.
+const RESERVFIL = new URL("../src/lib/seo-snapshot-steg2.ts", import.meta.url);
+const utanDatum = (t) => t.replace(/^export const STEG2_(GENERERAD|SCB_DATUM) = .*$/gm, "");
 const datum = new Date().toISOString().slice(0, 10);
-writeFileSync(
-  new URL("../src/lib/seo-snapshot-steg2.ts", import.meta.url),
-  `/**
+const reservfil = `/**
  * GENERERAD FIL — redigera inte för hand.
  *
  * Antal företag per kommun och per kommun × yrke i hantverk_foretag_steg2
@@ -541,9 +547,15 @@ export const STEG2_TOTAL = ${total};
 export const KOMMUN_FORETAG_STEG2: Readonly<Record<string, number>> = ${JSON.stringify(kf, null, 2)};
 
 export const KOMMUN_BRANSCH_FORETAG_STEG2: Readonly<Record<string, Readonly<Record<string, number>>>> = ${JSON.stringify(kbf, null, 2)};
-`,
-);
-console.error("Skrev src/lib/seo-snapshot-steg2.ts");
+`;
+if (!argv.includes("--reservfil")) {
+  console.error("Reservfilen src/lib/seo-snapshot-steg2.ts rörs inte (skrivs bara med --reservfil).");
+} else if (utanDatum(readFileSync(RESERVFIL, "utf8")) === utanDatum(reservfil)) {
+  console.error("Reservfilen src/lib/seo-snapshot-steg2.ts har samma antal; skrivs inte om.");
+} else {
+  writeFileSync(RESERVFIL, reservfil);
+  console.error("Skrev src/lib/seo-snapshot-steg2.ts");
+}
 
 // ---- 9. Bygg om sidorna -------------------------------------------------------------
 

@@ -25,7 +25,8 @@
 //  - Skriptet är idempotent: rader som inte längre uppfyller villkoren tas bort
 //    ur tabellen, så det kan köras dagligen efter SCB-körningen.
 //
-// Skriver också src/lib/seo-snapshot-pafyllning.ts (tillskottet till hubbarnas antal).
+// Med --reservfil skrivs också src/lib/seo-snapshot-pafyllning.ts (tillskottet till
+// hubbarnas antal när steg två är av), och bara om den har ändrats.
 import { spawnSync } from "node:child_process";
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { homedir } from "node:os";
@@ -400,8 +401,19 @@ for (let i = 0; i < bort.length; i += 300) {
 }
 console.error(`  borttagna: ${bort.length}`);
 
-writeFileSync(new URL("../src/lib/seo-snapshot-pafyllning.ts", import.meta.url), snapshot);
-console.error("Skrev src/lib/seo-snapshot-pafyllning.ts");
+// Filen används bara när steg två är av. Den skrivs bara på begäran
+// (--reservfil) och bara om innehållet har ändrats, så att den dagliga
+// körningen inte lämnar en ändrad fil efter sig.
+const utanDatum = (t) => t.replace(/^export const PAFYLLNING_GENERERAD = .*$/m, "");
+const PAF_FIL = new URL("../src/lib/seo-snapshot-pafyllning.ts", import.meta.url);
+if (!process.argv.includes("--reservfil")) {
+  console.error("src/lib/seo-snapshot-pafyllning.ts rörs inte (skrivs bara med --reservfil).");
+} else if (existsSync(PAF_FIL) && utanDatum(readFileSync(PAF_FIL, "utf8")) === utanDatum(snapshot)) {
+  console.error("src/lib/seo-snapshot-pafyllning.ts är oförändrad; skrivs inte om.");
+} else {
+  writeFileSync(PAF_FIL, snapshot);
+  console.error("Skrev src/lib/seo-snapshot-pafyllning.ts");
+}
 // Steg två bygger på påfyllningen: efterföljarna och den materialiserade vyn
 // hantverk_foretag_steg2 måste räknas om efter varje import.
 console.error("Kör nu scripts/steg2-upphorda.mjs, så att steg två följer med (lib/sql/hantverk-steg2-004.sql).");

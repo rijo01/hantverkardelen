@@ -6,7 +6,7 @@ import { safeLogotypUrl } from "@/lib/sanitize-html";
 import { REGISTER_AR, SCB_KALLANGIVELSE } from "@/lib/dataprovenans";
 import { yrkesnamn } from "@/lib/yrkesnamn";
 import { yrkeFor } from "@/lib/kluster/klassning";
-import { PAFYLLNING, STEG2, VISA_REGISTERTELEFON } from "@/lib/flaggor";
+import { PAFYLLNING, SORTERING, STEG2, VISA_REGISTERTELEFON } from "@/lib/flaggor";
 import { anstallda } from "@/lib/storleksklass";
 import {
   displayName,
@@ -198,6 +198,20 @@ export function RingKnapp({
 }
 
 /**
+ * Hur listan faktiskt är sorterad, ord för ord efter ordnaLista() i
+ * lib/queries.ts. Ändras ordningen ska texten ändras med den.
+ */
+const SORTERINGSTEXT =
+  SORTERING === "b"
+    ? "Sorterat: företag med betald profil först, därefter företag med hemsida och sist övriga. " +
+      "Inom varje grupp kommer företag där yrket är huvudverksamheten enligt SCB före dem där det är en sidoverksamhet, " +
+      "och sedan större företag före mindre (SCB:s storleksklass)."
+    : STEG2
+    ? "Sorterat: företag med betald profil först. Därefter kommer företag där yrket är huvudverksamheten enligt SCB " +
+      "före dem där det är en sidoverksamhet, och sedan företag med flest arbetsställen."
+    : "Sorterat: företag med betald profil först, därefter efter antal arbetsställen.";
+
+/**
  * Listan. Raderna är fristående vita ytor; under dem står hur listan är
  * sorterad och varifrån numren kommer.
  */
@@ -212,7 +226,7 @@ export function CompanyCardList({
     <div>
       <ol className="space-y-2">{children}</ol>
       <p className="mt-4 text-sm leading-relaxed text-ink-3">
-        Sorterat: företag med betald profil först, därefter efter antal arbetsställen.{" "}
+        {SORTERINGSTEXT}{" "}
         {STEG2
           ? "Antal anställda är SCB:s storleksklass. "
           : PAFYLLNING

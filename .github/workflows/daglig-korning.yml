@@ -1,0 +1,72 @@
+# Daglig körning för hantverkardelen.se: påfyllningen och steg två mot kvällens
+# SCB-läsning i mtoz. Plan: daglig-korning-plan.md (2026-11-25).
+#
+# AVSTÄNGD. Jobbet har inget schema och startar bara för hand (Actions →
+# "Daglig körning" → Run workflow). Schemat nedan slås på först när läsrollen
+# i mtoz finns, hemligheterna är inlagda, en körning för hand har gått igenom
+# och ägaren har sagt OK.
+#
+# Jobbet tvingar aldrig förbi nödbromsen. Stoppar ett skript (kod 3) eller går
+# något fel (kod 1) misslyckas jobbet, och GitHub skickar e-post. Sajten står
+# då kvar på förra körningen. --tvinga körs bara för hand, efter beslut.
+
+name: Daglig körning
+
+on:
+  workflow_dispatch:
+  # schedule:
+  #   # 22:00 UTC, efter SCB-läsningen i mtoz (startar 20:30, klar cirka 20:48).
+  #   - cron: "0 22 * * *"
+
+# Aldrig två körningar samtidigt: båda skriver samma tabeller.
+concurrency:
+  group: daglig-korning
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  kor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      # Läsroll i mtoz: bara SELECT på sex tabeller (mtoz-lasroll.sql).
+      MTOZ_DATABASE_URL: ${{ secrets.MTOZ_DATABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      # Bara för /api/steg2/revalidera, inte overlay-flödets hemlighet.
+      REVALIDERA_SECRET: ${{ secrets.REVALIDERA_SECRET }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # Skripten använder bara Nodes inbyggda moduler (ingen npm ci) och psql.
+      - name: psql
+        run: |
+          if ! command -v psql >/dev/null; then
+            sudo apt-get update -q && sudo apt-get install -y -q postgresql-client
+          fi
+          psql --version
+
+      - name: Hemligheterna finns
+        run: |
+          for v in MTOZ_DATABASE_URL NEXT_PUBLIC_SUPABASE_URL NEXT_PUBLIC_SUPABASE_ANON_KEY SUPABASE_SERVICE_ROLE_KEY REVALIDERA_SECRET; do
+            if [ -z "${!v}" ]; then echo "::error::$v saknas"; exit 1; fi
+          done
+
+      - name: Påfyllningen, omgång 1
+        run: node scripts/importera-pafyllning.mjs --omgang 1
+
+      # Bara om påfyllningen slutade utan fel (annars hoppas steget över).
+      - name: Steg två och ombyggnad av sidorna
+        run: node scripts/steg2-upphorda.mjs --revalidera https://hantverkardelen.se
+
+      # Körs alltid, även när ett steg ovan har misslyckats eller hoppats över.
+      - name: Dödmansgrepp (klar inom 48 timmar)
+        if: always()
+        run: node scripts/kontrollera-korning.mjs --timmar 48

@@ -8,7 +8,7 @@ import {
 import { kommunCodesForLan } from "./lan";
 import { filtreraSokord, kontaktsparrFilter } from "./kontaktsparr";
 import { FORETAG_VY, PAFYLLNING_KOLUMNER } from "./foretagsvy";
-import { STEG2 } from "./flaggor";
+import { SORTERING, STEG2 } from "./flaggor";
 import { arSparrad, sparradeNycklar, utanSparrade } from "./foretag-sparr";
 import type { KontaktsparrFilter } from "./overlay-contract";
 import { foretagIsIndexable } from "./seo";
@@ -201,6 +201,34 @@ const VIEW = FORETAG_VY;
  */
 const HUVUDKOD_ORDNING = STEG2 ? "huvudkod_hantverk" : "aeant";
 
+type Ordnbar<Q> = { order(kolumn: string, val?: { ascending?: boolean; nullsFirst?: boolean }): Q };
+const NED = { ascending: false, nullsFirst: false } as const;
+
+/**
+ * Listornas ordning. Samma i alla listor, sökningen och "liknande företag";
+ * texten under listan (CompanyCardList) beskriver den.
+ *
+ *   a (i dag): betald profil (poang), med steg två huvudkod före bikod,
+ *     antal arbetsställen (aeant).
+ *   b (provas på preview, NEXT_PUBLIC_SORTERING=b, kräver steg två): betald
+ *     profil, sedan företag med hemsida (har_webb, lib/sql/hantverk-steg2-008.sql),
+ *     sedan övriga; inom varje grupp huvudkod före bikod och sedan SCB:s
+ *     storleksklass, störst först.
+ *
+ * cfarnr sist, så att ordningen är fast mellan sidorna.
+ */
+function ordnaLista<Q extends Ordnbar<Q>>(q: Q): Q {
+  if (SORTERING === "b" && STEG2) {
+    return q
+      .order("poang", NED)
+      .order("har_webb", NED)
+      .order("huvudkod_hantverk", NED)
+      .order("storleksklass", NED)
+      .order("cfarnr", { ascending: true });
+  }
+  return q.order("poang", NED).order(HUVUDKOD_ORDNING, NED).order("aeant", NED).order("cfarnr", { ascending: true });
+}
+
 export type Kalla = "register2011" | "infofinder" | "register_scb";
 
 /** Vyns `kalla` som en av sajtens tre källor. Okänt räknas som det köpta registret. */
@@ -389,11 +417,7 @@ export async function listForetagInKommunByBransch(
     .or(NISCH_JURFORM_VILLKOR);
   q = applyAeantFilter(q, opts);
 
-  const { data, error } = await q
-    .order("poang", { ascending: false, nullsFirst: false })
-    .order(HUVUDKOD_ORDNING, { ascending: false, nullsFirst: false })
-    .order("aeant", { ascending: false, nullsFirst: false })
-    .order("cfarnr", { ascending: true })
+  const { data, error } = await ordnaLista(q)
     .range(from, to);
   if (error || !data) {
     console.error("listForetagInKommunByBransch", error);
@@ -611,11 +635,7 @@ async function runKategoriBrowse(
   // Total-räkning parallellt med data-queryn. count: exact — se modulnoten:
   // estimated ljuger (kapar vid 1001 / planerargissning). Try/catch så att
   // sajten hellre visar rader helt utan total än ett tal vi inte kan stå för.
-  const dataQuery = q
-    .order("poang", { ascending: false, nullsFirst: false })
-    .order(HUVUDKOD_ORDNING, { ascending: false, nullsFirst: false })
-    .order("aeant", { ascending: false, nullsFirst: false })
-    .order("cfarnr", { ascending: true })
+  const dataQuery = ordnaLista(q)
     .range(from, to);
 
   const totalPromise: Promise<number | undefined> = (async () => {
@@ -684,11 +704,7 @@ async function runBranschSearch(
     .or(NISCH_JURFORM_VILLKOR);
   qA = applyGeoFilter(qA, opts);
   qA = applyAeantFilter(qA, opts);
-  const branschQuery = qA
-    .order("poang", { ascending: false, nullsFirst: false })
-    .order(HUVUDKOD_ORDNING, { ascending: false, nullsFirst: false })
-    .order("aeant", { ascending: false, nullsFirst: false })
-    .order("cfarnr", { ascending: true })
+  const branschQuery = ordnaLista(qA)
     .range(from, to);
 
   // Total-räkning för bransch-träffen — exakt count, se runKategoriBrowse.
@@ -723,11 +739,7 @@ async function runBranschSearch(
           .or(NISCH_JURFORM_VILLKOR);
         qB = applyGeoFilter(qB, opts);
         qB = applyAeantFilter(qB, opts);
-        return qB
-          .order("poang", { ascending: false, nullsFirst: false })
-          .order(HUVUDKOD_ORDNING, { ascending: false, nullsFirst: false })
-    .order("aeant", { ascending: false, nullsFirst: false })
-          .order("cfarnr", { ascending: true })
+        return ordnaLista(qB)
           .limit(8);
       })()
     : null;
@@ -827,11 +839,7 @@ async function runTextSearch(
   if (opts.ng1 && HANTVERK_BRANSCHER_SET.has(opts.ng1)) q = q.eq("ng1", opts.ng1);
   q = applyAeantFilter(q, opts);
 
-  const textQuery = q
-    .order("poang", { ascending: false, nullsFirst: false })
-    .order(HUVUDKOD_ORDNING, { ascending: false, nullsFirst: false })
-    .order("aeant", { ascending: false, nullsFirst: false })
-    .order("cfarnr", { ascending: true })
+  const textQuery = ordnaLista(q)
     .range(from, to);
 
   const wantSokord = page === 1;
@@ -887,17 +895,14 @@ export async function listRelatedForetag(
 ): Promise<Foretag[]> {
   if (!HANTVERK_BRANSCHER_SET.has(ng1)) return [];
   const supa = getSupabaseAnon();
-  const { data, error } = await supa
+  const q = supa
     .from(VIEW)
     .select(COLUMNS_LIST)
     .eq("kommun", kommunCode)
     .eq("ng1", ng1)
     .or(NISCH_JURFORM_VILLKOR)
-    .neq("cfarnr", excludeCfarnr)
-    .order("poang", { ascending: false, nullsFirst: false })
-    .order(HUVUDKOD_ORDNING, { ascending: false, nullsFirst: false })
-    .order("aeant", { ascending: false, nullsFirst: false })
-    .order("cfarnr", { ascending: true })
+    .neq("cfarnr", excludeCfarnr);
+  const { data, error } = await ordnaLista(q)
     .limit(limit);
   if (error || !data) return [];
   return mappa(data as Partial<PublikRow>[]);
@@ -1029,10 +1034,7 @@ async function fetchByCfarnrs(
     .or(NISCH_JURFORM_VILLKOR);
   q = applyGeoFilter(q, opts);
   q = applyAeantFilter(q, opts);
-  const { data, error } = await q
-    .order("poang", { ascending: false, nullsFirst: false })
-    .order(HUVUDKOD_ORDNING, { ascending: false, nullsFirst: false })
-    .order("aeant", { ascending: false, nullsFirst: false });
+  const { data, error } = await ordnaLista(q);
   if (error || !data) {
     if (error) console.warn("fetchByCfarnrs", error.message);
     return [];
