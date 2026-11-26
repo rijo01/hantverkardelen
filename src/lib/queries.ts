@@ -128,8 +128,6 @@ export type Foretag = {
   orgnr: string | null;
   /** True om bolaget är en enskild firma — då döljer vi orgnr i UI. */
   arEnskildFirma: boolean;
-  /** "19XXXXXX-XXXX" för en enskild firma (klustret, kluster/004), annars null. Aldrig numret. */
-  orgnrMaskerat: string | null;
   /** SCB juridisk form-kod, se lib/jurform.ts för mappning. */
   jurform: number | null;
   /** Premium-poäng — högt värde = betalkund, ska rankas överst. */
@@ -181,7 +179,6 @@ type PublikRow = {
   aeant: number | null;
   orgnr: string | null;
   ar_enskild_firma: boolean | null;
-  orgnr_maskerat?: string | null;
   jurform: number | null;
   poang: number | null;
   infotext: string | null;
@@ -216,11 +213,11 @@ export const visarScb = (f: { kalla?: string | null }): boolean =>
   f.kalla === "infofinder" || f.kalla === "register_scb";
 
 const COLUMNS =
-  "id,cfarnr,firma,namn,gatuadress,postnr,postort,tel,webb,epostadress,ng1,kommun,aeant,orgnr,ar_enskild_firma,orgnr_maskerat,jurform,poang,infotext,logotyp,kontaktperson" +
+  "id,cfarnr,firma,namn,gatuadress,postnr,postort,tel,webb,epostadress,ng1,kommun,aeant,orgnr,ar_enskild_firma,jurform,poang,infotext,logotyp,kontaktperson" +
   PAFYLLNING_KOLUMNER;
 
 const COLUMNS_LIST =
-  "id,cfarnr,firma,namn,gatuadress,postnr,postort,tel,webb,epostadress,ng1,kommun,aeant,orgnr,ar_enskild_firma,orgnr_maskerat,jurform,poang,logotyp,kontaktperson" +
+  "id,cfarnr,firma,namn,gatuadress,postnr,postort,tel,webb,epostadress,ng1,kommun,aeant,orgnr,ar_enskild_firma,jurform,poang,logotyp,kontaktperson" +
   PAFYLLNING_KOLUMNER;
 
 /**
@@ -257,7 +254,6 @@ function mapRad(row: Partial<PublikRow>, kf: KontaktsparrFilter): Foretag {
     storleksklass: row.storleksklass ?? (row.cfarnr != null ? storleksklassFor(row.cfarnr) : null),
     orgnr: row.orgnr ?? null,
     arEnskildFirma: row.ar_enskild_firma ?? false,
-    orgnrMaskerat: row.orgnr_maskerat ?? null,
     jurform: row.jurform ?? null,
     poang: row.poang ?? null,
     infotext: kf.skrubba(row.infotext ?? null),

@@ -130,7 +130,7 @@ async function ScbPolicy() {
             personnumret, inte heller i krypterad eller hashad form
           </li>
           <li>
-            ägarens namn. En enskild firma utan eget firmanamn visas som ”Enskild firma, &lt;yrke&gt; i &lt;ort&gt;”
+            ägarens namn. En enskild firma utan eget firmanamn visas som ”Enskild firma i &lt;ort&gt;”
           </li>
           <li>verksamhetsbeskrivningen för enskilda firmor</li>
           <li>namngivna kontaktpersoner.</li>

@@ -104,25 +104,16 @@ export function shortWebb(webb: string | null | undefined): string | null {
 
 /**
  * Hur orgnr ska visas för ett företag:
- *   - Enskild firma → "Enskild firma – organisationsnummer visas ej av integritetsskäl"
- *     (orgnr är ett personnummer som vi inte exponerar)
+ *   - Enskild firma → bara "Enskild firma". Orgnr är ett personnummer, och
+ *     ingen del av det visas, inte heller en maskerad sifferrad som
+ *     "19XXXXXX-XXXX" (beslut 2026-11-26; ersätter kontrakt 1.3:s form här).
  *   - Övriga med orgnr → orgnr rakt av (redan formaterat med bindestreck från vyn)
  *   - Saknas orgnr utan att vara enskild firma → null (visa inget)
  */
 export function orgnrDisplay(
-  f: Pick<Foretag, "orgnr" | "arEnskildFirma"> & { orgnrMaskerat?: string | null },
+  f: Pick<Foretag, "orgnr" | "arEnskildFirma">,
 ): { kind: "orgnr"; value: string } | { kind: "hidden"; value: string } | null {
-  // Kontrakt 1.3 (14 okt 2026): samma form på alla sju sajter — seklet och
-  // resten X. Vyn lämnar aldrig ut numret; orgnr_maskerat bär bara seklet.
-  if (f.arEnskildFirma && f.orgnrMaskerat) {
-    return { kind: "hidden", value: `Enskild firma · ${f.orgnrMaskerat}` };
-  }
-  if (f.arEnskildFirma) {
-    return {
-      kind: "hidden",
-      value: "Enskild firma – organisationsnummer visas ej av integritetsskäl",
-    };
-  }
+  if (f.arEnskildFirma) return { kind: "hidden", value: "Enskild firma" };
   if (f.orgnr && f.orgnr.trim()) {
     return { kind: "orgnr", value: f.orgnr.trim() };
   }
